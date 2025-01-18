@@ -1,0 +1,133 @@
+/* General styling for the page */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    padding-bottom: 50px;
+    background: linear-gradient(to bottom, #f8f9fa, #dee2e6);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Heading styling */
+h1 {
+    margin-bottom: 20px;
+}
+
+/* Input area styling for the text box */
+#textInput {
+    width: 80%;
+    height: 150px;
+    margin: 10px auto;
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid #6c757d;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    resize: none;
+}
+
+/* Display area styling for processed text */
+#textDisplay {
+    width: 80%;
+    margin: 10px auto;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    min-height: 150px;
+    text-align: left;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    display: none;
+    cursor: pointer;
+    background: #fff;
+}
+
+/* Button container and button styles */
+.button-container {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+button {
+    font-size: 16px;
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background: #007bff;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background 0.3s;
+}
+
+/* Hover effect for buttons */
+button:hover {
+    background: #0056b3;
+}
+
+/* Styling for dropdown selectors */
+select {
+    font-size: 16px;
+    padding: 5px;
+    margin: 10px;
+    border: 2px solid #6c757d;
+    border-radius: 5px;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Bold labels for dropdowns */
+label {
+    font-weight: bold;
+}
+
+/* Highlight styling for the current word being read */
+.highlight {
+    background-color: yellow;
+}
+
+/* Styling for the progress container at the bottom of the page */
+#progressContainer {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #f8f9fa;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: left;
+    z-index: 1000;
+}
+
+@media (max-width: 768px) {
+    #progressContainer {
+        bottom: 5%;
+        right: 5%;
+        width: 90%;
+        padding: 8px;
+    }
+
+    #textInput, #textDisplay {
+        width: 90%;
+        font-size: 14px;
+    }
+
+    button {
+        font-size: 14px;
+        padding: 8px 15px;
+    }
+
+    .button-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
