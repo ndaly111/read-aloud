@@ -65,12 +65,14 @@ button {
     background: #007bff;
     color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: background 0.3s;
+    transition: background 0.3s, box-shadow 0.3s, color 0.3s;
 }
 
 /* Hover effect for buttons */
 button:hover {
     background: #0056b3;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    color: #e2e6ea;
 }
 
 /* Styling for dropdown selectors */
@@ -113,7 +115,15 @@ label {
         bottom: 5%;
         right: 5%;
         width: 90%;
-        padding: 8px;
+        height: 8px;
+        padding: 0;
+        background: #007bff;
+        border: none;
+        border-radius: 5px;
+    }
+
+    #progressContainer > * {
+        display: none;
     }
 
     #textInput, #textDisplay {
@@ -121,13 +131,16 @@ label {
         font-size: 14px;
     }
 
-    button {
-        font-size: 14px;
-        padding: 8px 15px;
+    .button-container {
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: space-evenly;
     }
 
-    .button-container {
-        flex-direction: column;
-        gap: 10px;
+    button {
+        flex: 1 1 calc(45% - 10px); /* Two buttons per row */
+        max-width: 100px;
+        font-size: 14px;
+        padding: 8px 12px;
     }
 }
