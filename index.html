@@ -4,145 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text-to-Speech Website</title>
-    <style>
-        /* General styling for the page */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-            padding-bottom: 50px; /* Ensure space for the progress bar *
-            background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Heading styling */
-        h1 {
-            margin-bottom: 20px;
-        }
-
-        /* Input area styling for the text box */
-        #textInput {
-            width: 80%;
-            height: 150px;
-            margin: 10px auto;
-            padding: 10px;
-            font-size: 16px;
-            border: 2px solid #6c757d;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            resize: none;
-        }
-
-        /* Display area styling for processed text */
-        #textDisplay {
-            width: 80%;
-            margin: 10px auto;
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            min-height: 150px;
-            text-align: left;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            display: none;
-            cursor: pointer;
-            background: #fff;
-        }
-
-        /* Button container and button styles */
-        .button-container {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        button {
-            font-size: 16px;
-            padding: 10px 20px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background: #007bff;
-            color: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: background 0.3s;
-        }
-
-        /* Hover effect for buttons */
-        button:hover {
-            background: #0056b3;
-        }
-
-        /* Styling for dropdown selectors */
-        select {
-            font-size: 16px;
-            padding: 5px;
-            margin: 10px;
-            border: 2px solid #6c757d;
-            border-radius: 5px;
-            background: #fff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Bold labels for dropdowns */
-        label {
-            font-weight: bold;
-        }
-
-        /* Highlight styling for the current word being read */
-        .highlight {
-            background-color: yellow;
-        }
-
-        /* Styling for the progress container at the bottom of the page */
-        #progressContainer {
-            position: fixed;
-            bottom: 10px;
-            right: 10px; /* Move to the bottom-right corner */
-            background: #f8f9fa;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            text-align: left;
-            z-index: 1000; /* Ensure it appears above other content */
-        }
-
-        /* Responsive design for smaller screens */
-        @media (max-width: 768px) {
-            #textInput, #textDisplay {
-                width: 90%;
-            }
-
-            button {
-                font-size: 14px;
-                padding: 8px 15px;
-            }
-
-            .button-container {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Page title and instructions -->
     <h1>Text-to-Speech Reader</h1>
     <p>Type or paste your text below to hear it read aloud.</p>
 
-    <!-- Text input box for user input -->
     <textarea id="textInput" placeholder="Type or paste your text here..."></textarea>
     <br>
 
-    <!-- Language selection dropdown -->
     <label for="languageSelect">Select Language:</label>
     <select id="languageSelect" onchange="filterVoicesByLanguage()">
         <option value="en" selected>English</option>
@@ -153,24 +23,24 @@
     </select>
     <br>
 
-    <!-- Voice selection dropdown -->
     <label for="voiceSelect">Select Voice:</label>
     <select id="voiceSelect">
         <option value="-1">Default Voice (Fallback)</option>
     </select>
 
-    <!-- Playback controls for text-to-speech -->
+    <label for="rateControl">Reading Speed:</label>
+    <input type="range" id="rateControl" min="0.5" max="2" step="0.1" value="1" onchange="updateRate(this.value)">
+    <span id="rateValue">1</span>
+
     <div class="button-container">
-        <button onclick="startReading()">Start</button>
+        <button onclick="startReading(true)">Start</button>
         <button onclick="pauseReading()">Pause</button>
         <button onclick="resumeReading()">Resume</button>
         <button onclick="stopReading()">Stop</button>
     </div>
 
-    <!-- Display area for processed text with interactive spans -->
     <div id="textDisplay"></div>
 
-    <!-- Progress tracker with elapsed and remaining time -->
     <div id="progressContainer">
         <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
         <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
@@ -178,24 +48,24 @@
     </div>
 
     <script>
-        // Variables for text-to-speech functionality
         let speechSynthesisUtterance;
         let voices = [];
         let startWordIndex = 0;
         let previousText = "";
         let readingStartTime = null;
+        let cachedSpans = null; // Cache spans for performance optimization
 
-        // DOM elements for various functionalities
         const textDisplay = document.getElementById('textDisplay');
         const textInput = document.getElementById('textInput');
         const voicesDropdown = document.getElementById('voiceSelect');
         const languageDropdown = document.getElementById('languageSelect');
+        const rateControl = document.getElementById('rateControl');
+        const rateValue = document.getElementById('rateValue');
 
         const progressPercent = document.getElementById('progressPercent');
         const timeElapsed = document.getElementById('timeElapsed');
         const timeRemaining = document.getElementById('timeRemaining');
 
-        // Prioritized voice options by language and region
         const regionalVoicePriority = {
             "en-US": ["Samantha", "Alex"],
             "en-GB": ["Daniel", "Serena", "Moira"],
@@ -205,10 +75,50 @@
             "it-IT": ["Alice", "Luca"],
         };
 
-        // List of excluded voices
-        const excludedVoices = ["Jester", "Organ", "Bubbles", "Bad News", "Boing", "Wobble", "Grandma", "Grandpa", "Rocko", "Shelley", "Flo", "Eddy", "Reed"];
+        let excludedVoices = [];
 
-        // Updates the text display area with clickable spans for each word
+        function updateExcludedVoices(newExclusions) {
+            excludedVoices = newExclusions;
+        }
+
+        updateExcludedVoices(["Jester", "Organ", "Bubbles", "Bad News", "Boing", "Wobble", "Grandma", "Grandpa", "Rocko", "Shelley", "Flo", "Eddy", "Reed"]);
+
+        function precomputeVoiceFilters(selectedLanguage) {
+            const prioritizedVoices = regionalVoicePriority[selectedLanguage + "-US"] || [];
+            const filteredVoices = {
+                prioritized: [],
+                fallback: []
+            };
+
+            voices.forEach((voice, index) => {
+                if (excludedVoices.some(excluded => voice.name.includes(excluded))) {
+                    return;
+                }
+                if (prioritizedVoices.includes(voice.name)) {
+                    filteredVoices.prioritized.push({
+                        index,
+                        html: `<option value="${index}" selected>🌟 ${voice.name} (${voice.lang})</option>`
+                    });
+                } else if (voice.lang.startsWith(selectedLanguage)) {
+                    filteredVoices.fallback.push({
+                        index,
+                        html: `<option value="${index}">${voice.name} (${voice.lang})</option>`
+                    });
+                }
+            });
+
+            return filteredVoices;
+        }
+
+        function filterVoicesByLanguage() {
+            const selectedLanguage = languageDropdown.value;
+            const { prioritized, fallback } = precomputeVoiceFilters(selectedLanguage);
+
+            voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>` +
+                prioritized.map(v => v.html).join('') +
+                fallback.map(v => v.html).join('');
+        }
+
         function updateTextDisplay() {
             const text = textInput.value;
             if (text !== previousText) {
@@ -218,24 +128,32 @@
                     .join('');
                 textDisplay.style.display = 'block';
                 previousText = text;
-                startWordIndex = 0; // Reset start index
+                cachedSpans = textDisplay.querySelectorAll('span'); // Cache spans
                 attachClickHandlers();
             }
         }
 
-        // Attaches click events to individual words for interactive playback
         function attachClickHandlers() {
-            const spans = textDisplay.querySelectorAll('span');
-            spans.forEach(span => {
+            cachedSpans.forEach(span => {
                 span.addEventListener('click', () => {
                     const index = parseInt(span.getAttribute('data-index'), 10);
                     startWordIndex = index;
-                    startReading(); // Start reading from the clicked word
+                    if (speechSynthesis.speaking) {
+                        speechSynthesis.cancel();
+                    }
+                    highlightWord(index); // Immediately highlight selected word
+                    startReading(false);
                 });
             });
         }
 
-        // Formats seconds into HH:MM:SS format for timers
+        function highlightWord(index) {
+            cachedSpans.forEach(span => span.classList.remove('highlight'));
+            if (cachedSpans[index]) {
+                cachedSpans[index].classList.add('highlight');
+            }
+        }
+
         function formatTime(seconds) {
             const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
             const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -243,7 +161,6 @@
             return `${hrs}:${mins}:${secs}`;
         }
 
-        // Updates progress percentages and timers dynamically
         function updateProgress(currentWordIndex, totalWords) {
             const percent = Math.round((currentWordIndex / totalWords) * 100);
             progressPercent.textContent = `${percent}%`;
@@ -255,8 +172,7 @@
             timeRemaining.textContent = formatTime(estimatedTime);
         }
 
-        // Starts text-to-speech playback from a specified word index
-        function startReading() {
+        function startReading(reset = false) {
             const text = textInput.value;
 
             if (!text) {
@@ -264,11 +180,10 @@
                 return;
             }
 
-            if (speechSynthesis.speaking) {
-                speechSynthesis.cancel();
+            if (reset) {
+                startWordIndex = 0;
+                resetProgress();
             }
-
-            updateTextDisplay(); // Ensure text display is updated
 
             const words = text.split(/(\s+)/);
             const selectedText = words.slice(startWordIndex).join('');
@@ -280,7 +195,7 @@
                 speechSynthesisUtterance.voice = voices[selectedVoiceIndex];
             }
 
-            speechSynthesisUtterance.rate = 1;
+            speechSynthesisUtterance.rate = parseFloat(rateControl.value);
             speechSynthesisUtterance.pitch = 1;
 
             const totalWords = words.length;
@@ -290,98 +205,76 @@
             speechSynthesisUtterance.onboundary = (event) => {
                 const charIndex = event.charIndex;
                 let cumulativeCharCount = 0;
-                let foundIndex = startWordIndex;
 
-                const spans = textDisplay.querySelectorAll('span');
-
-                for (let i = startWordIndex; i < spans.length; i++) {
-                    cumulativeCharCount += spans[i].textContent.length;
+                for (let i = startWordIndex; i < cachedSpans.length; i++) {
+                    cumulativeCharCount += cachedSpans[i].textContent.length;
                     if (cumulativeCharCount > charIndex) {
-                        spans.forEach(span => span.classList.remove('highlight'));
-                        spans[i].classList.add('highlight');
+                        highlightWord(i);
                         updateProgress(i, totalWords);
-                        foundIndex = i;
                         break;
                     }
                 }
-
-                startWordIndex = foundIndex;
             };
 
             speechSynthesisUtterance.onend = () => {
-                const spans = textDisplay.querySelectorAll('span');
-                spans.forEach(span => span.classList.remove('highlight'));
+                cachedSpans.forEach(span => span.classList.remove('highlight'));
                 resetProgress();
             };
 
             speechSynthesis.speak(speechSynthesisUtterance);
         }
 
-        // Resets the progress tracker and clears highlights
+        function updateRate(rate) {
+            rateValue.textContent = rate;
+        }
+
         function resetProgress() {
             progressPercent.textContent = '0%';
             timeElapsed.textContent = '00:00:00';
             timeRemaining.textContent = '00:00:00';
         }
 
-        // Pauses playback
         function pauseReading() {
             if (speechSynthesis.speaking) {
                 speechSynthesis.pause();
             }
         }
 
-        // Resumes paused playback
         function resumeReading() {
             if (speechSynthesis.paused) {
                 speechSynthesis.resume();
             }
         }
 
-        // Stops playback and resets state
         function stopReading() {
             if (speechSynthesis.speaking) {
                 speechSynthesis.cancel();
-                const spans = textDisplay.querySelectorAll('span');
-                spans.forEach(span => span.classList.remove('highlight'));
+                cachedSpans.forEach(span => span.classList.remove('highlight'));
                 resetProgress();
             }
         }
 
-        // Filters available voices based on the selected language and populates the dropdown
-        function filterVoicesByLanguage() {
-            const selectedLanguage = languageDropdown.value; // Get the selected language
-            const prioritizedVoices = regionalVoicePriority[selectedLanguage + "-US"] || []; // Get prioritized voices for the region
-
-            let prioritizedOptions = [];
-            let fallbackOptions = [];
-
-            voices.forEach((voice, index) => {
-                if (excludedVoices.some(excluded => voice.name.includes(excluded))) {
-                    return; // Skip excluded voices
-                }
-                const isPrioritized = prioritizedVoices.includes(voice.name);
-                const optionHTML = `<option value="${index}" ${isPrioritized ? 'selected' : ''}>${isPrioritized ? '🌟 ' : ''}${voice.name} (${voice.lang})</option>`;
-                if (isPrioritized) {
-                    prioritizedOptions.push(optionHTML);
-                } else if (voice.lang.startsWith(selectedLanguage)) {
-                    fallbackOptions.push(optionHTML);
-                }
-            });
-
-            voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>` + prioritizedOptions.join('') + fallbackOptions.join('');
-        }
-
-        // Populates the voice dropdown with available voices
         function populateVoices() {
-            voices = speechSynthesis.getVoices(); // Get the list of available voices
-            filterVoicesByLanguage(); // Populate the dropdown with filtered voices
+            function retryPopulateVoices(attempt = 0) {
+                if (!('speechSynthesis' in window)) {
+                    alert('Text-to-speech is not supported in your browser. Please try a different browser.');
+                    return;
+                }
+                voices = speechSynthesis.getVoices();
+                if (voices.length === 0 && attempt < 5) {
+                    setTimeout(() => retryPopulateVoices(attempt + 1), 200 * Math.pow(2, attempt));
+                } else if (voices.length === 0) {
+                    console.error("Failed to load voices after multiple attempts.");
+                } else {
+                    filterVoicesByLanguage();
+                }
+            }
+            retryPopulateVoices();
         }
 
-        // Event listeners for dynamic updates and initialization
-        textInput.addEventListener('input', updateTextDisplay); // Update the display as the user types
-        speechSynthesis.addEventListener('voiceschanged', populateVoices); // Repopulate voices when updated by the browser
-        populateVoices(); // Initial population of voices
+        textInput.addEventListener('input', updateTextDisplay);
+        speechSynthesis.addEventListener('voiceschanged', populateVoices);
+        populateVoices();
 
     </script>
 </body>
