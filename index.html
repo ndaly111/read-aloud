@@ -42,7 +42,6 @@
     <div id="textDisplay"></div>
 
     <div id="progressContainer">
-        <div class="progress-bar"></div>
         <div class="progress-details">
             <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
             <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
@@ -168,10 +167,6 @@
             const percent = Math.round((currentWordIndex / totalWords) * 100);
             progressPercent.textContent = `${percent}%`;
 
-            // Update progress bar width
-            const progressBar = document.querySelector('.progress-bar');
-            progressBar.style.width = `${percent}%`;
-
             const elapsedTime = Math.floor((Date.now() - readingStartTime) / 1000);
             const estimatedTime = Math.round((totalWords - currentWordIndex) / 2);
 
@@ -239,9 +234,6 @@
             progressPercent.textContent = '0%';
             timeElapsed.textContent = '00:00:00';
             timeRemaining.textContent = '00:00:00';
-
-            const progressBar = document.querySelector('.progress-bar');
-            progressBar.style.width = '0%';
         }
 
         function pauseReading() {
