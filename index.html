@@ -50,6 +50,15 @@
         <button onclick="resumeReading()">Resume</button>
         <button onclick="stopReading()">Stop</button>
     </div>
+    <div id="textDisplay"></div>
+
+    <div id="progressContainer">
+        <div class="progress-details">
+            <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
+            <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
+            <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
+        </div>
+    </div>
 
     <h2>Why Choose Our Free Text-to-Speech Tool?</h2>
     <ul>
@@ -73,17 +82,6 @@
         <summary>What languages are supported?</summary>
         <p>Currently, we support English, Spanish, French, German, and Italian.</p>
     </details>
-
-
-    <div id="textDisplay"></div>
-
-    <div id="progressContainer">
-        <div class="progress-details">
-            <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
-            <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
-            <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
-        </div>
-    </div>
 
     <script>
         let speechSynthesisUtterance;
