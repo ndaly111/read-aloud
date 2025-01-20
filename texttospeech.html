@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-Speech Website</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Text-to-Speech Reader</h1>
+    <p>Type or paste your text below to hear it read aloud.</p>
+
+    <textarea id="textInput" placeholder="Type or paste your text here..."></textarea>
+    <br>
+
+    <label for="languageSelect">Select Language:</label>
+    <select id="languageSelect" onchange="filterVoicesByLanguage()">
+        <option value="en" selected>English</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="it">Italian</option>
+    </select>
+    <br>
+
+    <label for="voiceSelect">Select Voice:</label>
+    <select id="voiceSelect">
+        <option value="-1">Default Voice (Fallback)</option>
+    </select>
+
+    <label for="rateControl">Reading Speed:</label>
+    <input type="range" id="rateControl" min="0.5" max="2" step="0.1" value="1" onchange="updateRate(this.value)">
+    <span id="rateValue">1</span>
+
+    <div class="button-container">
+        <button onclick="startReading(true)">Start</button>
+        <button onclick="pauseReading()">Pause</button>
+        <button onclick="resumeReading()">Resume</button>
+        <button onclick="stopReading()">Stop</button>
+    </div>
+
+    <div id="textDisplay"></div>
+
+    <div id="progressContainer">
+        <div class="progress-details">
+            <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
+            <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
+            <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
+        </div>
+    </div>
+
+    <script>
+        let speechSynthesisUtterance;
+        let voices = [];
+        let startWordIndex = 0;
+        let previousText = "";
+        let readingStartTime = null;
+        let cachedSpans = null; // Cache spans for performance optimization
+
+        const textDisplay = document.getElementById('textDisplay');
+        const textInput = document.getElementById('textInput');
+        const voicesDropdown = document.getElementById('voiceSelect');
+        const languageDropdown = document.getElementById('languageSelect');
+        const rateControl = document.getElementById('rateControl');
+        const rateValue = document.getElementById('rateValue');
+
+        const progressPercent = document.getElementById('progressPercent');
+        const timeElapsed = document.getElementById('timeElapsed');
+        const timeRemaining = document.getElementById('timeRemaining');
+
+        const regionalVoicePriority = {
+            "en-US": ["Samantha", "Alex"],
+            "en-GB": ["Daniel", "Serena", "Moira"],
+            "en-AU": ["Karen", "Russell"],
+            "fr-FR": ["Thomas", "Audrey"],
+            "de-DE": ["Hans", "Marlene"],
+            "it-IT": ["Alice", "Luca"],
+        };
+
+        let excludedVoices = [];
+
+        function updateExcludedVoices(newExclusions) {
+            excludedVoices = newExclusions;
+        }
+
+        updateExcludedVoices(["Jester", "Organ", "Bubbles", "Bad News", "Boing", "Wobble", "Grandma", "Grandpa", "Rocko", "Shelley", "Flo", "Eddy", "Reed"]);
+
+        function precomputeVoiceFilters(selectedLanguage) {
+            const prioritizedVoices = regionalVoicePriority[selectedLanguage + "-US"] || [];
+            const filteredVoices = {
+                prioritized: [],
+                fallback: []
+            };
+
+            voices.forEach((voice, index) => {
+                if (excludedVoices.some(excluded => voice.name.includes(excluded))) {
+                    return;
+                }
+                if (prioritizedVoices.includes(voice.name)) {
+                    filteredVoices.prioritized.push({
+                        index,
+                        html: `<option value="${index}" selected>🌟 ${voice.name} (${voice.lang})</option>`
+                    });
+                } else if (voice.lang.startsWith(selectedLanguage)) {
+                    filteredVoices.fallback.push({
+                        index,
+                        html: `<option value="${index}">${voice.name} (${voice.lang})</option>`
+                    });
+                }
+            });
+
+            return filteredVoices;
+        }
+
+        function filterVoicesByLanguage() {
+            const selectedLanguage = languageDropdown.value;
+            const { prioritized, fallback } = precomputeVoiceFilters(selectedLanguage);
+
+            voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>` +
+                prioritized.map(v => v.html).join('') +
+                fallback.map(v => v.html).join('');
+        }
+
+        function updateTextDisplay() {
+            const text = textInput.value;
+            if (text !== previousText) {
+                const words = text.split(/(\s+)/);
+                textDisplay.innerHTML = words
+                    .map((word, index) => `<span data-index="${index}">${word}</span>`)
+                    .join('');
+                textDisplay.style.display = 'block';
+                previousText = text;
+                cachedSpans = textDisplay.querySelectorAll('span'); // Cache spans
+                attachClickHandlers();
+            }
+        }
+
+        function attachClickHandlers() {
+            cachedSpans.forEach(span => {
+                span.addEventListener('click', () => {
+                    const index = parseInt(span.getAttribute('data-index'), 10);
+                    startWordIndex = index;
+                    if (speechSynthesis.speaking) {
+                        speechSynthesis.cancel();
+                    }
+                    highlightWord(index); // Immediately highlight selected word
+                    startReading(false);
+                });
+            });
+        }
+
+        function highlightWord(index) {
+            cachedSpans.forEach(span => span.classList.remove('highlight'));
+            if (cachedSpans[index]) {
+                cachedSpans[index].classList.add('highlight');
+            }
+        }
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${hrs}:${mins}:${secs}`;
+        }
+
+        function updateProgress(currentWordIndex, totalWords) {
+            const percent = Math.round((currentWordIndex / totalWords) * 100);
+            progressPercent.textContent = `${percent}%`;
+
+            const elapsedTime = Math.floor((Date.now() - readingStartTime) / 1000);
+            const estimatedTime = Math.round((totalWords - currentWordIndex) / 2);
+
+            timeElapsed.textContent = formatTime(elapsedTime);
+            timeRemaining.textContent = formatTime(estimatedTime);
+        }
+
+        function startReading(reset = false) {
+            const text = textInput.value;
+
+            if (!text) {
+                alert('Please enter some text to read aloud.');
+                return;
+            }
+
+            if (reset) {
+                startWordIndex = 0;
+                resetProgress();
+            }
+
+            const words = text.split(/(\s+)/);
+            const selectedText = words.slice(startWordIndex).join('');
+
+            speechSynthesisUtterance = new SpeechSynthesisUtterance(selectedText);
+
+            const selectedVoiceIndex = parseInt(voicesDropdown.value, 10);
+            if (!isNaN(selectedVoiceIndex) && voices[selectedVoiceIndex]) {
+                speechSynthesisUtterance.voice = voices[selectedVoiceIndex];
+            }
+
+            speechSynthesisUtterance.rate = parseFloat(rateControl.value);
+            speechSynthesisUtterance.pitch = 1;
+
+            const totalWords = words.length;
+
+            readingStartTime = Date.now();
+
+            speechSynthesisUtterance.onboundary = (event) => {
+                const charIndex = event.charIndex;
+                let cumulativeCharCount = 0;
+
+                for (let i = startWordIndex; i < cachedSpans.length; i++) {
+                    cumulativeCharCount += cachedSpans[i].textContent.length;
+                    if (cumulativeCharCount > charIndex) {
+                        highlightWord(i);
+                        updateProgress(i, totalWords);
+                        break;
+                    }
+                }
+            };
+
+            speechSynthesisUtterance.onend = () => {
+                cachedSpans.forEach(span => span.classList.remove('highlight'));
+                resetProgress();
+            };
+
+            speechSynthesis.speak(speechSynthesisUtterance);
+        }
+
+        function updateRate(rate) {
+            rateValue.textContent = rate;
+        }
+
+        function resetProgress() {
+            progressPercent.textContent = '0%';
+            timeElapsed.textContent = '00:00:00';
+            timeRemaining.textContent = '00:00:00';
+        }
+
+        function pauseReading() {
+            if (speechSynthesis.speaking) {
+                speechSynthesis.pause();
+            }
+        }
+
+        function resumeReading() {
+            if (speechSynthesis.paused) {
+                speechSynthesis.resume();
+            }
+        }
+
+        function stopReading() {
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+                cachedSpans.forEach(span => span.classList.remove('highlight'));
+                resetProgress();
+            }
+        }
+
+        function populateVoices() {
+            function retryPopulateVoices(attempt = 0) {
+                if (!('speechSynthesis' in window)) {
+                    alert('Text-to-speech is not supported in your browser. Please try a different browser.');
+                    return;
+                }
+                voices = speechSynthesis.getVoices();
+                if (voices.length === 0 && attempt < 5) {
+                    setTimeout(() => retryPopulateVoices(attempt + 1), 200 * Math.pow(2, attempt));
+                } else if (voices.length === 0) {
+                    console.error("Failed to load voices after multiple attempts.");
+                } else {
+                    filterVoicesByLanguage();
+                }
+            }
+            retryPopulateVoices();
+        }
+
+        textInput.addEventListener('input', updateTextDisplay);
+        speechSynthesis.addEventListener('voiceschanged', populateVoices);
+        populateVoices();
+
+    </script>
+</body>
+</html>
