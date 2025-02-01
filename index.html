@@ -1,318 +1,346 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Text-to-Speech Reader | Convert Text to Speech Online</title>
-    <meta name="description" content="Convert any text to speech instantly with our free, no-sign-up tool. Multiple languages, natural voices, and simple controls. Start reading aloud now!">
-    <link rel="stylesheet" href="styles.css">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802"
-     crossorigin="anonymous"></script>
-    <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Text-to-Speech Reader | Convert Text to Speech Online</title>
+  <meta name="description" content="Convert any text to speech instantly with our free, no-sign-up tool. Multiple languages, natural voices, and simple controls. Start reading aloud now!">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Adsense script (from your original code) -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802"
+    crossorigin="anonymous"></script>
+  <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY" />
+  <!-- Google Tag Manager (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SVGML1VGPG');
+  </script>
 </head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-SVGML1VGPG');
-</script>
 <body>
-    <h1>Free Text-to-Speech Reader: Convert Text to Speech Online</h1>
-    <p>Welcome to the best free text-to-speech reader online! Whether you’re looking to improve accessibility, enhance your study sessions, or simply read text aloud, our tool is designed to meet your needs. With natural voices, multiple language support, and no sign-ups required, you can start listening instantly.</p>
+  <!-- Navigation Bar -->
+  <nav>
+    <ul>
+      <li><a href="#home">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+  </nav>
 
+  <!-- Home Section with Intro and Ad Container -->
+  <section id="home">
+    <h1>Free Text-to-Speech Reader: Convert Text to Speech Online</h1>
+    <p>
+      Welcome to the best free text-to-speech reader online! Whether you’re looking to improve accessibility, enhance your study sessions, or simply read text aloud, our tool is designed to meet your needs. With natural voices, multiple language support, and no sign-ups required, you can start listening instantly.
+    </p>
+
+    <!-- Adsense Ad Container -->
+    <!-- Replace "YOUR_AD_SLOT" with your actual ad slot ID -->
+    <div class="ad-container" style="margin: 20px 0;">
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-4003447295960802"
+           data-ad-slot="YOUR_AD_SLOT"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about">
+    <h2>About This Tool</h2>
+    <p>
+      This text-to-speech tool is designed to help users convert written text into natural, easy-to-listen-to speech. Whether you are visually impaired or just prefer auditory content, our service provides a user-friendly way to enjoy any text.
+    </p>
+  </section>
+
+  <!-- How It Works Section -->
+  <section id="how-it-works">
+    <h2>How It Works</h2>
+    <p>
+      Simply enter or paste your text into the textarea below, choose your preferred language and voice, adjust the reading speed, and click “Start.” Our advanced text-to-speech engine then converts your text into clear, natural-sounding speech.
+    </p>
+    <p>
+      Features like real-time word highlighting and progress tracking make it easy to follow along as your content is read aloud.
+    </p>
+  </section>
+
+  <!-- Tool Interface -->
+  <div id="tool-interface">
     <textarea id="textInput" placeholder="Type or paste your text here..."></textarea>
     <br>
-
     <label for="languageSelect">Select Language:</label>
     <select id="languageSelect" style="width: 25%; padding: 10px;" onchange="filterVoicesByLanguage()">
-        <option value="en" selected>English</option>
-        <option value="es">Spanish</option>
-        <option value="fr">French</option>
-        <option value="de">German</option>
-        <option value="it">Italian</option>
+      <option value="en" selected>English</option>
+      <option value="es">Spanish</option>
+      <option value="fr">French</option>
+      <option value="de">German</option>
+      <option value="it">Italian</option>
     </select>
     <br>
-
     <label for="voiceSelect">Select Voice:</label>
     <select id="voiceSelect">
-        <option value="-1">Default Voice (Fallback)</option>
+      <option value="-1">Default Voice (Fallback)</option>
     </select>
-
+    <br>
     <label for="rateControl">Reading Speed:</label>
     <input type="range" id="rateControl" min="0.5" max="2" step="0.1" value="1" onchange="updateRate(this.value)">
     <span id="rateValue">1</span>
-
     <div class="button-container">
-        <button onclick="startReading(true)">Start</button>
-        <button onclick="pauseReading()">Pause</button>
-        <button onclick="resumeReading()">Resume</button>
-        <button onclick="stopReading()">Stop</button>
+      <button onclick="startReading(true)">Start</button>
+      <button onclick="pauseReading()">Pause</button>
+      <button onclick="resumeReading()">Resume</button>
+      <button onclick="stopReading()">Stop</button>
     </div>
     <div id="textDisplay"></div>
-
     <div id="progressContainer">
-        <div class="progress-details">
-            <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
-            <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
-            <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
-        </div>
+      <div class="progress-details">
+        <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
+        <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
+        <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
+      </div>
     </div>
+  </div>
 
-    <h2>Why Choose Our Free Text-to-Speech Tool?</h2>
-    <ul>
-        <li><strong>100% Free</strong> – No sign-ups or downloads required.</li>
-        <li><strong>Multiple Languages</strong> – English, Spanish, French, and more.</li>
-        <li><strong>Natural Voices</strong> – High-quality voice options for clarity.</li>
-        <li><strong>Perfect for Accessibility</strong> – Ideal for visually impaired users.</li>
-    </ul>
-
-
+  <!-- FAQ Section -->
+  <section id="faq">
     <h2>Frequently Asked Questions</h2>
     <details>
-        <summary>Is this tool free?</summary>
-        <p>Yes, it's completely free with no sign-ups or downloads.</p>
+      <summary>Is this tool free?</summary>
+      <p>Yes, it's completely free with no sign-ups or downloads.</p>
     </details>
     <details>
-        <summary>Can I use it for accessibility?</summary>
-        <p>Absolutely! It's designed for users with visual impairments and dyslexia.</p>
+      <summary>Can I use it for accessibility?</summary>
+      <p>Absolutely! It's designed for users with visual impairments and dyslexia.</p>
     </details>
     <details>
-        <summary>What languages are supported?</summary>
-        <p>Currently, we support English, Spanish, French, German, and Italian.</p>
+      <summary>What languages are supported?</summary>
+      <p>Currently, we support English, Spanish, French, German, and Italian.</p>
     </details>
+  </section>
 
-    <script>
-        let speechSynthesisUtterance;
-        let voices = [];
-        let startWordIndex = 0;
-        let previousText = "";
-        let readingStartTime = null;
-        let cachedSpans = null; // Cache spans for performance optimization
+  <!-- JavaScript Code -->
+  <script>
+    /* START OF ORIGINAL TEXT-TO-SPEECH SCRIPT */
+    let speechSynthesisUtterance;
+    let voices = [];
+    let startWordIndex = 0;
+    let previousText = "";
+    let readingStartTime = null;
+    let cachedSpans = null; // Cache spans for performance optimization
 
-        const textDisplay = document.getElementById('textDisplay');
-        const textInput = document.getElementById('textInput');
-        const voicesDropdown = document.getElementById('voiceSelect');
-        const languageDropdown = document.getElementById('languageSelect');
-        const rateControl = document.getElementById('rateControl');
-        const rateValue = document.getElementById('rateValue');
+    const textDisplay = document.getElementById('textDisplay');
+    const textInput = document.getElementById('textInput');
+    const voicesDropdown = document.getElementById('voiceSelect');
+    const languageDropdown = document.getElementById('languageSelect');
+    const rateControl = document.getElementById('rateControl');
+    const rateValue = document.getElementById('rateValue');
 
-        const progressPercent = document.getElementById('progressPercent');
-        const timeElapsed = document.getElementById('timeElapsed');
-        const timeRemaining = document.getElementById('timeRemaining');
+    const progressPercent = document.getElementById('progressPercent');
+    const timeElapsed = document.getElementById('timeElapsed');
+    const timeRemaining = document.getElementById('timeRemaining');
 
-        const regionalVoicePriority = {
-            "en-US": ["Samantha", "Alex"],
-            "en-GB": ["Daniel", "Serena", "Moira"],
-            "en-AU": ["Karen", "Russell"],
-            "fr-FR": ["Thomas", "Audrey"],
-            "de-DE": ["Hans", "Marlene"],
-            "it-IT": ["Alice", "Luca"],
-        };
+    const regionalVoicePriority = {
+      "en-US": ["Samantha", "Alex"],
+      "en-GB": ["Daniel", "Serena", "Moira"],
+      "en-AU": ["Karen", "Russell"],
+      "fr-FR": ["Thomas", "Audrey"],
+      "de-DE": ["Hans", "Marlene"],
+      "it-IT": ["Alice", "Luca"],
+    };
 
-        let excludedVoices = [];
+    let excludedVoices = [];
 
-        function updateExcludedVoices(newExclusions) {
-            excludedVoices = newExclusions;
+    function updateExcludedVoices(newExclusions) {
+      excludedVoices = newExclusions;
+    }
+
+    updateExcludedVoices(["Jester", "Organ", "Bubbles", "Bad News", "Boing", "Wobble", "Grandma", "Grandpa", "Rocko", "Shelley", "Flo", "Eddy", "Reed"]);
+
+    function precomputeVoiceFilters(selectedLanguage) {
+      const prioritizedVoices = regionalVoicePriority[selectedLanguage + "-US"] || [];
+      const filteredVoices = {
+        prioritized: [],
+        fallback: []
+      };
+
+      voices.forEach((voice, index) => {
+        if (excludedVoices.some(excluded => voice.name.includes(excluded))) {
+          return;
         }
-
-        updateExcludedVoices(["Jester", "Organ", "Bubbles", "Bad News", "Boing", "Wobble", "Grandma", "Grandpa", "Rocko", "Shelley", "Flo", "Eddy", "Reed"]);
-
-        function precomputeVoiceFilters(selectedLanguage) {
-            const prioritizedVoices = regionalVoicePriority[selectedLanguage + "-US"] || [];
-            const filteredVoices = {
-                prioritized: [],
-                fallback: []
-            };
-
-            voices.forEach((voice, index) => {
-                if (excludedVoices.some(excluded => voice.name.includes(excluded))) {
-                    return;
-                }
-                if (prioritizedVoices.includes(voice.name)) {
-                    filteredVoices.prioritized.push({
-                        index,
-                        html: `<option value="${index}" selected>🌟 ${voice.name} (${voice.lang})</option>`
-                    });
-                } else if (voice.lang.startsWith(selectedLanguage)) {
-                    filteredVoices.fallback.push({
-                        index,
-                        html: `<option value="${index}">${voice.name} (${voice.lang})</option>`
-                    });
-                }
-            });
-
-            return filteredVoices;
+        if (prioritizedVoices.includes(voice.name)) {
+          filteredVoices.prioritized.push({
+            index,
+            html: `<option value="${index}" selected>🌟 ${voice.name} (${voice.lang})</option>`
+          });
+        } else if (voice.lang.startsWith(selectedLanguage)) {
+          filteredVoices.fallback.push({
+            index,
+            html: `<option value="${index}">${voice.name} (${voice.lang})</option>`
+          });
         }
+      });
 
-        function filterVoicesByLanguage() {
-            const selectedLanguage = languageDropdown.value;
-            const { prioritized, fallback } = precomputeVoiceFilters(selectedLanguage);
+      return filteredVoices;
+    }
 
-            voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>` +
-                prioritized.map(v => v.html).join('') +
-                fallback.map(v => v.html).join('');
+    function filterVoicesByLanguage() {
+      const selectedLanguage = languageDropdown.value;
+      const { prioritized, fallback } = precomputeVoiceFilters(selectedLanguage);
+      voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>` +
+        prioritized.map(v => v.html).join('') +
+        fallback.map(v => v.html).join('');
+    }
+
+    function updateTextDisplay() {
+      const text = textInput.value;
+      if (text !== previousText) {
+        const words = text.split(/(\s+)/);
+        textDisplay.innerHTML = words
+          .map((word, index) => `<span data-index="${index}">${word}</span>`)
+          .join('');
+        textDisplay.style.display = 'block';
+        previousText = text;
+        cachedSpans = textDisplay.querySelectorAll('span'); // Cache spans
+        attachClickHandlers();
+      }
+    }
+
+    function attachClickHandlers() {
+      cachedSpans.forEach(span => {
+        span.addEventListener('click', () => {
+          const index = parseInt(span.getAttribute('data-index'), 10);
+          startWordIndex = index;
+          if (speechSynthesis.speaking) {
+            speechSynthesis.cancel();
+          }
+          highlightWord(index); // Immediately highlight selected word
+          startReading(false);
+        });
+      });
+    }
+
+    function highlightWord(index) {
+      cachedSpans.forEach(span => span.classList.remove('highlight'));
+      if (cachedSpans[index]) {
+        cachedSpans[index].classList.add('highlight');
+      }
+    }
+
+    function formatTime(seconds) {
+      const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${hrs}:${mins}:${secs}`;
+    }
+
+    function updateProgress(currentWordIndex, totalWords) {
+      const percent = Math.round((currentWordIndex / totalWords) * 100);
+      progressPercent.textContent = `${percent}%`;
+      const elapsedTime = Math.floor((Date.now() - readingStartTime) / 1000);
+      const estimatedTime = Math.round((totalWords - currentWordIndex) / 2);
+      timeElapsed.textContent = formatTime(elapsedTime);
+      timeRemaining.textContent = formatTime(estimatedTime);
+    }
+
+    function startReading(reset = false) {
+      const text = textInput.value;
+      if (!text) {
+        alert('Please enter some text to read aloud.');
+        return;
+      }
+      if (reset) {
+        startWordIndex = 0;
+        resetProgress();
+      }
+      const words = text.split(/(\s+)/);
+      const selectedText = words.slice(startWordIndex).join('');
+      speechSynthesisUtterance = new SpeechSynthesisUtterance(selectedText);
+      const selectedVoiceIndex = parseInt(voicesDropdown.value, 10);
+      if (!isNaN(selectedVoiceIndex) && voices[selectedVoiceIndex]) {
+        speechSynthesisUtterance.voice = voices[selectedVoiceIndex];
+      }
+      speechSynthesisUtterance.rate = parseFloat(rateControl.value);
+      speechSynthesisUtterance.pitch = 1;
+      const totalWords = words.length;
+      readingStartTime = Date.now();
+      speechSynthesisUtterance.onboundary = (event) => {
+        const charIndex = event.charIndex;
+        let cumulativeCharCount = 0;
+        for (let i = startWordIndex; i < cachedSpans.length; i++) {
+          cumulativeCharCount += cachedSpans[i].textContent.length;
+          if (cumulativeCharCount > charIndex) {
+            highlightWord(i);
+            updateProgress(i, totalWords);
+            break;
+          }
         }
+      };
+      speechSynthesisUtterance.onend = () => {
+        cachedSpans.forEach(span => span.classList.remove('highlight'));
+        resetProgress();
+      };
+      speechSynthesis.speak(speechSynthesisUtterance);
+    }
 
-        function updateTextDisplay() {
-            const text = textInput.value;
-            if (text !== previousText) {
-                const words = text.split(/(\s+)/);
-                textDisplay.innerHTML = words
-                    .map((word, index) => `<span data-index="${index}">${word}</span>`)
-                    .join('');
-                textDisplay.style.display = 'block';
-                previousText = text;
-                cachedSpans = textDisplay.querySelectorAll('span'); // Cache spans
-                attachClickHandlers();
-            }
+    function updateRate(rate) {
+      rateValue.textContent = rate;
+    }
+
+    function resetProgress() {
+      progressPercent.textContent = '0%';
+      timeElapsed.textContent = '00:00:00';
+      timeRemaining.textContent = '00:00:00';
+    }
+
+    function pauseReading() {
+      if (speechSynthesis.speaking) {
+        speechSynthesis.pause();
+      }
+    }
+
+    function resumeReading() {
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume();
+      }
+    }
+
+    function stopReading() {
+      if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+        cachedSpans.forEach(span => span.classList.remove('highlight'));
+        resetProgress();
+      }
+    }
+
+    function populateVoices() {
+      function retryPopulateVoices(attempt = 0) {
+        if (!('speechSynthesis' in window)) {
+          alert('Text-to-speech is not supported in your browser. Please try a different browser.');
+          return;
         }
-
-        function attachClickHandlers() {
-            cachedSpans.forEach(span => {
-                span.addEventListener('click', () => {
-                    const index = parseInt(span.getAttribute('data-index'), 10);
-                    startWordIndex = index;
-                    if (speechSynthesis.speaking) {
-                        speechSynthesis.cancel();
-                    }
-                    highlightWord(index); // Immediately highlight selected word
-                    startReading(false);
-                });
-            });
+        voices = speechSynthesis.getVoices();
+        if (voices.length === 0 && attempt < 5) {
+          setTimeout(() => retryPopulateVoices(attempt + 1), 200 * Math.pow(2, attempt));
+        } else if (voices.length === 0) {
+          console.error("Failed to load voices after multiple attempts.");
+        } else {
+          filterVoicesByLanguage();
         }
+      }
+      retryPopulateVoices();
+    }
 
-        function highlightWord(index) {
-            cachedSpans.forEach(span => span.classList.remove('highlight'));
-            if (cachedSpans[index]) {
-                cachedSpans[index].classList.add('highlight');
-            }
-        }
-
-        function formatTime(seconds) {
-            const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
-            const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-            const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
-            return `${hrs}:${mins}:${secs}`;
-        }
-
-        function updateProgress(currentWordIndex, totalWords) {
-            const percent = Math.round((currentWordIndex / totalWords) * 100);
-            progressPercent.textContent = `${percent}%`;
-
-            const elapsedTime = Math.floor((Date.now() - readingStartTime) / 1000);
-            const estimatedTime = Math.round((totalWords - currentWordIndex) / 2);
-
-            timeElapsed.textContent = formatTime(elapsedTime);
-            timeRemaining.textContent = formatTime(estimatedTime);
-        }
-
-        function startReading(reset = false) {
-            const text = textInput.value;
-
-            if (!text) {
-                alert('Please enter some text to read aloud.');
-                return;
-            }
-
-            if (reset) {
-                startWordIndex = 0;
-                resetProgress();
-            }
-
-            const words = text.split(/(\s+)/);
-            const selectedText = words.slice(startWordIndex).join('');
-
-            speechSynthesisUtterance = new SpeechSynthesisUtterance(selectedText);
-
-            const selectedVoiceIndex = parseInt(voicesDropdown.value, 10);
-            if (!isNaN(selectedVoiceIndex) && voices[selectedVoiceIndex]) {
-                speechSynthesisUtterance.voice = voices[selectedVoiceIndex];
-            }
-
-            speechSynthesisUtterance.rate = parseFloat(rateControl.value);
-            speechSynthesisUtterance.pitch = 1;
-
-            const totalWords = words.length;
-
-            readingStartTime = Date.now();
-
-            speechSynthesisUtterance.onboundary = (event) => {
-                const charIndex = event.charIndex;
-                let cumulativeCharCount = 0;
-
-                for (let i = startWordIndex; i < cachedSpans.length; i++) {
-                    cumulativeCharCount += cachedSpans[i].textContent.length;
-                    if (cumulativeCharCount > charIndex) {
-                        highlightWord(i);
-                        updateProgress(i, totalWords);
-                        break;
-                    }
-                }
-            };
-
-            speechSynthesisUtterance.onend = () => {
-                cachedSpans.forEach(span => span.classList.remove('highlight'));
-                resetProgress();
-            };
-
-            speechSynthesis.speak(speechSynthesisUtterance);
-        }
-
-        function updateRate(rate) {
-            rateValue.textContent = rate;
-        }
-
-        function resetProgress() {
-            progressPercent.textContent = '0%';
-            timeElapsed.textContent = '00:00:00';
-            timeRemaining.textContent = '00:00:00';
-        }
-
-        function pauseReading() {
-            if (speechSynthesis.speaking) {
-                speechSynthesis.pause();
-            }
-        }
-
-        function resumeReading() {
-            if (speechSynthesis.paused) {
-                speechSynthesis.resume();
-            }
-        }
-
-        function stopReading() {
-            if (speechSynthesis.speaking) {
-                speechSynthesis.cancel();
-                cachedSpans.forEach(span => span.classList.remove('highlight'));
-                resetProgress();
-            }
-        }
-
-        function populateVoices() {
-            function retryPopulateVoices(attempt = 0) {
-                if (!('speechSynthesis' in window)) {
-                    alert('Text-to-speech is not supported in your browser. Please try a different browser.');
-                    return;
-                }
-                voices = speechSynthesis.getVoices();
-                if (voices.length === 0 && attempt < 5) {
-                    setTimeout(() => retryPopulateVoices(attempt + 1), 200 * Math.pow(2, attempt));
-                } else if (voices.length === 0) {
-                    console.error("Failed to load voices after multiple attempts.");
-                } else {
-                    filterVoicesByLanguage();
-                }
-            }
-            retryPopulateVoices();
-        }
-
-        textInput.addEventListener('input', updateTextDisplay);
-        speechSynthesis.addEventListener('voiceschanged', populateVoices);
-        populateVoices();
-
-    </script>
+    textInput.addEventListener('input', updateTextDisplay);
+    speechSynthesis.addEventListener('voiceschanged', populateVoices);
+    populateVoices();
+    /* END OF ORIGINAL SCRIPT */
+  </script>
 </body>
 </html>
