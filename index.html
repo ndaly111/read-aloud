@@ -6,7 +6,7 @@
   <title>Free Text-to-Speech Reader | Convert Text to Speech Online</title>
   <meta name="description" content="Convert any text to speech instantly with our free, no-sign-up tool. Multiple languages, natural voices, and simple controls. Start reading aloud now!">
   <link rel="stylesheet" href="styles.css">
-  <!-- Adsense script (from your original code) -->
+  <!-- Adsense script (unchanged) -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802"
     crossorigin="anonymous"></script>
   <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY" />
@@ -18,114 +18,154 @@
     gtag('js', new Date());
     gtag('config', 'G-SVGML1VGPG');
   </script>
+  <!-- Optional: Insert JSON‑LD structured data here for FAQ or WebApplication schema -->
 </head>
 <body>
-  <!-- Navigation Bar -->
-  <nav>
-    <ul>
-      <li><a href="#home">Home</a></li>
-      <li><a href="#about">About</a></li>
-      <li><a href="#how-it-works">How It Works</a></li>
-      <li><a href="#faq">FAQ</a></li>
-    </ul>
-  </nav>
-
-  <!-- Home Section with Intro and Ad Container -->
-  <section id="home">
-    <h1>Free Text-to-Speech Reader: Convert Text to Speech Online</h1>
-    <p>
-      Welcome to the best free text-to-speech reader online! Whether you’re looking to improve accessibility, enhance your study sessions, or simply read text aloud, our tool is designed to meet your needs. With natural voices, multiple language support, and no sign-ups required, you can start listening instantly.
-    </p>
-
-    <!-- Adsense Ad Container -->
-    <!-- Replace "YOUR_AD_SLOT" with your actual ad slot ID -->
-    <div class="ad-container" style="margin: 20px 0;">
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-4003447295960802"
-           data-ad-slot="YOUR_AD_SLOT"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
+  <!-- HEADER: Logo & Navigation -->
+  <header>
+    <div class="container">
+      <div class="logo">Read-Aloud</div>
+      <nav>
+        <ul>
+          <li><a href="#hero">Home</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#how-it-works">How It Works</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#blog">Blog</a></li>
+        </ul>
+      </nav>
     </div>
-  </section>
+  </header>
 
-  <!-- About Section -->
-  <section id="about">
-    <h2>About This Tool</h2>
-    <p>
-      This text-to-speech tool is designed to help users convert written text into natural, easy-to-listen-to speech. Whether you are visually impaired or just prefer auditory content, our service provides a user-friendly way to enjoy any text.
-    </p>
-  </section>
-
-  <!-- How It Works Section -->
-  <section id="how-it-works">
-    <h2>How It Works</h2>
-    <p>
-      Simply enter or paste your text into the textarea below, choose your preferred language and voice, adjust the reading speed, and click “Start.” Our advanced text-to-speech engine then converts your text into clear, natural-sounding speech.
-    </p>
-    <p>
-      Features like real-time word highlighting and progress tracking make it easy to follow along as your content is read aloud.
-    </p>
-  </section>
-
-  <!-- Tool Interface -->
-  <div id="tool-interface">
-    <textarea id="textInput" placeholder="Type or paste your text here..."></textarea>
-    <br>
-    <label for="languageSelect">Select Language:</label>
-    <select id="languageSelect" style="width: 25%; padding: 10px;" onchange="filterVoicesByLanguage()">
-      <option value="en" selected>English</option>
-      <option value="es">Spanish</option>
-      <option value="fr">French</option>
-      <option value="de">German</option>
-      <option value="it">Italian</option>
-    </select>
-    <br>
-    <label for="voiceSelect">Select Voice:</label>
-    <select id="voiceSelect">
-      <option value="-1">Default Voice (Fallback)</option>
-    </select>
-    <br>
-    <label for="rateControl">Reading Speed:</label>
-    <input type="range" id="rateControl" min="0.5" max="2" step="0.1" value="1" onchange="updateRate(this.value)">
-    <span id="rateValue">1</span>
-    <div class="button-container">
-      <button onclick="startReading(true)">Start</button>
-      <button onclick="pauseReading()">Pause</button>
-      <button onclick="resumeReading()">Resume</button>
-      <button onclick="stopReading()">Stop</button>
-    </div>
-    <div id="textDisplay"></div>
-    <div id="progressContainer">
-      <div class="progress-details">
-        <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
-        <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
-        <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
+  <!-- HERO SECTION: Eye-catching introduction and AdSense container -->
+  <section id="hero">
+    <div class="container">
+      <h1>Free Text-to-Speech Reader</h1>
+      <p>Convert any text into natural-sounding speech instantly—no sign-up, unlimited usage!</p>
+      <a href="#tool-interface" class="btn">Try It Now</a>
+      <!-- Google AdSense Ad Container (retained near the top) -->
+      <div class="ad-container" style="margin: 20px 0;">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-4003447295960802"
+             data-ad-slot="YOUR_AD_SLOT"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
       </div>
     </div>
-  </div>
-
-  <!-- FAQ Section -->
-  <section id="faq">
-    <h2>Frequently Asked Questions</h2>
-    <details>
-      <summary>Is this tool free?</summary>
-      <p>Yes, it's completely free with no sign-ups or downloads.</p>
-    </details>
-    <details>
-      <summary>Can I use it for accessibility?</summary>
-      <p>Absolutely! It's designed for users with visual impairments and dyslexia.</p>
-    </details>
-    <details>
-      <summary>What languages are supported?</summary>
-      <p>Currently, we support English, Spanish, French, German, and Italian.</p>
-    </details>
   </section>
 
-  <!-- JavaScript Code -->
+  <!-- ABOUT SECTION -->
+  <section id="about">
+    <div class="container">
+      <h2>About This Tool</h2>
+      <p>
+        Our free text-to-speech tool is designed to help you convert written text into natural, easy-to-listen speech. Perfect for accessibility, studying, and multitasking—no downloads or sign-ups required.
+      </p>
+    </div>
+  </section>
+
+  <!-- TOOL INTERFACE SECTION: The core functionality -->
+  <section id="tool-interface">
+    <div class="container">
+      <h2>Try It Out</h2>
+      <textarea id="textInput" placeholder="Type or paste your text here..."></textarea>
+      <br>
+      <label for="languageSelect">Select Language:</label>
+      <select id="languageSelect" onchange="filterVoicesByLanguage()">
+        <option value="en" selected>English</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="it">Italian</option>
+      </select>
+      <br>
+      <label for="voiceSelect">Select Voice:</label>
+      <select id="voiceSelect">
+        <option value="-1">Default Voice (Fallback)</option>
+      </select>
+      <br>
+      <label for="rateControl">Reading Speed:</label>
+      <input type="range" id="rateControl" min="0.5" max="2" step="0.1" value="1" onchange="updateRate(this.value)">
+      <span id="rateValue">1</span>
+      <div class="button-container">
+        <button onclick="startReading(true)">Start</button>
+        <button onclick="pauseReading()">Pause</button>
+        <button onclick="resumeReading()">Resume</button>
+        <button onclick="stopReading()">Stop</button>
+      </div>
+      <div id="textDisplay"></div>
+      <div id="progressContainer">
+        <div class="progress-details">
+          <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
+          <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
+          <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENEFITS/USE-CASES SECTION -->
+  <section id="benefits">
+    <div class="container">
+      <h2>Why Use Our Tool?</h2>
+      <div class="benefit">
+        <h3>Accessibility</h3>
+        <p>Listen to text if you have visual impairments or dyslexia.</p>
+      </div>
+      <div class="benefit">
+        <h3>Productivity</h3>
+        <p>Convert emails, articles, and reports to audio on the go.</p>
+      </div>
+      <div class="benefit">
+        <h3>Learning</h3>
+        <p>Enhance your studies by listening to your notes or foreign language texts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS & FAQ SECTION -->
+  <section id="how-it-works">
+    <div class="container">
+      <h2>How It Works</h2>
+      <p>
+        Simply paste your text into the area above, select your language and voice, adjust the reading speed, and click “Start.” Enjoy real-time word highlighting and progress tracking as your text is read aloud.
+      </p>
+      <!-- FAQ integrated within the same section for simplicity -->
+      <h2>Frequently Asked Questions</h2>
+      <details>
+        <summary>Is this tool free?</summary>
+        <p>Yes, it’s completely free with no sign-ups or downloads.</p>
+      </details>
+      <details>
+        <summary>Can I use it for accessibility?</summary>
+        <p>Absolutely! It’s designed for users with visual impairments and dyslexia.</p>
+      </details>
+      <details>
+        <summary>What languages are supported?</summary>
+        <p>We currently support English, Spanish, French, German, and Italian.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 Read-Aloud.com. All rights reserved.</p>
+      <nav>
+        <ul>
+          <li><a href="/privacy">Privacy Policy</a></li>
+          <li><a href="/terms">Terms of Use</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </footer>
+
+  <!-- JavaScript Code: (Keep your original text-to-speech script as is) -->
   <script>
     /* START OF ORIGINAL TEXT-TO-SPEECH SCRIPT */
     let speechSynthesisUtterance;
