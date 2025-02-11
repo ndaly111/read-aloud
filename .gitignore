@@ -1,1 +1,46 @@
+# Ignore the API key file to prevent leaks
 api_key.json
+
+# Ignore Node.js dependencies (if using Node.js)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Ignore logs and temporary files
+*.log
+logs/
+debug.log
+error.log
+*.cache
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore VS Code settings
+.vscode/
+*.code-workspace
+
+# Ignore Python cache files (if using Python for backend)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore build and deployment artifacts
+dist/
+build/
+.env
+
+# Ignore IDE config files (for JetBrains, VS Code, etc.)
+.idea/
+*.iml
+
+# Ignore GitGuardian’s secret detection cache (if using locally)
+.gitguardian/
+.gitguardian_ignore
+.gitguardian.yaml
+
+# Ignore temporary files
+tmp/
+temp/
+*.swp
