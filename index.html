@@ -6,10 +6,12 @@
   <title>Free Text-to-Speech Reader | Convert Text to Speech Online</title>
   <meta name="description" content="Convert any text to speech instantly with our free, no-sign-up tool. Multiple languages, natural voices, and simple controls. Start reading aloud now!">
   <link rel="stylesheet" href="styles.css">
+
   <!-- Adsense script (unchanged) -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802"
     crossorigin="anonymous"></script>
   <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY" />
+
   <!-- Google Tag Manager (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
   <script>
@@ -18,8 +20,42 @@
     gtag('js', new Date());
     gtag('config', 'G-SVGML1VGPG');
   </script>
-  <!-- Optional: Insert JSON‑LD structured data here for FAQ or WebApplication schema -->
+
+  <!-- JSON-LD Structured Data for FAQ (example) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Is this tool free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, it’s completely free with no sign-ups or downloads."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use it for accessibility?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Absolutely! It’s designed for users with visual impairments and dyslexia."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What languages are supported?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "We currently support English, Spanish, French, German, and Italian."
+        }
+      }
+    ]
+  }
+  </script>
 </head>
+
 <body>
   <!-- HEADER: Logo & Navigation -->
   <header>
@@ -29,9 +65,10 @@
         <ul>
           <li><a href="#hero">Home</a></li>
           <li><a href="#about">About</a></li>
+          <li><a href="#tool-interface">Tool</a></li>
+          <li><a href="#blog">Blog</a></li>
           <li><a href="#how-it-works">How It Works</a></li>
           <li><a href="#faq">FAQ</a></li>
-          <li><a href="#blog">Blog</a></li>
         </ul>
       </nav>
     </div>
@@ -43,7 +80,8 @@
       <h1>Free Text-to-Speech Reader</h1>
       <p>Convert any text into natural-sounding speech instantly—no sign-up, unlimited usage!</p>
       <a href="#tool-interface" class="btn">Try It Now</a>
-      <!-- Google AdSense Ad Container (retained near the top) -->
+
+      <!-- Google AdSense Ad Container -->
       <div class="ad-container" style="margin: 20px 0;">
         <ins class="adsbygoogle"
              style="display:block"
@@ -63,8 +101,16 @@
     <div class="container">
       <h2>About This Tool</h2>
       <p>
-        Our free text-to-speech tool is designed to help you convert written text into natural, easy-to-listen speech. Perfect for accessibility, studying, and multitasking—no downloads or sign-ups required.
+        Our free text-to-speech (TTS) tool turns written words into clear, easy-to-listen audio. Whether you’re studying, multitasking, or navigating accessibility challenges, Read-Aloud offers a simple way to have text read aloud.
       </p>
+      <p>
+        We built this tool to help students, professionals, and individuals with visual impairments or dyslexia. Using the latest in web speech APIs (or fallback audio from VoiceRSS), our site aims to provide accurate, convenient audio playback in multiple languages.
+      </p>
+      <p>
+        We also strive to keep this service lightweight, free, and privacy-friendly—no sign-ups required. For more tips on using TTS effectively, check out our <a href="#blog">blog</a> below.
+      </p>
+      <!-- OPTIONAL: Insert an illustrative image -->
+      <!-- <img src="assets/tts-illustration.jpg" alt="Illustration of text-to-speech concept" style="max-width:100%;"> -->
     </div>
   </section>
 
@@ -108,21 +154,49 @@
     </div>
   </section>
 
+  <!-- BLOG SECTION: Additional content for SEO and user engagement -->
+  <section id="blog">
+    <div class="container">
+      <h2>Blog & Resources</h2>
+      <article>
+        <h3>How TTS Can Improve Your Productivity</h3>
+        <p>
+          Ever wish you could “read” an article while on the go? Text-to-speech makes it simple. Whether you’re commuting, doing household chores, or juggling tasks at work, TTS can help you absorb information hands-free. 
+        </p>
+        <p>
+          For students, TTS can transform e-books or PDF notes into audio format, promoting better retention. For professionals, it’s a great way to stay on top of reports and memos when you don’t have time to sit down and read.
+        </p>
+      </article>
+
+      <article>
+        <h3>Accessibility: Empowering More Users</h3>
+        <p>
+          TTS is vital for many people with visual impairments or reading difficulties. By providing clear, synthesized speech, our tool ensures that no one is left out from accessing digital content. Combined with our user-friendly interface, it’s an all-in-one solution for inclusive reading.
+        </p>
+        <p>
+          Check out our <a href="#benefits">Benefits/Use-Cases</a> section for more details. If you have questions about accessibility settings, feel free to <a href="#contact">contact us</a> or consult our FAQ below.
+        </p>
+      </article>
+
+      <!-- You can add more blog posts or link to a dedicated blog page if you have one. -->
+    </div>
+  </section>
+
   <!-- BENEFITS/USE-CASES SECTION -->
   <section id="benefits">
     <div class="container">
       <h2>Why Use Our Tool?</h2>
       <div class="benefit">
         <h3>Accessibility</h3>
-        <p>Listen to text if you have visual impairments or dyslexia.</p>
+        <p>Listen to text if you have visual impairments or dyslexia. Our tool aims to break down barriers by providing voice options in multiple languages.</p>
       </div>
       <div class="benefit">
         <h3>Productivity</h3>
-        <p>Convert emails, articles, and reports to audio on the go.</p>
+        <p>Convert emails, articles, and reports to audio on the go. Stay efficient by “reading” even when your eyes are busy.</p>
       </div>
       <div class="benefit">
         <h3>Learning</h3>
-        <p>Enhance your studies by listening to your notes or foreign language texts.</p>
+        <p>Enhance your studies by listening to your notes or foreign language texts. Hearing text can improve comprehension and retention.</p>
       </div>
     </div>
   </section>
@@ -134,8 +208,8 @@
       <p>
         Simply paste your text into the area above, select your language and voice, adjust the reading speed, and click “Start.” Enjoy real-time word highlighting and progress tracking as your text is read aloud.
       </p>
-      <!-- FAQ integrated within the same section for simplicity -->
-      <h2>Frequently Asked Questions</h2>
+
+      <h2 id="faq">Frequently Asked Questions</h2>
       <details>
         <summary>Is this tool free?</summary>
         <p>Yes, it’s completely free with no sign-ups or downloads.</p>
@@ -203,8 +277,8 @@
     };
 
     let excludedVoices = [];
-    let voiceRSSApiKey = null;    // Will store the fetched API key
-    let fallbackAudio = null;     // Will hold the <audio> element if using fallback
+    let voiceRSSApiKey = null; // Will store the fetched API key
+    let fallbackAudio = null;  // Will hold the <audio> element if using fallback
 
     /* -----------------------------------------------------------
        EXCLUDED VOICES
@@ -212,7 +286,10 @@
     function updateExcludedVoices(newExclusions) {
       excludedVoices = newExclusions;
     }
-    updateExcludedVoices(["Jester","Organ","Bubbles","Bad News","Boing","Wobble","Grandma","Grandpa","Rocko","Shelley","Flo","Eddy","Reed"]);
+    updateExcludedVoices([
+      "Jester","Organ","Bubbles","Bad News","Boing","Wobble",
+      "Grandma","Grandpa","Rocko","Shelley","Flo","Eddy","Reed"
+    ]);
 
     /* -----------------------------------------------------------
        LOAD API KEY (for VoiceRSS fallback)
@@ -244,21 +321,22 @@
        ----------------------------------------------------------- */
     function precomputeVoiceFilters(selectedLanguage) {
       const prioritizedVoices = regionalVoicePriority[selectedLanguage + "-US"] || [];
-      const filteredVoices = {
-        prioritized: [],
-        fallback: []
-      };
+      const filteredVoices = { prioritized: [], fallback: [] };
 
       voices.forEach((voice, index) => {
+        // Skip excluded voices
         if (excludedVoices.some(excluded => voice.name.includes(excluded))) {
           return;
         }
+        // If voice is on the short priority list
         if (prioritizedVoices.includes(voice.name)) {
           filteredVoices.prioritized.push({
             index,
             html: `<option value="${index}" selected>🌟 ${voice.name} (${voice.lang})</option>`
           });
-        } else if (voice.lang.startsWith(selectedLanguage)) {
+        }
+        // If voice language matches the user-selected language
+        else if (voice.lang.startsWith(selectedLanguage)) {
           filteredVoices.fallback.push({
             index,
             html: `<option value="${index}">${voice.name} (${voice.lang})</option>`
@@ -272,9 +350,9 @@
     function filterVoicesByLanguage() {
       const selectedLanguage = languageDropdown.value;
       const { prioritized, fallback } = precomputeVoiceFilters(selectedLanguage);
-      voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>` +
-        prioritized.map(v => v.html).join('') +
-        fallback.map(v => v.html).join('');
+      voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>`
+        + prioritized.map(v => v.html).join('')
+        + fallback.map(v => v.html).join('');
     }
 
     /* -----------------------------------------------------------
@@ -329,7 +407,7 @@
       const percent = Math.round((currentWordIndex / totalWords) * 100);
       progressPercent.textContent = `${percent}%`;
       const elapsedTime = Math.floor((Date.now() - readingStartTime) / 1000);
-      // Estimate each word ~0.5 second at rate=1, but it's rough
+      // Rough estimate: ~0.5 seconds per word at rate=1
       const estimatedTime = Math.round((totalWords - currentWordIndex) * 0.5);
       timeElapsed.textContent = formatTime(elapsedTime);
       timeRemaining.textContent = formatTime(estimatedTime);
@@ -345,24 +423,20 @@
        FALLBACK LOGIC WITH VoiceRSS
        ----------------------------------------------------------- */
     async function speakWithVoiceRSS(text, langCode, rate = 1) {
-      // If no API key, we cannot proceed
       if (!voiceRSSApiKey) {
         alert("No local voices found, and the VoiceRSS API key is missing. Cannot speak the text.");
         return;
       }
-
       try {
         // Stop any existing audio
         if (fallbackAudio) {
           fallbackAudio.pause();
           fallbackAudio = null;
         }
-        // Prepare rate (VoiceRSS doesn't let you set rate precisely like speechSynthesis; we approximate)
-        // VoiceRSS has a speed range -5 (slowest) to +5 (fastest)
-        // We'll map browser range [0.5..2] => [-5..+5]
+        // VoiceRSS rate range: -5..+5 => map [0.5..2]
         const mappedRate = Math.round(((rate - 0.5) / 1.5) * 10 - 5);
-        
-        // Build request URL for VoiceRSS
+
+        // Build request URL
         const apiUrl = `https://api.voicerss.org/?key=${encodeURIComponent(voiceRSSApiKey)}`
           + `&hl=${encodeURIComponent(langCode)}`
           + `&r=${mappedRate}`
@@ -370,7 +444,7 @@
           + `&f=44khz_16bit_stereo`
           + `&src=${encodeURIComponent(text)}`;
 
-        // Fetch the MP3 file
+        // Fetch MP3 audio
         const response = await fetch(apiUrl);
         if (!response.ok) {
           throw new Error("VoiceRSS request failed");
@@ -382,22 +456,17 @@
         fallbackAudio = new Audio(blobUrl);
         fallbackAudio.play();
 
-        // Since fallback doesn't do per-word boundary, we won't highlight words
-        // We at least start a basic timer for total progress
+        // Basic progress timer (no per-word highlighting)
         readingStartTime = Date.now();
-
         fallbackAudio.onended = () => {
           resetProgress();
         };
-
-        // Basic progress timer
         const totalWords = text.split(/\s+/).length;
         const intervalId = setInterval(() => {
           if (!fallbackAudio || fallbackAudio.paused) {
             clearInterval(intervalId);
           }
           const elapsedSec = (Date.now() - readingStartTime) / 1000;
-          // Rough guess: 0.5s per word
           const currentWordIndex = Math.min(Math.floor(elapsedSec / 0.5), totalWords);
           updateProgress(currentWordIndex, totalWords);
           if (fallbackAudio && fallbackAudio.ended) {
@@ -463,33 +532,32 @@
         alert('Please enter some text to read aloud.');
         return;
       }
-
       // Stop any current speech or fallback
       stopReading();
+
       if (reset) {
         startWordIndex = 0;
         resetProgress();
       }
 
-      // If we have local voices
+      // Check for local voices
       const selectedVoiceIndex = parseInt(voicesDropdown.value, 10);
       const localVoicesAvailable = (voices.length > 0);
 
-      // Decide whether we use fallback
-      const shouldUseFallback = useVoiceRSSFallback && (!localVoicesAvailable || selectedVoiceIndex === -1);
+      // If fallback needed
+      const shouldUseFallback = useVoiceRSSFallback
+        && (!localVoicesAvailable || selectedVoiceIndex === -1);
 
-      // If fallback is chosen or needed
       if (shouldUseFallback) {
-        // For the fallback, choose a language code. The dropdown values are simple: "en", "es", "fr", etc.
-        const lang = languageDropdown.value;
+        // Use VoiceRSS
+        const lang = languageDropdown.value; 
         speakWithVoiceRSS(text, lang, parseFloat(rateControl.value));
         return;
       }
 
-      // Otherwise use the built-in speech synthesis
+      // Otherwise, use built-in speech synthesis
       const words = text.split(/(\s+)/);
       const selectedText = words.slice(startWordIndex).join('');
-
       speechSynthesisUtterance = new SpeechSynthesisUtterance(selectedText);
 
       if (!isNaN(selectedVoiceIndex) && voices[selectedVoiceIndex]) {
@@ -502,7 +570,6 @@
       readingStartTime = Date.now();
 
       speechSynthesisUtterance.onboundary = (event) => {
-        // highlight word-by-word
         const charIndex = event.charIndex;
         let cumulativeCharCount = 0;
         for (let i = startWordIndex; i < cachedSpans.length; i++) {
