@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Free Text-to-Speech Reader | Convert Text to Speech Online</title>
   <meta name="description" content="Convert any text to speech instantly with our free, no-sign-up tool. Multiple languages, natural voices, and simple controls. Start reading aloud now!">
   <link rel="stylesheet" href="styles.css">
@@ -165,9 +165,16 @@
     </div>
   </footer>
 
-  <!-- JavaScript Code: (Keep your original text-to-speech script as is) -->
+  <!-- ==================== JavaScript Code ==================== -->
   <script>
-    /* START OF ORIGINAL TEXT-TO-SPEECH SCRIPT */
+    /* -----------------------------------------------------------
+       CONFIG: Toggle fallback usage ON/OFF
+       ----------------------------------------------------------- */
+    const useVoiceRSSFallback = true; // Set to true to enable fallback
+
+    /* -----------------------------------------------------------
+       GLOBAL VARIABLES
+       ----------------------------------------------------------- */
     let speechSynthesisUtterance;
     let voices = [];
     let startWordIndex = 0;
@@ -196,13 +203,45 @@
     };
 
     let excludedVoices = [];
+    let voiceRSSApiKey = null;    // Will store the fetched API key
+    let fallbackAudio = null;     // Will hold the <audio> element if using fallback
 
+    /* -----------------------------------------------------------
+       EXCLUDED VOICES
+       ----------------------------------------------------------- */
     function updateExcludedVoices(newExclusions) {
       excludedVoices = newExclusions;
     }
+    updateExcludedVoices(["Jester","Organ","Bubbles","Bad News","Boing","Wobble","Grandma","Grandpa","Rocko","Shelley","Flo","Eddy","Reed"]);
 
-    updateExcludedVoices(["Jester", "Organ", "Bubbles", "Bad News", "Boing", "Wobble", "Grandma", "Grandpa", "Rocko", "Shelley", "Flo", "Eddy", "Reed"]);
+    /* -----------------------------------------------------------
+       LOAD API KEY (for VoiceRSS fallback)
+       ----------------------------------------------------------- */
+    function loadApiKey() {
+      // Fetch from api_key.json
+      return fetch("api_key.json")
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("Failed to load api_key.json");
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Expecting { "VoiceRSS_API_Key": "YOUR_API_KEY" }
+          if (!data.VoiceRSS_API_Key) {
+            throw new Error("VoiceRSS_API_Key not found in api_key.json");
+          }
+          voiceRSSApiKey = data.VoiceRSS_API_Key;
+        })
+        .catch(error => {
+          console.error("Error loading API key:", error);
+          voiceRSSApiKey = null;
+        });
+    }
 
+    /* -----------------------------------------------------------
+       FILLING THE DROPDOWN WITH VOICES
+       ----------------------------------------------------------- */
     function precomputeVoiceFilters(selectedLanguage) {
       const prioritizedVoices = regionalVoicePriority[selectedLanguage + "-US"] || [];
       const filteredVoices = {
@@ -238,6 +277,9 @@
         fallback.map(v => v.html).join('');
     }
 
+    /* -----------------------------------------------------------
+       TEXT DISPLAY & HIGHLIGHTING
+       ----------------------------------------------------------- */
     function updateTextDisplay() {
       const text = textInput.value;
       if (text !== previousText) {
@@ -273,6 +315,9 @@
       }
     }
 
+    /* -----------------------------------------------------------
+       PROGRESS & TIMING
+       ----------------------------------------------------------- */
     function formatTime(seconds) {
       const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
       const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -284,33 +329,180 @@
       const percent = Math.round((currentWordIndex / totalWords) * 100);
       progressPercent.textContent = `${percent}%`;
       const elapsedTime = Math.floor((Date.now() - readingStartTime) / 1000);
-      const estimatedTime = Math.round((totalWords - currentWordIndex) / 2);
+      // Estimate each word ~0.5 second at rate=1, but it's rough
+      const estimatedTime = Math.round((totalWords - currentWordIndex) * 0.5);
       timeElapsed.textContent = formatTime(elapsedTime);
       timeRemaining.textContent = formatTime(estimatedTime);
     }
 
+    function resetProgress() {
+      progressPercent.textContent = '0%';
+      timeElapsed.textContent = '00:00:00';
+      timeRemaining.textContent = '00:00:00';
+    }
+
+    /* -----------------------------------------------------------
+       FALLBACK LOGIC WITH VoiceRSS
+       ----------------------------------------------------------- */
+    async function speakWithVoiceRSS(text, langCode, rate = 1) {
+      // If no API key, we cannot proceed
+      if (!voiceRSSApiKey) {
+        alert("No local voices found, and the VoiceRSS API key is missing. Cannot speak the text.");
+        return;
+      }
+
+      try {
+        // Stop any existing audio
+        if (fallbackAudio) {
+          fallbackAudio.pause();
+          fallbackAudio = null;
+        }
+        // Prepare rate (VoiceRSS doesn't let you set rate precisely like speechSynthesis; we approximate)
+        // VoiceRSS has a speed range -5 (slowest) to +5 (fastest)
+        // We'll map browser range [0.5..2] => [-5..+5]
+        const mappedRate = Math.round(((rate - 0.5) / 1.5) * 10 - 5);
+        
+        // Build request URL for VoiceRSS
+        const apiUrl = `https://api.voicerss.org/?key=${encodeURIComponent(voiceRSSApiKey)}`
+          + `&hl=${encodeURIComponent(langCode)}`
+          + `&r=${mappedRate}`
+          + `&c=MP3`
+          + `&f=44khz_16bit_stereo`
+          + `&src=${encodeURIComponent(text)}`;
+
+        // Fetch the MP3 file
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          throw new Error("VoiceRSS request failed");
+        }
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Create audio element and play
+        fallbackAudio = new Audio(blobUrl);
+        fallbackAudio.play();
+
+        // Since fallback doesn't do per-word boundary, we won't highlight words
+        // We at least start a basic timer for total progress
+        readingStartTime = Date.now();
+
+        fallbackAudio.onended = () => {
+          resetProgress();
+        };
+
+        // Basic progress timer
+        const totalWords = text.split(/\s+/).length;
+        const intervalId = setInterval(() => {
+          if (!fallbackAudio || fallbackAudio.paused) {
+            clearInterval(intervalId);
+          }
+          const elapsedSec = (Date.now() - readingStartTime) / 1000;
+          // Rough guess: 0.5s per word
+          const currentWordIndex = Math.min(Math.floor(elapsedSec / 0.5), totalWords);
+          updateProgress(currentWordIndex, totalWords);
+          if (fallbackAudio && fallbackAudio.ended) {
+            clearInterval(intervalId);
+          }
+        }, 500);
+
+      } catch (error) {
+        console.error("Error in speakWithVoiceRSS:", error);
+        alert("Failed to use VoiceRSS fallback. Check console for details.");
+      }
+    }
+
+    /* -----------------------------------------------------------
+       CONTROLS
+       ----------------------------------------------------------- */
+    function updateRate(rate) {
+      rateValue.textContent = rate;
+    }
+
+    function pauseReading() {
+      // If using native TTS
+      if (speechSynthesis.speaking && !speechSynthesis.paused) {
+        speechSynthesis.pause();
+      }
+      // If using fallback
+      if (fallbackAudio && !fallbackAudio.paused) {
+        fallbackAudio.pause();
+      }
+    }
+
+    function resumeReading() {
+      // If using native TTS
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume();
+      }
+      // If using fallback
+      if (fallbackAudio && fallbackAudio.paused) {
+        fallbackAudio.play();
+      }
+    }
+
+    function stopReading() {
+      // If using native TTS
+      if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+        cachedSpans.forEach(span => span.classList.remove('highlight'));
+      }
+      // If using fallback
+      if (fallbackAudio) {
+        fallbackAudio.pause();
+        fallbackAudio = null;
+      }
+      resetProgress();
+    }
+
+    /* -----------------------------------------------------------
+       START READING (Primary function)
+       ----------------------------------------------------------- */
     function startReading(reset = false) {
-      const text = textInput.value;
+      const text = textInput.value.trim();
       if (!text) {
         alert('Please enter some text to read aloud.');
         return;
       }
+
+      // Stop any current speech or fallback
+      stopReading();
       if (reset) {
         startWordIndex = 0;
         resetProgress();
       }
+
+      // If we have local voices
+      const selectedVoiceIndex = parseInt(voicesDropdown.value, 10);
+      const localVoicesAvailable = (voices.length > 0);
+
+      // Decide whether we use fallback
+      const shouldUseFallback = useVoiceRSSFallback && (!localVoicesAvailable || selectedVoiceIndex === -1);
+
+      // If fallback is chosen or needed
+      if (shouldUseFallback) {
+        // For the fallback, choose a language code. The dropdown values are simple: "en", "es", "fr", etc.
+        const lang = languageDropdown.value;
+        speakWithVoiceRSS(text, lang, parseFloat(rateControl.value));
+        return;
+      }
+
+      // Otherwise use the built-in speech synthesis
       const words = text.split(/(\s+)/);
       const selectedText = words.slice(startWordIndex).join('');
+
       speechSynthesisUtterance = new SpeechSynthesisUtterance(selectedText);
-      const selectedVoiceIndex = parseInt(voicesDropdown.value, 10);
+
       if (!isNaN(selectedVoiceIndex) && voices[selectedVoiceIndex]) {
         speechSynthesisUtterance.voice = voices[selectedVoiceIndex];
       }
       speechSynthesisUtterance.rate = parseFloat(rateControl.value);
       speechSynthesisUtterance.pitch = 1;
+
       const totalWords = words.length;
       readingStartTime = Date.now();
+
       speechSynthesisUtterance.onboundary = (event) => {
+        // highlight word-by-word
         const charIndex = event.charIndex;
         let cumulativeCharCount = 0;
         for (let i = startWordIndex; i < cachedSpans.length; i++) {
@@ -322,43 +514,18 @@
           }
         }
       };
+
       speechSynthesisUtterance.onend = () => {
         cachedSpans.forEach(span => span.classList.remove('highlight'));
         resetProgress();
       };
+
       speechSynthesis.speak(speechSynthesisUtterance);
     }
 
-    function updateRate(rate) {
-      rateValue.textContent = rate;
-    }
-
-    function resetProgress() {
-      progressPercent.textContent = '0%';
-      timeElapsed.textContent = '00:00:00';
-      timeRemaining.textContent = '00:00:00';
-    }
-
-    function pauseReading() {
-      if (speechSynthesis.speaking) {
-        speechSynthesis.pause();
-      }
-    }
-
-    function resumeReading() {
-      if (speechSynthesis.paused) {
-        speechSynthesis.resume();
-      }
-    }
-
-    function stopReading() {
-      if (speechSynthesis.speaking) {
-        speechSynthesis.cancel();
-        cachedSpans.forEach(span => span.classList.remove('highlight'));
-        resetProgress();
-      }
-    }
-
+    /* -----------------------------------------------------------
+       POPULATE VOICES
+       ----------------------------------------------------------- */
     function populateVoices() {
       function retryPopulateVoices(attempt = 0) {
         if (!('speechSynthesis' in window)) {
@@ -367,9 +534,10 @@
         }
         voices = speechSynthesis.getVoices();
         if (voices.length === 0 && attempt < 5) {
+          // exponential backoff
           setTimeout(() => retryPopulateVoices(attempt + 1), 200 * Math.pow(2, attempt));
         } else if (voices.length === 0) {
-          console.error("Failed to load voices after multiple attempts.");
+          console.warn("No local voices found. A fallback will be used if enabled.");
         } else {
           filterVoicesByLanguage();
         }
@@ -377,10 +545,17 @@
       retryPopulateVoices();
     }
 
+    /* -----------------------------------------------------------
+       EVENT LISTENERS & INIT
+       ----------------------------------------------------------- */
     textInput.addEventListener('input', updateTextDisplay);
     speechSynthesis.addEventListener('voiceschanged', populateVoices);
-    populateVoices();
-    /* END OF ORIGINAL SCRIPT */
+
+    // 1. Load the API key (for fallback)
+    loadApiKey().then(() => {
+      // 2. Then populate voices
+      populateVoices();
+    });
   </script>
 </body>
 </html>
