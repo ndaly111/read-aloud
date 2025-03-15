@@ -61,7 +61,7 @@
   <header>
     <div class="container">
       <div class="logo">Read-Aloud</div>
-      <nav>
+      <nav aria-label="Main Navigation">
         <ul>
           <li><a href="#hero">Home</a></li>
           <li><a href="#about">About</a></li>
@@ -109,8 +109,6 @@
       <p>
         We also strive to keep this service lightweight, free, and privacy-friendly—no sign-ups required. For more tips on using TTS effectively, check out our <a href="#blog">blog</a> below.
       </p>
-      <!-- OPTIONAL: Insert an illustrative image -->
-      <!-- <img src="assets/tts-illustration.jpg" alt="Illustration of text-to-speech concept" style="max-width:100%;"> -->
     </div>
   </section>
 
@@ -118,7 +116,7 @@
   <section id="tool-interface">
     <div class="container">
       <h2>Try It Out</h2>
-      <textarea id="textInput" placeholder="Type or paste your text here..."></textarea>
+      <textarea id="textInput" aria-label="Enter text for text-to-speech" placeholder="Type or paste your text here..."></textarea>
       <br>
       <label for="languageSelect">Select Language:</label>
       <select id="languageSelect" onchange="filterVoicesByLanguage()">
@@ -144,7 +142,7 @@
         <button onclick="stopReading()">Stop</button>
       </div>
       <div id="textDisplay"></div>
-      <div id="progressContainer">
+      <div id="progressContainer" aria-live="polite">
         <div class="progress-details">
           <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
           <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
@@ -161,7 +159,7 @@
       <article>
         <h3>How TTS Can Improve Your Productivity</h3>
         <p>
-          Ever wish you could “read” an article while on the go? Text-to-speech makes it simple. Whether you’re commuting, doing household chores, or juggling tasks at work, TTS can help you absorb information hands-free. 
+          Ever wish you could “read” an article while on the go? Text-to-speech makes it simple. Whether you’re commuting, doing household chores, or juggling tasks at work, TTS can help you absorb information hands-free.
         </p>
         <p>
           For students, TTS can transform e-books or PDF notes into audio format, promoting better retention. For professionals, it’s a great way to stay on top of reports and memos when you don’t have time to sit down and read.
@@ -177,8 +175,6 @@
           Check out our <a href="#benefits">Benefits/Use-Cases</a> section for more details. If you have questions about accessibility settings, feel free to <a href="#contact">contact us</a> or consult our FAQ below.
         </p>
       </article>
-
-      <!-- You can add more blog posts or link to a dedicated blog page if you have one. -->
     </div>
   </section>
 
@@ -625,6 +621,6 @@
     });
   </script>
   <!-- Add this somewhere in the <body> of index.html -->
-<a href="audio.html">Listen to Audio</a>
+  <a href="audio.html">Listen to Audio</a>
 </body>
 </html>
