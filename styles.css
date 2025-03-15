@@ -7,7 +7,6 @@ body {
     padding: 0;
     background: linear-gradient(to bottom, #f8f9fa, #dee2e6);
     color: #333;
-    /* Removed overall centering so sections can span full width */
 }
 
 /* Container for centering content where needed */
@@ -59,7 +58,8 @@ header nav ul li a {
    ====================== */
 #hero {
     width: 100%;
-    background: url('hero-background.jpg') no-repeat center center/cover;
+    /* Added a dark overlay for better contrast */
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('hero-background.jpg') no-repeat center center/cover;
     color: #fff;
     padding: 60px 20px;
     text-align: center;
@@ -85,8 +85,7 @@ header nav ul li a {
 }
 
 /* ======================
-   Section Content
-   (About, Tool, How It Works/FAQ)
+   Section Content (if needed)
    ====================== */
 .section-content {
     background: #f4f4f4;
@@ -101,16 +100,18 @@ header nav ul li a {
     margin-bottom: 20px;
 }
 
-/* About Section uses .section-content styles; additional styling if needed */
+/* ======================
+   About Section
+   ====================== */
 #about p {
     font-size: 18px;
     line-height: 1.5;
 }
 
 /* ======================
-   Tool Section
+   Tool Interface Section
    ====================== */
-#tool {
+#tool-interface {
     padding: 40px 0;
 }
 
@@ -234,7 +235,7 @@ footer nav ul li a {
 }
 
 /* ======================
-   Progress Container (unchanged)
+   Progress Container
    ====================== */
 #progressContainer {
     position: fixed;
