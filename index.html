@@ -5,33 +5,53 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Free Text-to-Speech Reader | Convert Text to Speech Online</title>
   <meta name="description" content="Convert any text to speech instantly with our free, no-sign-up tool. Multiple languages, natural voices, and simple controls. Start reading aloud now!">
+  <link rel="canonical" href="https://read-aloud.com/">
+
+  <!-- Styles -->
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Google AdSense (unchanged) -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802"
-    crossorigin="anonymous"></script>
-  <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY" />
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
+
+  <!-- Search Console -->
+  <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY">
 
   <!-- Google Tag Manager -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
+    function gtag(){ dataLayer.push(arguments); }
     gtag('js', new Date());
     gtag('config', 'G-SVGML1VGPG');
   </script>
 </head>
 
 <body>
+  <!-- COOKIE CONSENT BANNER (required for AdSense personalisation) -->
+  <div id="cookie-banner" style="position:fixed;bottom:0;left:0;right:0;padding:1rem;background:#f5f5f5;border-top:1px solid #ddd;display:none;font-family:Arial,sans-serif;font-size:.9rem;z-index:9999">
+    We use cookies to personalise content and ads. <button id="cookie-accept" style="margin-left:.5rem">Accept</button>
+  </div>
+  <script>
+    (function(){
+      if(localStorage.getItem('cookieAccepted')!=='yes'){
+        document.getElementById('cookie-banner').style.display='block';
+        document.getElementById('cookie-accept').onclick=function(){
+          localStorage.setItem('cookieAccepted','yes');
+          document.getElementById('cookie-banner').style.display='none';
+        };
+      }
+    })();
+  </script>
+
   <!-- HEADER -->
   <header>
     <div class="container">
       <div class="logo">Read-Aloud</div>
-      <nav aria-label="Main Navigation">
+      <nav role="navigation" aria-label="Main Navigation">
         <ul>
           <li><a href="index.html" class="active">Home</a></li>
           <li><a href="about.html">About</a></li>
-          <li><a href="index.html#tool-interface">Tool</a></li>
+          <li><a href="#tool-interface">Tool</a></li>
           <li><a href="blog.html">Blog</a></li>
           <li><a href="how-it-works.html">How It Works</a></li>
           <li><a href="faq.html">FAQ</a></li>
@@ -40,34 +60,37 @@
     </div>
   </header>
 
-  <!-- HERO SECTION -->
+  <!-- HERO -->
   <section id="hero">
     <div class="container">
       <h1>Free Text-to-Speech Reader</h1>
       <p>Convert any text into natural-sounding speech instantly—no sign-up, unlimited usage!</p>
-      <a href="#tool-interface" class="btn">Try It Now</a>
+      <a href="#tool-interface" class="btn" aria-label="Skip to tool interface">Try It Now</a>
 
-      <!-- AdSense Container -->
-      <div class="ad-container" style="margin: 20px 0;">
+      <!-- AdSense – replace YOUR_AD_SLOT with the slot ID shown in AdSense -->
+      <div class="ad-container" style="margin:20px 0">
         <ins class="adsbygoogle"
              style="display:block"
              data-ad-client="ca-pub-4003447295960802"
              data-ad-slot="YOUR_AD_SLOT"
              data-ad-format="auto"
              data-full-width-responsive="true"></ins>
-        <script>
-          (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
       </div>
     </div>
   </section>
 
-  <!-- TOOL INTERFACE SECTION -->
-  <section id="tool-interface">
+  <!-- TOOL -->
+  <main id="tool-interface">
     <div class="container">
       <h2>Try It Out</h2>
-      <textarea id="textInput" aria-label="Enter text for text-to-speech" placeholder="Type or paste your text here..."></textarea>
+
+      <label for="textInput" class="visually-hidden">Enter text</label>
+      <textarea id="textInput" aria-label="Enter text for text-to-speech"
+                placeholder="Type or paste your text here…"></textarea>
+
       <br>
+
       <label for="languageSelect">Select Language:</label>
       <select id="languageSelect" onchange="filterVoicesByLanguage()">
         <option value="en" selected>English</option>
@@ -76,413 +99,231 @@
         <option value="de">German</option>
         <option value="it">Italian</option>
       </select>
+
       <br>
+
       <label for="voiceSelect">Select Voice:</label>
       <select id="voiceSelect">
         <option value="-1">Default Voice (Fallback)</option>
       </select>
+
       <br>
+
       <label for="rateControl">Reading Speed:</label>
       <input type="range" id="rateControl" min="0.5" max="2" step="0.1" value="1" onchange="updateRate(this.value)">
       <span id="rateValue">1</span>
+
       <div class="button-container">
-        <button onclick="startReading(true)">Start</button>
-        <button onclick="pauseReading()">Pause</button>
-        <button onclick="resumeReading()">Resume</button>
-        <button onclick="stopReading()">Stop</button>
+        <button aria-label="Start reading"   onclick="startReading(true)">Start</button>
+        <button aria-label="Pause reading"   onclick="pauseReading()">Pause</button>
+        <button aria-label="Resume reading"  onclick="resumeReading()">Resume</button>
+        <button aria-label="Stop reading"    onclick="stopReading()">Stop</button>
       </div>
-      <div id="textDisplay"></div>
+
+      <div id="textDisplay" aria-live="polite"></div>
+
       <div id="progressContainer" aria-live="polite">
-        <div class="progress-details">
-          <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
-          <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
-          <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
-        </div>
+        <p><strong>Progress:</strong> <span id="progressPercent">0%</span></p>
+        <p><strong>Time Elapsed:</strong> <span id="timeElapsed">00:00:00</span></p>
+        <p><strong>Time Remaining:</strong> <span id="timeRemaining">00:00:00</span></p>
       </div>
     </div>
-  </section>
+  </main>
 
   <!-- FOOTER -->
   <footer>
     <div class="container">
       <p>&copy; 2025 Read-Aloud.com. All rights reserved.</p>
-      <nav>
+      <nav role="navigation" aria-label="Secondary Navigation">
         <ul>
-          <li><a href="/privacy">Privacy Policy</a></li>
-          <li><a href="/terms">Terms of Use</a></li>
-          <li><a href="/contact">Contact</a></li>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms of Use</a></li>
+          <li><a href="contact.html">Contact</a></li>
         </ul>
       </nav>
     </div>
   </footer>
 
-  <!-- ==================== JavaScript Code ==================== -->
+  <!-- ==================== JavaScript ==================== -->
   <script>
-    /* -----------------------------------------------------------
-       CONFIG: Toggle fallback usage ON/OFF
-       ----------------------------------------------------------- */
+    /* -------------- CONFIG ---------------- */
     const useVoiceRSSFallback = true;
 
-    /* -----------------------------------------------------------
-       GLOBAL VARIABLES
-       ----------------------------------------------------------- */
-    let speechSynthesisUtterance;
-    let voices = [];
-    let startWordIndex = 0;
-    let previousText = "";
-    let readingStartTime = null;
-    let cachedSpans = null;
+    /* -------------- GLOBALS --------------- */
+    let speechSynthesisUtterance, voices = [], startWordIndex = 0,
+        previousText = "", readingStartTime = null, cachedSpans = null;
 
-    const textDisplay = document.getElementById('textDisplay');
-    const textInput = document.getElementById('textInput');
-    const voicesDropdown = document.getElementById('voiceSelect');
+    const textDisplay      = document.getElementById('textDisplay');
+    const textInput        = document.getElementById('textInput');
+    const voicesDropdown   = document.getElementById('voiceSelect');
     const languageDropdown = document.getElementById('languageSelect');
-    const rateControl = document.getElementById('rateControl');
-    const rateValue = document.getElementById('rateValue');
-
-    const progressPercent = document.getElementById('progressPercent');
-    const timeElapsed = document.getElementById('timeElapsed');
-    const timeRemaining = document.getElementById('timeRemaining');
+    const rateControl      = document.getElementById('rateControl');
+    const rateValue        = document.getElementById('rateValue');
+    const progressPercent  = document.getElementById('progressPercent');
+    const timeElapsed      = document.getElementById('timeElapsed');
+    const timeRemaining    = document.getElementById('timeRemaining');
 
     const regionalVoicePriority = {
-      "en-US": ["Samantha", "Alex"],
-      "en-GB": ["Daniel", "Serena", "Moira"],
-      "en-AU": ["Karen", "Russell"],
-      "fr-FR": ["Thomas", "Audrey"],
-      "de-DE": ["Hans", "Marlene"],
-      "it-IT": ["Alice", "Luca"],
+      "en-US": ["Samantha","Alex"],
+      "en-GB": ["Daniel","Serena","Moira"],
+      "en-AU": ["Karen","Russell"],
+      "fr-FR": ["Thomas","Audrey"],
+      "de-DE": ["Hans","Marlene"],
+      "it-IT": ["Alice","Luca"]
     };
 
     let excludedVoices = [];
     let voiceRSSApiKey = null;
-    let fallbackAudio = null;
+    let fallbackAudio  = null;
 
-    /* -----------------------------------------------------------
-       EXCLUDED VOICES
-       ----------------------------------------------------------- */
-    function updateExcludedVoices(newExclusions) {
-      excludedVoices = newExclusions;
-    }
-    updateExcludedVoices([
-      "Jester","Organ","Bubbles","Bad News","Boing","Wobble",
-      "Grandma","Grandpa","Rocko","Shelley","Flo","Eddy","Reed"
-    ]);
+    /* ----------- EXCLUDED VOICES ---------- */
+    function updateExcludedVoices(v){ excludedVoices = v; }
+    updateExcludedVoices(["Jester","Organ","Bubbles","Bad News","Boing","Wobble","Grandma","Grandpa","Rocko","Shelley","Flo","Eddy","Reed"]);
 
-    /* -----------------------------------------------------------
-       LOAD API KEY (for VoiceRSS fallback)
-       ----------------------------------------------------------- */
-    function loadApiKey() {
-      // Fetch from api_key.json
-      return fetch("api_key.json")
-        .then(response => {
-          if (!response.ok) {
-            throw new Error("Failed to load api_key.json");
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (!data.VoiceRSS_API_Key) {
-            throw new Error("VoiceRSS_API_Key not found in api_key.json");
-          }
-          voiceRSSApiKey = data.VoiceRSS_API_Key;
-        })
-        .catch(error => {
-          console.error("Error loading API key:", error);
-          voiceRSSApiKey = null;
-        });
+    /* -------------- LOAD KEY -------------- */
+    async function loadApiKey(){
+      try{
+        const r = await fetch("api_key.json");
+        if(!r.ok) throw new Error();
+        const d = await r.json();
+        voiceRSSApiKey = d.VoiceRSS_API_Key || null;
+      }catch(e){
+        console.warn("VoiceRSS key missing");
+      }
     }
 
-    /* -----------------------------------------------------------
-       VOICE DROPDOWN
-       ----------------------------------------------------------- */
-    function precomputeVoiceFilters(selectedLanguage) {
-      const prioritizedVoices = regionalVoicePriority[selectedLanguage + "-US"] || [];
-      const filteredVoices = { prioritized: [], fallback: [] };
-
-      voices.forEach((voice, index) => {
-        // Skip excluded voices
-        if (excludedVoices.some(excluded => voice.name.includes(excluded))) {
-          return;
-        }
-        // If voice is on the short priority list
-        if (prioritizedVoices.includes(voice.name)) {
-          filteredVoices.prioritized.push({
-            index,
-            html: `<option value="${index}" selected>🌟 ${voice.name} (${voice.lang})</option>`
-          });
-        }
-        // If voice language matches the user-selected language
-        else if (voice.lang.startsWith(selectedLanguage)) {
-          filteredVoices.fallback.push({
-            index,
-            html: `<option value="${index}">${voice.name} (${voice.lang})</option>`
-          });
+    /* ---------- VOICE DROPDOWN ------------ */
+    function precomputeVoiceFilters(lang){
+      const pri = regionalVoicePriority[`${lang}-US`] || [];
+      const out = {pri:[],rest:[]};
+      voices.forEach((v,i)=>{
+        if(excludedVoices.some(x=>v.name.includes(x))) return;
+        if(pri.includes(v.name)){
+          out.pri.push({i,html:`<option value="${i}" selected>🌟 ${v.name} (${v.lang})</option>`});
+        }else if(v.lang.startsWith(lang)){
+          out.rest.push({i,html:`<option value="${i}">${v.name} (${v.lang})</option>`});
         }
       });
-
-      return filteredVoices;
+      return out;
+    }
+    function filterVoicesByLanguage(){
+      const lang = languageDropdown.value;
+      const {pri,rest} = precomputeVoiceFilters(lang);
+      voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>` + pri.map(o=>o.html).join('') + rest.map(o=>o.html).join('');
     }
 
-    function filterVoicesByLanguage() {
-      const selectedLanguage = languageDropdown.value;
-      const { prioritized, fallback } = precomputeVoiceFilters(selectedLanguage);
-      voicesDropdown.innerHTML = `<option value="-1">Default Voice (Fallback)</option>`
-        + prioritized.map(v => v.html).join('')
-        + fallback.map(v => v.html).join('');
-    }
-
-    /* -----------------------------------------------------------
-       TEXT DISPLAY & HIGHLIGHTING
-       ----------------------------------------------------------- */
-    function updateTextDisplay() {
-      const text = textInput.value;
-      if (text !== previousText) {
-        const words = text.split(/(\s+)/);
-        textDisplay.innerHTML = words
-          .map((word, index) => `<span data-index="${index}">${word}</span>`)
-          .join('');
+    /* ---------- DISPLAY & HIGHLIGHT ------- */
+    function updateTextDisplay(){
+      const t = textInput.value;
+      if(t !== previousText){
+        textDisplay.innerHTML = t.split(/(\s+)/).map((w,i)=>`<span data-index="${i}">${w}</span>`).join('');
         textDisplay.style.display = 'block';
-        previousText = text;
-        cachedSpans = textDisplay.querySelectorAll('span');
-        attachClickHandlers();
-      }
-    }
-
-    function attachClickHandlers() {
-      cachedSpans.forEach(span => {
-        span.addEventListener('click', () => {
-          const index = parseInt(span.getAttribute('data-index'), 10);
-          startWordIndex = index;
-          if (speechSynthesis.speaking) {
-            speechSynthesis.cancel();
-          }
-          highlightWord(index);
+        previousText = t;
+        cachedSpans  = textDisplay.querySelectorAll('span');
+        cachedSpans.forEach(s=>s.addEventListener('click',()=>{
+          startWordIndex = +s.dataset.index;
+          if(speechSynthesis.speaking) speechSynthesis.cancel();
+          highlightWord(startWordIndex);
           startReading(false);
-        });
-      });
-    }
-
-    function highlightWord(index) {
-      cachedSpans.forEach(span => span.classList.remove('highlight'));
-      if (cachedSpans[index]) {
-        cachedSpans[index].classList.add('highlight');
+        }));
       }
     }
-
-    /* -----------------------------------------------------------
-       PROGRESS & TIMING
-       ----------------------------------------------------------- */
-    function formatTime(seconds) {
-      const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
-      const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-      const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
-      return `${hrs}:${mins}:${secs}`;
+    function highlightWord(i){
+      cachedSpans.forEach(s=>s.classList.remove('highlight'));
+      if(cachedSpans[i]) cachedSpans[i].classList.add('highlight');
     }
 
-    function updateProgress(currentWordIndex, totalWords) {
-      const percent = Math.round((currentWordIndex / totalWords) * 100);
-      progressPercent.textContent = `${percent}%`;
-      const elapsedTime = Math.floor((Date.now() - readingStartTime) / 1000);
-      // ~0.5 seconds per word at rate=1
-      const estimatedTime = Math.round((totalWords - currentWordIndex) * 0.5);
-      timeElapsed.textContent = formatTime(elapsedTime);
-      timeRemaining.textContent = formatTime(estimatedTime);
+    /* -------------- PROGRESS -------------- */
+    function formatTime(s){
+      const h = String(Math.floor(s/3600)).padStart(2,'0'),
+            m = String(Math.floor(s%3600/60)).padStart(2,'0'),
+            sec = String(Math.floor(s%60)).padStart(2,'0');
+      return `${h}:${m}:${sec}`;
+    }
+    function updateProgress(i,total){
+      progressPercent.textContent = `${Math.round(i/total*100)}%`;
+      const elapsed = Math.floor((Date.now()-readingStartTime)/1000);
+      const est = Math.round((total-i)*0.5);
+      timeElapsed.textContent = formatTime(elapsed);
+      timeRemaining.textContent = formatTime(est);
+    }
+    function resetProgress(){
+      progressPercent.textContent='0%';
+      timeElapsed.textContent='00:00:00';
+      timeRemaining.textContent='00:00:00';
     }
 
-    function resetProgress() {
-      progressPercent.textContent = '0%';
-      timeElapsed.textContent = '00:00:00';
-      timeRemaining.textContent = '00:00:00';
+    /* ---------- VoiceRSS Fallback --------- */
+    async function speakWithVoiceRSS(text,lang,rate){
+      if(!voiceRSSApiKey){ alert("VoiceRSS key missing"); return; }
+      if(fallbackAudio) fallbackAudio.pause();
+      const mapped = Math.round(((rate-0.5)/1.5)*10-5);
+      const url = `https://api.voicerss.org/?key=${encodeURIComponent(voiceRSSApiKey)}&hl=${lang}&r=${mapped}&c=MP3&f=44khz_16bit_stereo&src=${encodeURIComponent(text)}`;
+      const res = await fetch(url);
+      if(!res.ok){ alert("VoiceRSS error"); return; }
+      const blob = await res.blob();
+      fallbackAudio = new Audio(URL.createObjectURL(blob));
+      fallbackAudio.play();
+      readingStartTime = Date.now();
+      const totalWords = text.split(/\s+/).length;
+      const itv = setInterval(()=>{
+        if(!fallbackAudio || fallbackAudio.paused){ clearInterval(itv); return; }
+        const idx = Math.min(Math.floor((Date.now()-readingStartTime)/500), totalWords);
+        updateProgress(idx,totalWords);
+      },500);
+      fallbackAudio.onended = () => { resetProgress(); clearInterval(itv); };
     }
 
-    /* -----------------------------------------------------------
-       FALLBACK LOGIC WITH VoiceRSS
-       ----------------------------------------------------------- */
-    async function speakWithVoiceRSS(text, langCode, rate = 1) {
-      if (!voiceRSSApiKey) {
-        alert("No local voices found, and the VoiceRSS API key is missing.");
-        return;
-      }
-      try {
-        if (fallbackAudio) {
-          fallbackAudio.pause();
-          fallbackAudio = null;
-        }
-        // VoiceRSS rate range: -5..+5 => map [0.5..2]
-        const mappedRate = Math.round(((rate - 0.5) / 1.5) * 10 - 5);
-
-        const apiUrl = `https://api.voicerss.org/?key=${encodeURIComponent(voiceRSSApiKey)}`
-          + `&hl=${encodeURIComponent(langCode)}`
-          + `&r=${mappedRate}`
-          + `&c=MP3`
-          + `&f=44khz_16bit_stereo`
-          + `&src=${encodeURIComponent(text)}`;
-
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-          throw new Error("VoiceRSS request failed");
-        }
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-
-        fallbackAudio = new Audio(blobUrl);
-        fallbackAudio.play();
-
-        readingStartTime = Date.now();
-        fallbackAudio.onended = () => {
-          resetProgress();
-        };
-        const totalWords = text.split(/\s+/).length;
-        const intervalId = setInterval(() => {
-          if (!fallbackAudio || fallbackAudio.paused) {
-            clearInterval(intervalId);
-          }
-          const elapsedSec = (Date.now() - readingStartTime) / 1000;
-          const currentWordIndex = Math.min(Math.floor(elapsedSec / 0.5), totalWords);
-          updateProgress(currentWordIndex, totalWords);
-          if (fallbackAudio && fallbackAudio.ended) {
-            clearInterval(intervalId);
-          }
-        }, 500);
-
-      } catch (error) {
-        console.error("Error in speakWithVoiceRSS:", error);
-        alert("Failed to use VoiceRSS fallback.");
-      }
-    }
-
-    /* -----------------------------------------------------------
-       CONTROLS
-       ----------------------------------------------------------- */
-    function updateRate(rate) {
-      rateValue.textContent = rate;
-    }
-
-    function pauseReading() {
-      if (speechSynthesis.speaking && !speechSynthesis.paused) {
-        speechSynthesis.pause();
-      }
-      if (fallbackAudio && !fallbackAudio.paused) {
-        fallbackAudio.pause();
-      }
-    }
-
-    function resumeReading() {
-      if (speechSynthesis.paused) {
-        speechSynthesis.resume();
-      }
-      if (fallbackAudio && fallbackAudio.paused) {
-        fallbackAudio.play();
-      }
-    }
-
-    function stopReading() {
-      if (speechSynthesis.speaking) {
-        speechSynthesis.cancel();
-        cachedSpans.forEach(span => span.classList.remove('highlight'));
-      }
-      if (fallbackAudio) {
-        fallbackAudio.pause();
-        fallbackAudio = null;
-      }
+    /* -------------- CONTROLS ------------- */
+    function updateRate(v){ rateValue.textContent = v; }
+    function pauseReading(){ speechSynthesis.pause(); if(fallbackAudio) fallbackAudio.pause(); }
+    function resumeReading(){ if(speechSynthesis.paused) speechSynthesis.resume(); if(fallbackAudio) fallbackAudio.play(); }
+    function stopReading(){
+      speechSynthesis.cancel();
+      if(fallbackAudio){ fallbackAudio.pause(); fallbackAudio=null; }
+      cachedSpans && cachedSpans.forEach(s=>s.classList.remove('highlight'));
       resetProgress();
     }
 
-    /* -----------------------------------------------------------
-       START READING
-       ----------------------------------------------------------- */
-    function startReading(reset = false) {
+    /* -------------- START ---------------- */
+    function startReading(reset=true){
       const text = textInput.value.trim();
-      if (!text) {
-        alert('Please enter some text to read aloud.');
+      if(!text){ alert('Please enter text.'); return; }
+      stopReading(); if(reset){ startWordIndex=0; resetProgress(); }
+
+      const selVoiceIdx = +voicesDropdown.value;
+      const localOK = voices.length>0 && selVoiceIdx!==-1;
+      if(useVoiceRSSFallback && !localOK){
+        speakWithVoiceRSS(text,languageDropdown.value, +rateControl.value);
         return;
       }
-      stopReading();
-
-      if (reset) {
-        startWordIndex = 0;
-        resetProgress();
-      }
-
-      const selectedVoiceIndex = parseInt(voicesDropdown.value, 10);
-      const localVoicesAvailable = (voices.length > 0);
-
-      // Decide fallback usage
-      const shouldUseFallback = useVoiceRSSFallback
-        && (!localVoicesAvailable || selectedVoiceIndex === -1);
-
-      if (shouldUseFallback) {
-        const lang = languageDropdown.value; 
-        speakWithVoiceRSS(text, lang, parseFloat(rateControl.value));
-        return;
-      }
-
-      // Native speech
       const words = text.split(/(\s+)/);
-      const selectedText = words.slice(startWordIndex).join('');
-      speechSynthesisUtterance = new SpeechSynthesisUtterance(selectedText);
-
-      if (!isNaN(selectedVoiceIndex) && voices[selectedVoiceIndex]) {
-        speechSynthesisUtterance.voice = voices[selectedVoiceIndex];
-      }
-      speechSynthesisUtterance.rate = parseFloat(rateControl.value);
-      speechSynthesisUtterance.pitch = 1;
-
-      const totalWords = words.length;
+      const selTxt = words.slice(startWordIndex).join('');
+      speechSynthesisUtterance = new SpeechSynthesisUtterance(selTxt);
+      if(localOK) speechSynthesisUtterance.voice = voices[selVoiceIdx];
+      speechSynthesisUtterance.rate = +rateControl.value;
+      const total = words.length;
       readingStartTime = Date.now();
-
-      speechSynthesisUtterance.onboundary = (event) => {
-        const charIndex = event.charIndex;
-        let cumulativeCharCount = 0;
-        for (let i = startWordIndex; i < cachedSpans.length; i++) {
-          cumulativeCharCount += cachedSpans[i].textContent.length;
-          if (cumulativeCharCount > charIndex) {
-            highlightWord(i);
-            updateProgress(i, totalWords);
-            break;
-          }
+      speechSynthesisUtterance.onboundary = e=>{
+        let chars=0;
+        for(let i=startWordIndex;i<cachedSpans.length;i++){
+          chars += cachedSpans[i].textContent.length;
+          if(chars>e.charIndex){ highlightWord(i); updateProgress(i,total); break; }
         }
       };
-
-      speechSynthesisUtterance.onend = () => {
-        cachedSpans.forEach(span => span.classList.remove('highlight'));
-        resetProgress();
-      };
-
+      speechSynthesisUtterance.onend = ()=>{ cachedSpans.forEach(s=>s.classList.remove('highlight')); resetProgress(); };
       speechSynthesis.speak(speechSynthesisUtterance);
     }
 
-    /* -----------------------------------------------------------
-       POPULATE VOICES
-       ----------------------------------------------------------- */
-    function populateVoices() {
-      function retryPopulateVoices(attempt = 0) {
-        if (!('speechSynthesis' in window)) {
-          alert('Text-to-speech is not supported in your browser.');
-          return;
-        }
-        voices = speechSynthesis.getVoices();
-        if (voices.length === 0 && attempt < 5) {
-          setTimeout(() => retryPopulateVoices(attempt + 1), 200 * Math.pow(2, attempt));
-        } else if (voices.length === 0) {
-          console.warn("No local voices found. Fallback will be used if enabled.");
-        } else {
-          filterVoicesByLanguage();
-        }
-      }
-      retryPopulateVoices();
-    }
-
-    /* -----------------------------------------------------------
-       INIT
-       ----------------------------------------------------------- */
+    /* -------------- INIT ----------------- */
     textInput.addEventListener('input', updateTextDisplay);
     speechSynthesis.addEventListener('voiceschanged', populateVoices);
-
-    // Load API key, then populate voices
-    loadApiKey().then(() => {
-      populateVoices();
-    });
+    async function populateVoices(attempt=0){
+      voices = speechSynthesis.getVoices();
+      if(!voices.length && attempt<5) return setTimeout(()=>populateVoices(attempt+1),200<<attempt);
+      filterVoicesByLanguage();
+    }
+    loadApiKey().then(populateVoices);
   </script>
 </body>
 </html>
