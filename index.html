@@ -6,245 +6,248 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>Read-Aloud | FREE Text-to-Speech</title>
 
-<!-- — retro CSS shortened for brevity – feel free to keep your custom tiles / gifs — -->
+<!-- retro css (short) -->
 <style>
-body{margin:0;background:#000080 url("bg_tile.gif") repeat;color:#FFFFCC;font:14px Verdana}
-a{color:#FFFF33;text-decoration:none}a:hover{text-decoration:underline}
-#top-bar{border-bottom:3px double #FFFF00;background:#000040;text-align:center;padding:5px}
-#logo{font:48px "Comic Sans MS";color:#0f0;text-shadow:2px 2px #f0f}
-#nav ul{margin:0;padding:0;list-style:none}#nav li{display:inline-block;margin:0 8px}
-#nav a{padding:2px 6px;border:1px dotted #ff0}
-.panel{background:#001a66;border:2px outset #ff0;padding:12px;margin:16px}
-textarea{width:100%;min-height:120px;background:#fff;color:#000;border:3px inset #666;font:14px/1.4 "Courier New"}
-.btn,.button-container button{background:#ff0;border:2px outset #333;padding:6px 12px;font:14px Tahoma;cursor:pointer;color:#000}
+body{margin:0;background:#000080 url("bg_tile.gif") repeat;color:#fffc;font:14px Verdana}
+#top{background:#000040;border-bottom:3px double #ff0;text-align:center;padding:6px}
+#top h1{margin:4px 0;font:48px "Comic Sans MS";color:#0f0;text-shadow:2px 2px #f0f}
+.panel{margin:14px;background:#001a66;border:2px outset #ff0;padding:12px}
+textarea{width:100%;min-height:120px;padding:4px;border:3px inset #666;font:15px/1.4 "Courier New";box-sizing:border-box}
+.btn,.panel button{background:#ff0;border:2px outset #333;font:14px Tahoma;padding:6px 14px;color:#000;cursor:pointer}
 .highlight{background:#f0f;color:#000}
 progress{width:100%;height:12px;border:2px inset #333;background:#333}
 progress::-webkit-progress-value{background:#0f0}
-#cookie{position:fixed;bottom:0;left:0;right:0;background:#ff6;padding:6px;text-align:center;font:12px Verdana;display:none;z-index:999}
-#cookie button{margin-left:8px}
-@media(max-width:640px){#nav li{display:block;margin:4px 0}}
+@media(max-width:640px){body{font-size:13px}}
 </style>
 
 <!-- AdSense (UNCHANGED) -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
 <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-SVGML1VGPG');</script>
 </head>
 
 <body>
-<div id="cookie">We use cookies.<button class="btn" onclick="this.parentNode.remove();localStorage.setItem('ok','1')">OK</button></div>
-
-<div id="top-bar">
-  <div id="logo">Read-Aloud</div>
-  <nav id="nav"><ul>
-    <li><a href="#tool">Tool</a></li><li><a href="about.html">About</a></li>
-  </ul></nav>
-</div>
+<div id="top"><h1>Read-Aloud</h1></div>
 
 <div class="panel">
-  <h2>Free Text-to-Speech</h2>
-  <textarea id="text"></textarea><br>
+  <textarea id="txt" placeholder="Paste or type text here…"></textarea><br><br>
+
   <label>Language <select id="lang"></select></label>
-  <label>Voice <select id="voice"><option value="-1">Default</option></select></label><br><br>
-  <label>Speed <span id="rateV">1</span>x
+  <label style="margin-left:12px">Voice <select id="voice"><option value="-1">Default</option></select></label><br><br>
+
+  <label>Speed <span id="rv">1</span>x
     <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
   </label><br><br>
-  <div class="button-container">
-    <button id="start">Start</button>
-    <button id="pause">Pause</button>
-    <button id="resume">Resume</button>
-    <button id="stop">Stop</button>
-  </div>
+
+  <button id="start" class="btn">Start</button>
+  <button id="pause" class="btn">Pause</button>
+  <button id="resume" class="btn">Resume</button>
+  <button id="stop" class="btn">Stop</button><br><br>
+
   <progress id="bar" value="0" max="100"></progress>
-  <div id="timer"><strong>0 %</strong> – <span id="elap">00:00:00</span> / <span id="rem">00:00:00</span></div>
-  <div id="display" aria-live="polite"></div>
+  <div id="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
+
+  <div id="disp" aria-live="polite" style="margin-top:8px"></div>
 </div>
 
-<!-- Ad unit -->
-<div style="text-align:center;margin:12px">
+<!-- ad unit -->
+<div style="text-align:center;margin:14px">
   <ins class="adsbygoogle" style="display:inline-block;width:468px;height:60px"
        data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
   <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
 </div>
 
 <script>
-/* ======== CONFIG ======== */
-const CHUNK = 12000;                // ≤ iOS hard cap 32 768
-const SAMPLE = 'Hi';                // voice preview
-let voiceRSSKey = null;             // loaded later
+/* ==========  CONSTANTS  ========== */
+const CHUNK   = 900;          // 900 chars per utterance
+const LANGS   = {en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian'};
+const $       = id=>document.getElementById(id);
 
-/* ======== DOM ======== */
-const $ = id=>document.getElementById(id);
-const txt=$('text'),lang=$('lang'),voice=$('voice'),rate=$('rate'),rateV=$('rateV');
-const start=$('start'),pause=$('pause'),resume=$('resume'),stop=$('stop');
-const bar=$('bar'),timer=$('timer'),elap=$('elap'),rem=$('rem'),display=$('display');
+/* ==========  DOM refs  ========== */
+const txt   = $('txt'), langSel=$('lang'), voiceSel=$('voice'),
+      rateR = $('rate'), rateV=$('rv'),
+      bar   = $('bar'), ela=$('ela'), rem=$('rem'), pct=$('meter').firstElementChild,
+      startB=$('start'), pauseB=$('pause'), resumeB=$('resume'), stopB=$('stop'),
+      disp  = $('disp');
 
-/* ======== STATE ======== */
-let voices=[],q=[],u=null,startTime=0,charPos=0,text='',spans=[];
-let mobileUnlockDone=false,fallbackAudio=null;
+/* ==========  GLOBALS  ========== */
+let voices       = [];
+let queue        = [];
+let utter        = null;
+let progChar     = 0;
+let totalChars   = 0;
+let startTime    = 0;
+let boundarySeen = false;
+let fallbackAud  = null;
+let keyRSS       = null;
+let isSpeaking   = false;
 
-/* ======== INIT ======== */
-(async()=>{
-  if(!localStorage.ok) $('cookie').style.display='block';
-  rate.oninput=()=>{rateV.textContent=rate.value;};
-  window.addEventListener('resize',()=>autoSize());
+/* ==========  INIT  ========== */
+(async function init(){
+  Object.entries(LANGS).forEach(([c,n])=>langSel.add(new Option(n,c)));
+  rateR.oninput = ()=>rateV.textContent=rateR.value;
+
+  voiceSel.addEventListener('change',()=>{ if(voiceSel.value!=='-1') previewVoice(); });
+
+  startB.onclick = () => startSpeak();
+  pauseB.onclick = () => {speechSynthesis.pause(); fallbackAud?.pause();};
+  resumeB.onclick= () => {speechSynthesis.resume(); fallbackAud?.play();};
+  stopB.onclick  = stopAll;
+
   txt.addEventListener('input',buildDisplay);
+  window.addEventListener('resize', autoSize);
 
-  ['en','es','fr','de','it'].forEach(c=>{
-    const o=new Option({en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian'}[c],c);
-    lang.add(o);
-  });
-  lang.value='en';
+  try { keyRSS = (await fetch('api_key.json').then(r=>r.json())).VoiceRSS_API_Key; } catch{}
 
-  start.onclick = ()=> speak(true);
-  pause.onclick = ()=>{speechSynthesis.pause();if(fallbackAudio)fallbackAudio.pause();};
-  resume.onclick=()=>{speechSynthesis.resume();if(fallbackAudio)fallbackAudio.play();};
-  stop.onclick  = stopAll;
-
-  document.addEventListener('keydown',e=>{
-    if(e.target.tagName==='TEXTAREA')return;
-    const k=e.key.toLowerCase();
-    if(k==='s')speak(true);else if(k==='p')speechSynthesis.pause();else if(k==='r')speechSynthesis.resume();else if(k==='x')stopAll();
-  });
-
-  /* Load VoiceRSS key if present */
-  try{voiceRSSKey=(await fetch('api_key.json').then(r=>r.json())).VoiceRSS_API_Key}catch{}
-
-  await unlockAudio();          // ensures mobile audio allowed
-  await loadVoices();           // now voices should populate
+  await unlockAudio();
+  await loadVoices();
   buildDisplay();
   autoSize();
 })();
 
-/* ======== Audio unlock for mobile ======== */
+/* ==========  AUDIO UNLOCK  ========== */
 function unlockAudio(){
   return new Promise(res=>{
-    const unlock=()=>{ if(mobileUnlockDone){res();return;}
-      mobileUnlockDone=true;
-      const ctx=new (window.AudioContext||window.webkitAudioContext)();
-      const osc=ctx.createOscillator();osc.frequency.value=0;
-      osc.connect(ctx.destination);osc.start(0);osc.stop(0);
-      document.removeEventListener('touchend',unlock,false);
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const unlock = ()=>{
+      const buf=ctx.createBuffer(1,1,22050);
+      const src=ctx.createBufferSource(); src.buffer=buf; src.connect(ctx.destination); src.start(0);
+      document.body.removeEventListener('touchend',unlock);
       res();
     };
-    document.addEventListener('touchend',unlock,false); // first user tap
+    document.body.addEventListener('touchend',unlock,{once:true});
   });
 }
 
-/* ======== Load voices (retry until success or 2 s) ======== */
-function loadVoices(){
+/* ==========  VOICES  ========== */
+function loadVoices(timeout=3000){
   return new Promise(res=>{
-    const probe=()=>{
+    const t0=Date.now();
+    const poll=()=>{
       voices=speechSynthesis.getVoices();
-      if(voices.length){fillVoices();res();}
-      else if(Date.now()<startTime+2000)setTimeout(probe,200);
-      else{fillVoices();res();}
+      if(voices.length||Date.now()-t0>timeout){populateVoiceSel();res();}
+      else setTimeout(poll,200);
     };
-    // trigger iOS to load voices
-    const tiny=new SpeechSynthesisUtterance(' ');
-    speechSynthesis.speak(tiny);
-    setTimeout(probe,200);
+    // nudge iOS
+    speechSynthesis.speak(new SpeechSynthesisUtterance(' '));
+    poll();
   });
 }
-function fillVoices(){
-  voice.innerHTML='<option value="-1">Default</option>';
-  voices.filter(v=>v.lang.startsWith(lang.value)).forEach((v,i)=>{
-    voice.add(new Option(v.name,i));
-  });
-  voice.onchange=()=>{ if(voice.value!=='-1'){const test=new SpeechSynthesisUtterance(SAMPLE);test.voice=voices[voice.value];speechSynthesis.speak(test);} };
+function populateVoiceSel(){
+  voiceSel.innerHTML='<option value="-1">Default</option>';
+  voices.filter(v=>v.lang.startsWith(langSel.value))
+        .forEach((v,i)=>voiceSel.add(new Option(v.name,i)));
+}
+function previewVoice(){
+  const u=new SpeechSynthesisUtterance('Hi'); u.voice=voices[+voiceSel.value]; u.rate=+rateR.value; speechSynthesis.speak(u);
 }
 
-/* ======== Build display & spans ======== */
+/* ==========  DISPLAY BUILD  ========== */
 function buildDisplay(){
-  text=txt.value;
-  display.innerHTML='';spans=[];charPos=0;
-  text.split(/(\s+)/).forEach((tok,i)=>{
-    const s=document.createElement('span');s.textContent=tok;s.dataset.i=i;
-    display.appendChild(s);spans.push(charPos);charPos+=tok.length;
+  disp.innerHTML='';
+  totalChars = txt.value.length;
+  let pos=0;
+  txt.value.split(/(\s+)/).forEach((tok,i)=>{
+    const s=document.createElement('span'); s.textContent=tok;
+    disp.appendChild(s);
+    pos+=tok.length;
   });
-  charPos=0;updateProgress(0);
+  resetMeter();
 }
 
-/* ======== Speak ======== */
-function speak(fresh){
-  if(!text.trim()){alert('Enter text first');return;}
-  if(fresh){stopAll();charPos=0;}
-  if(!voices.length||voice.value==='-1') return fallbackSpeak(text.slice(charPos));
-  queueChunks(); playNext();
+/* ==========  START SPEAK  ========== */
+function startSpeak(){
+  if(isSpeaking) stopAll();
+  if(!txt.value.trim()) {alert('Type or paste some text'); return;}
+  if(!voices.length || voiceSel.value==='-1') { fallbackSpeak(); return; }
+
+  queue = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g')) || [];
+  progChar=0; startTime=Date.now(); boundarySeen=false; isSpeaking=true;
+  speakNext();
+  requestAnimationFrame(progressLoop);
 }
-function queueChunks(){
-  q=text.slice(charPos).match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g'))||[];
-}
-function playNext(){
-  if(!q.length){finish();return;}
-  u=new SpeechSynthesisUtterance(q.shift());
-  u.rate=+rate.value;
-  if(voice.value!=='-1'&&voices[voice.value])u.voice=voices[+voice.value];
-  const localStart=charPos;
-  u.onboundary=e=>{const g=localStart+e.charIndex;highlight(g);updateProgress(g);}
-  u.onend=()=>{charPos+=u.text.length;playNext();}
-  speechSynthesis.speak(u);
-  if(!startTime)startTime=Date.now(),rafLoop();
+function speakNext(){
+  if(!queue.length){finish(); return;}
+  const chunk=queue.shift();
+  utter=new SpeechSynthesisUtterance(chunk);
+  utter.rate=+rateR.value;
+  if(voiceSel.value!=='-1') utter.voice = voices[+voiceSel.value];
+  const chunkStart=progChar;
+  utter.onboundary = e=>{
+    progChar = chunkStart + e.charIndex;
+    boundarySeen = true;
+  };
+  utter.onend = ()=>{ progChar = chunkStart+chunk.length; speakNext(); };
+  speechSynthesis.speak(utter);
 }
 
-/* ======== Progress loop ======== */
-function rafLoop(){if(!speechSynthesis.speaking)return;
-  updateProgress(charPos+Math.round(u.charIndex||0));
-  requestAnimationFrame(rafLoop);
+/* ==========  PROGRESS LOOP  ========== */
+function progressLoop(){
+  if(!isSpeaking) return;
+  if(!boundarySeen){ // fall back to time-based estimate after 0.5 s without boundary
+    const elapsed=(Date.now()-startTime)/1000;
+    progChar=Math.min(totalChars, Math.round(elapsed* (1/0.55)*5 )); // crude ~180wpm
+  }
+  updateMeter(progChar);
+  requestAnimationFrame(progressLoop);
 }
 
-/* ======== Highlight ======== */
-function highlight(gChar){
-  const idx=spans.findIndex((p,i)=>gChar>=p && (i===spans.length-1||gChar<spans[i+1]));
-  [...display.children].forEach(s=>s.classList.remove('highlight'));
-  if(idx>=0)display.children[idx].classList.add('highlight');
+/* ==========  UPDATE METER  ========== */
+function updateMeter(c){
+  const p=Math.round(c/totalChars*100);
+  bar.value=p; pct.textContent=p+' %';
+  const el=Math.floor((Date.now()-startTime)/1000);
+  const estTotal=Math.round(totalChars/ (180*5/60) /rateR.value ); // 180 wpm *5chars/word
+  const rm=Math.max(0,estTotal-el);
+  ela.textContent=formatTime(el); rem.textContent=formatTime(rm);
+  highlight(c);
+}
+function formatTime(s){const h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor(s%3600/60)).padStart(2,'0'),sc=String(s%60).padStart(2,'0');return `${h}:${m}:${sc}`;}
+
+/* ==========  HIGHLIGHT  ========== */
+function highlight(charIdx){
+  let sum=0,child;
+  for(const span of disp.childNodes){
+    const len=span.textContent.length;
+    if(charIdx>=sum && charIdx<sum+len){child=span;break;}
+    sum+=len;
+  }
+  Array.from(disp.children).forEach(s=>s.classList.remove('highlight'));
+  if(child) child.classList.add('highlight');
 }
 
-/* ======== Progress numbers ======== */
-function updateProgress(c){
-  const pct=Math.round(c/text.length*100);
-  bar.value=pct;timer.firstElementChild.textContent=pct+' %';
-  const elapsed=Math.floor((Date.now()-startTime)/1000);
-  const total=Math.round(text.split(/\s+/).length*0.5/rate.value);
-  const remain=Math.max(0,total-elapsed);
-  elap.textContent=fmt(elapsed);rem.textContent=fmt(remain);
+/* ==========  FALLBACK (VoiceRSS)  ========== */
+async function fallbackSpeak(){
+  if(!keyRSS){alert('No local voices & no VoiceRSS key');return;}
+  progChar=0; startTime=Date.now(); isSpeaking=true;
+  const chunks = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g'))||[];
+  for(const chunk of chunks){
+    await playViaRSS(chunk);
+    progChar+=chunk.length;
+  }
+  finish();
 }
-function fmt(s){const h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor(s%3600/60)).padStart(2,'0'),sc=String(s%60).padStart(2,'0');return`${h}:${m}:${sc}`;}
-
-/* ======== Finish ======== */
-function finish(){updateProgress(text.length);highlight(text.length);}
-
-/* ======== Fallback via VoiceRSS ======== */
-async function fallbackSpeak(t){
-  if(!voiceRSSKey){alert('No local voices and no VoiceRSS key');return;}
-  const rVal=Math.round(((rate.value-0.5)/1.5)*10-5);
-  startTime=Date.now();
-  for(const chunk of (t.match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g'))||[])){
-    const url=`https://api.voicerss.org/?key=${voiceRSSKey}&hl=${lang.value}&c=MP3&r=${rVal}&src=${encodeURIComponent(chunk)}`;
-    const blob=await fetch(url).then(r=>r.blob());
-    await playBlob(blob,chunk.length);
-  } finish();
-}
-function playBlob(blob,len){
-  return new Promise(res=>{
-    fallbackAudio=new Audio(URL.createObjectURL(blob));fallbackAudio.play();
-    const base=charPos;
-    const loop=setInterval(()=>{if(!fallbackAudio)clearInterval(loop);
-      const prog=base+Math.round(len*(fallbackAudio.currentTime/fallbackAudio.duration||0));
-      highlight(prog);updateProgress(prog);
-    },200);
-    fallbackAudio.onended=()=>{clearInterval(loop);charPos+=len;res();};
+function playViaRSS(textPart){
+  return new Promise(async res=>{
+    const rVal=Math.round(((rateR.value-0.5)/1.5)*10-5);
+    const url=`https://api.voicerss.org/?key=${keyRSS}&hl=${langSel.value}&c=MP3&r=${rVal}&src=${encodeURIComponent(textPart)}`;
+    const aud=new Audio(url); fallbackAud=aud; aud.play();
+    const len=textPart.length,base=progChar;
+    const tID=setInterval(()=>updateMeter(base+Math.round(len*(aud.currentTime/aud.duration||0))),200);
+    aud.onended=()=>{clearInterval(tID); res();};
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden) aud.play();});
   });
 }
 
-/* ======== Stop ======== */
-function stopAll(){speechSynthesis.cancel();q=[];if(fallbackAudio){fallbackAudio.pause();fallbackAudio=null;}startTime=0;updateProgress(charPos);}
+/* ==========  STOP / FINISH  ========== */
+function stopAll(){
+  speechSynthesis.cancel(); queue=[]; isSpeaking=false;
+  fallbackAud?.pause(); fallbackAud=null; resetMeter();
+}
+function finish(){isSpeaking=false; updateMeter(totalChars);}
+function resetMeter(){bar.value=0; pct.textContent='0 %'; ela.textContent='00:00:00'; rem.textContent='00:00:00';}
 
-/* ======== Auto-size ======== */
+/* ==========  AUTO-SIZE  ========== */
 function autoSize(){txt.style.height='auto';txt.style.height=txt.scrollHeight+'px';}
-autoSize();
 </script>
 </body>
 </html>
