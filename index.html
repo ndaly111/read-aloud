@@ -2,82 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=5; IE=8; IE=Edge"> <!-- hello, old school -->
+  <meta http-equiv="X-UA-Compatible" content="IE=5; IE=Edge">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Read-Aloud | Totally FREE Text-to-Speech!</title>
 
-  <!-- Retro tile background (replace bg_tile.gif with any 32×32 GIF you like) -->
+  <!-- ——— 1999 style ——— -->
   <style>
-    body{
-      margin:0;
-      background:#000080 url("bg_tile.gif") repeat;
-      color:#FFFFCC;
-      font-family:Verdana, Geneva, sans-serif;
-      font-size:14px;
-    }
-    /* --- Links ---------------------------------------------------------------- */
-    a{color:#FFFF33;text-decoration:none}
-    a:hover{text-decoration:underline}
-    /* --- Header --------------------------------------------------------------- */
-    #top-bar{
-      border-bottom:3px double #FFFF00;
-      background:#000040;
-      text-align:center;
-      padding:5px 0;
-    }
-    #logo{
-      font-family:"Comic Sans MS", cursive;
-      font-size:48px;
-      color:#00FF00;
-      text-shadow:2px 2px 0 #FF00FF;
-      letter-spacing:2px;
-    }
-    /* --- Navigation ----------------------------------------------------------- */
-    #nav ul{margin:0;padding:0;list-style:none}
-    #nav li{display:inline-block;margin:0 8px}
+    body{margin:0;background:#000080 url("bg_tile.gif") repeat;color:#FFFFCC;font:14px Verdana}
+    a{color:#FFFF33;text-decoration:none}a:hover{text-decoration:underline}
+    #top-bar{border-bottom:3px double #FFFF00;background:#000040;text-align:center;padding:5px 0}
+    #logo{font:48px "Comic Sans MS";color:#00FF00;text-shadow:2px 2px 0 #FF00FF;letter-spacing:2px}
+    #nav ul{margin:0;padding:0;list-style:none}#nav li{display:inline-block;margin:0 8px}
     #nav a{padding:2px 6px;border:1px dotted #FFFF00}
-    /* --- Page Layout ---------------------------------------------------------- */
     #outer-table{margin:0 auto;width:95%;max-width:960px;border:3px ridge #FFFF00}
-    .side-cell{width:160px;background:#000040 url("sidebar_tile.gif") repeat;border-right:3px groove #FFFF00;vertical-align:top}
+    .side-cell{width:160px;background:#000040;border-right:3px groove #FFFF00;vertical-align:top}
     .content-cell{padding:20px}
     .panel{background:#001a66;border:2px outset #FFFF00;padding:10px;margin-bottom:20px}
-    h2,h3{font-family:"Comic Sans MS",cursive;color:#FFFF66;margin:0 0 10px}
-    /* --- Buttons -------------------------------------------------------------- */
-    .btn,.button-container button{
-      font-family:Tahoma,Arial,sans-serif;
-      font-size:14px;
-      color:#000;
-      background:#FFFF00;
-      border:2px outset #333;
-      padding:6px 12px;
-      cursor:pointer
-    }
+    h2{font:"Comic Sans MS";color:#FFFF66;margin:0 0 10px}
+    .btn,.button-container button{font:14px Tahoma;background:#FFFF00;color:#000;border:2px outset #333;padding:6px 12px;cursor:pointer}
     .button-container button{margin-right:4px}
-    textarea{
-      width:100%;min-height:120px;
-      background:#fff;border:3px inset #666;color:#000;font-family:Courier New,monospace
-    }
-    select,input[type="range"]{
-      background:#FFFFCC;border:2px inset #333;color:#000
-    }
-    /* --- Progress bar (retro look) ------------------------------------------- */
-    progress{
-      width:100%;height:12px;border:2px inset #333;background:#333
-    }
+    textarea{width:100%;min-height:120px;background:#fff;border:3px inset #666;color:#000;font:14px/1.4 "Courier New",monospace}
+    select,input[type="range"]{background:#FFFFCC;border:2px inset #333;color:#000}
+    progress{width:100%;height:12px;border:2px inset #333;background:#333}
     progress::-webkit-progress-value{background:#00FF00}
-    /* --- Cookie banner -------------------------------------------------------- */
-    #cookie-banner{
-      position:fixed;bottom:0;left:0;right:0;
-      background:#FFFF66;color:#000;padding:6px 4px;
-      border-top:3px ridge #000;font:12px/1 Verdana,sans-serif;
-      display:none;z-index:9999;text-align:center
-    }
+    #cookie-banner{position:fixed;bottom:0;left:0;right:0;background:#FFFF66;color:#000;padding:6px;border-top:3px ridge #000;font:12px Verdana;display:none;text-align:center;z-index:9999}
     #cookie-banner button{margin-left:6px}
-    /* --- Highlight ------------------------------------------------------------ */
     .highlight{background:#FF00FF;color:#000}
-    /* --- Hide modern scrollbars (retro) -------------------------------------- */
-    ::-webkit-scrollbar{width:12px;background:#000040}
-    ::-webkit-scrollbar-thumb{background:#FFFF00;border:2px ridge #333}
+    ::-webkit-scrollbar{width:12px;background:#000040}::-webkit-scrollbar-thumb{background:#FFFF00;border:2px ridge #333}
     @media(max-width:640px){.side-cell{display:none}}
   </style>
 
@@ -91,61 +42,49 @@
 </head>
 <body>
 
-<!-- Cookie Banner -->
-<div id="cookie-banner">We use cookies (yum!). <button id="cookie-accept" class="btn">OK!</button></div>
+<!-- Cookie banner -->
+<div id="cookie-banner">We use cookies to personalise content and ads. <button id="cookie-accept" class="btn">OK!</button></div>
 
-<!-- Header + Marquee -->
+<!-- Header & marquee -->
 <div id="top-bar">
-  <div id="logo"><img src="star.gif" alt="★" width="32" height="32"> Read-Aloud <img src="star.gif" alt="★" width="32" height="32"></div>
-  <marquee behavior="scroll" direction="left" scrollamount="4" style="color:#FFFF33">Convert Any Text → Speech in True Y2K Style — 100 % FREE, unlimited!</marquee>
-  <nav id="nav">
-    <ul>
-      <li><a href="index.html">Home</a></li>
-      <li><a href="#tool-interface">The Tool</a></li>
-      <li><a href="about.html">About</a></li>
-      <li><a href="blog.html">Blog</a></li>
-      <li><a href="how-it-works.html">How It Works</a></li>
-      <li><a href="faq.html">FAQ</a></li>
-    </ul>
-  </nav>
+  <div id="logo">Read-Aloud</div>
+  <marquee scrollamount="4" style="color:#FFFF33">Convert Any Text → Speech in True Y2K Style — 100 % FREE &amp; Unlimited!</marquee>
+  <nav id="nav"><ul>
+    <li><a href="index.html">Home</a></li>
+    <li><a href="#tool-interface">The Tool</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="blog.html">Blog</a></li>
+    <li><a href="how-it-works.html">How It Works</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+  </ul></nav>
 </div>
 
-<!-- Table-based page layout (oh yes) -->
+<!-- Layout -->
 <table id="outer-table" cellspacing="0" cellpadding="0">
   <tr>
-    <!-- Left sidebar w/ animated GIF bullet list -->
     <td class="side-cell">
-      <h3>Cool Links</h3>
+      <h2 style="font-size:20px">Cool Links</h2>
       <ul style="list-style-image:url('bullet.gif');padding-left:20px">
         <li><a href="https://validator.w3.org/" target="_blank">HTML Validator</a></li>
-        <li><a href="https://neocities.org/" target="_blank">NeoCities</a></li>
-        <li><a href="https://archive.org/" target="_blank">Wayback Machine</a></li>
+        <li><a href="https://neocities.org/"     target="_blank">NeoCities</a></li>
+        <li><a href="https://archive.org/"        target="_blank">Wayback Machine</a></li>
       </ul>
-      <!-- 120×600 skyscraper for nostalgia -->
-      <div style="margin-top:20px;text-align:center">
-        <img src="ad_placeholder_120x600.gif" alt="Your Ad Here" style="border:3px ridge #FFFF00">
-      </div>
     </td>
 
-    <!-- Main content cell -->
     <td class="content-cell">
-      <!-- Hero (with AdSense) -->
-      <div class="panel" id="hero">
+      <!-- Hero -->
+      <div class="panel">
         <h2>Free Text-to-Speech Reader</h2>
         <p>Copy-paste any text and hear it spoken aloud in classic retro glory!</p>
         <button class="btn" onclick="document.location.href='#tool-interface'">Try It NOW</button>
-
-        <!-- AdSense unit (slot unchanged) -->
         <div style="margin:16px 0;text-align:center">
-          <ins class="adsbygoogle"
-               style="display:inline-block;width:468px;height:60px"
-               data-ad-client="ca-pub-4003447295960802"
-               data-ad-slot="YOUR_AD_SLOT"></ins>
-          <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+          <ins class="adsbygoogle" style="display:inline-block;width:468px;height:60px"
+               data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
+          <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
         </div>
       </div>
 
-      <!-- Tool Interface -->
+      <!-- Tool -->
       <div class="panel" id="tool-interface">
         <h2>Text → Speech Tool</h2>
         <textarea id="textInput" placeholder="Paste your text here…"></textarea><br><br>
@@ -153,7 +92,7 @@
         <label for="languageSelect">Language:</label>
         <select id="languageSelect"></select><br><br>
 
-        <label for="voiceSelect">Voice:</label>
+        <label for="voiceSelect">Voice (click to preview):</label>
         <select id="voiceSelect"><option value="-1">Default</option></select><br><br>
 
         <label for="rateControl">Speed:</label>
@@ -161,10 +100,10 @@
         <span id="rateValue">1</span><br><br>
 
         <div class="button-container">
-          <button id="startBtn">Start</button>
-          <button id="pauseBtn">Pause</button>
-          <button id="resumeBtn">Resume</button>
-          <button id="stopBtn">Stop</button>
+          <button id="startBtn">Start (S)</button>
+          <button id="pauseBtn">Pause (P)</button>
+          <button id="resumeBtn">Resume (R)</button>
+          <button id="stopBtn">Stop (X)</button>
         </div>
 
         <progress id="progressBar" value="0" max="100"></progress>
@@ -181,103 +120,214 @@
   <p>&copy; 1999-2025 Read-Aloud.com • <a href="privacy.html">Privacy</a> • <a href="terms.html">Terms</a> • <a href="contact.html">Contact</a></p>
 </div>
 
-<!-- ========== JavaScript (unchanged core logic, retro comment banners!) ========== -->
+<!-- ================= Improved TTS Engine ================= -->
 <script>
-/* =====================================================
-   ==  R  E  A  D    A  L  O  U  D    M  A  I  N     ==
-   ===================================================== */
-const useVoiceRSSFallback=true,chunkSize=3000,samplePhrase='Hello';
-const $=id=>document.getElementById(id),
-txtInput=$('textInput'),langSel=$('languageSelect'),voiceSel=$('voiceSelect'),
-rate=$('rateControl'),rateVal=$('rateValue'),startBtn=$('startBtn'),
-pauseBtn=$('pauseBtn'),resumeBtn=$('resumeBtn'),stopBtn=$('stopBtn'),
-bar=$('progressBar'),pText=$('progressText'),elapsed=$('timeElapsed'),
-remain=$('timeRemaining'),display=$('textDisplay');
-let voices=[],utter=null,startIdx=0,spans=[],prev='',startTime=0,fallbackAudio=null,key=null;
+/* ===== CONFIG ===== */
+const CHUNK_CHAR_LIMIT   = 15000;           // safe below browser limits
+const SAMPLE_PHRASE      = 'Hello';         // voice preview
+const useVoiceRSSFallback= true;
 
-/* ---------- COOKIE BANNER ---------- */
-if(localStorage.getItem('cookieAccepted')!=='yes'){
-  const b=$('cookie-banner');
-  b.style.display='block';
-  $('cookie-accept').onclick=()=>{localStorage.setItem('cookieAccepted','yes');b.remove();};
+/* ===== DOM ===== */
+const $            = id=>document.getElementById(id),
+      txtInput     = $('textInput'),
+      langSel      = $('languageSelect'),
+      voiceSel     = $('voiceSelect'),
+      rateCtrl     = $('rateControl'),
+      rateVal      = $('rateValue'),
+      startBtn     = $('startBtn'),
+      pauseBtn     = $('pauseBtn'),
+      resumeBtn    = $('resumeBtn'),
+      stopBtn      = $('stopBtn'),
+      bar          = $('progressBar'),
+      pText        = $('progressText'),
+      elapsedSpan  = $('timeElapsed'),
+      remainSpan   = $('timeRemaining'),
+      display      = $('textDisplay');
+
+/* ===== GLOBAL STATE ===== */
+let voices           = [];
+let utterQueue       = [];
+let currentUtter     = null;
+let startTime        = 0;
+let charOffset       = 0;        // chars spoken before current utter
+let fullText         = '';
+let spanStarts       = [];       // cumulative char positions of each span
+let fallbackAudio    = null;
+let voiceRSSKey      = null;
+
+/* ===== INIT ===== */
+(function init(){
+  // cookie banner
+  if(localStorage.getItem('cookieAccepted')!=='yes'){
+    $('cookie-banner').style.display='block';
+    $('cookie-accept').onclick=()=>{localStorage.setItem('cookieAccepted','yes');$('cookie-banner').remove();};
+  }
+
+  // settings
+  rateCtrl.value  = localStorage.getItem('rl_rate')  || '1';
+  rateVal.textContent = rateCtrl.value;
+
+  // input listeners
+  txtInput.addEventListener('input', rebuildDisplay);
+  rateCtrl.addEventListener('input', () => { rateVal.textContent = rateCtrl.value; saveSettings(); });
+  langSel.addEventListener('change', () => { filterVoices(); saveSettings(); });
+  voiceSel.addEventListener('change', previewVoice);
+
+  // buttons
+  startBtn.onclick  = () => speak(true);
+  pauseBtn.onclick  = pause;
+  resumeBtn.onclick = resume;
+  stopBtn.onclick   = stop;
+
+  // hotkeys
+  document.addEventListener('keydown', e=>{
+    if(e.target.tagName==='TEXTAREA') return;
+    const k=e.key.toLowerCase();
+    if(k==='s') speak(true); else if(k==='p') pause(); else if(k==='r') resume(); else if(k==='x') stop();
+  });
+
+  // voices
+  speechSynthesis.addEventListener('voiceschanged', populateVoices);
+  populateLanguages();
+  populateVoices();
+
+  // API key (VoiceRSS)
+  fetch('api_key.json').then(r=>r.ok?r.json():null).then(j=>{voiceRSSKey=j?j.VoiceRSS_API_Key:null;});
+
+  rebuildDisplay();
+})();
+
+/* ===== UI helpers ===== */
+function saveSettings(){
+  localStorage.setItem('rl_lang' , langSel.value);
+  localStorage.setItem('rl_voice', voiceSel.value);
+  localStorage.setItem('rl_rate' , rateCtrl.value);
+}
+function populateLanguages(){
+  const map = {en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian'};
+  for(const k in map){
+    const o=document.createElement('option'); o.value=k; o.textContent=map[k]; langSel.appendChild(o);
+  }
+  langSel.value = localStorage.getItem('rl_lang') || 'en';
+}
+function populateVoices(attempt=0){
+  voices = speechSynthesis.getVoices();
+  if(!voices.length && attempt<5) return setTimeout(()=>populateVoices(attempt+1), 200<<attempt);
+  filterVoices();
+  voiceSel.value = localStorage.getItem('rl_voice') || '-1';
+}
+function filterVoices(){
+  const lang = langSel.value;
+  voiceSel.innerHTML='<option value="-1">Default</option>';
+  voices.filter(v=>v.lang.startsWith(lang))
+        .forEach((v,i)=>{ const o=document.createElement('option');o.value=i;o.textContent=v.name;voiceSel.appendChild(o); });
 }
 
-/* ---------- SETTINGS ---------- */
-function saveSettings(){localStorage.setItem('rl_lang',langSel.value);localStorage.setItem('rl_voice',voiceSel.value);localStorage.setItem('rl_rate',rate.value);}
-function loadSettings(){rate.value=localStorage.getItem('rl_rate')||'1';rateVal.textContent=rate.value;}
-
-/* ---------- INIT ---------- */
-document.addEventListener('DOMContentLoaded',async()=>{
-  loadSettings();
-  txtInput.addEventListener('input',autoSizeAndDisplay);autoSizeAndDisplay();
-  rate.oninput=()=>{rateVal.textContent=rate.value;saveSettings();};
-  langSel.onchange=()=>{filterVoices();saveSettings();};
-  voiceSel.onchange=previewVoice;
-  startBtn.onclick=()=>startReading(true);pauseBtn.onclick=pauseReading;resumeBtn.onclick=resumeReading;stopBtn.onclick=stopReading;
-  document.addEventListener('keydown',hotkeys);
-  await loadApiKey();populateLanguages();populateVoices();
-});
-
-/* ---------- TEXT AREA ---------- */
-function autoSizeAndDisplay(){
-  txtInput.style.height='auto';txtInput.style.height=txtInput.scrollHeight+'px';
-  const t=txtInput.value;if(t===prev)return;
-  display.innerHTML=t.split(/(\s+)/).map((w,i)=>`<span data-i="${i}">${w}</span>`).join('');
-  spans=[...display.querySelectorAll('span')];
-  spans.forEach(s=>s.onclick=()=>{startIdx=+s.dataset.i;highlight(startIdx);startReading(false);});
-  prev=t;
+/* ===== Display & Highlight ===== */
+function rebuildDisplay(){
+  fullText = txtInput.value;
+  display.innerHTML = ''; spanStarts = [];
+  let pos = 0;
+  fullText.split(/(\s+)/).forEach((token,idx)=>{
+    const span=document.createElement('span');
+    span.textContent=token; span.dataset.i=idx;
+    span.onclick=()=>{ charOffset = spanStarts[idx]; speak(true); };
+    display.appendChild(span);
+    spanStarts[idx]=pos;
+    pos += token.length;
+  });
+  bar.value=0; pText.firstElementChild.textContent='0 %';
 }
-function highlight(i){spans.forEach(s=>s.classList.remove('highlight'));if(spans[i])spans[i].classList.add('highlight');}
-
-/* ---------- HOTKEYS ---------- */
-function hotkeys(e){if(e.target.tagName==='TEXTAREA')return;const k=e.key.toLowerCase();if(k==='s')startReading(true);else if(k==='p')pauseReading();else if(k==='r')resumeReading();else if(k==='x')stopReading();}
-
-/* ---------- VOICES ---------- */
-function populateLanguages(){['en','es','fr','de','it'].forEach(l=>{const o=document.createElement('option');o.value=l;o.text={'en':'English','es':'Spanish','fr':'French','de':'German','it':'Italian'}[l];langSel.appendChild(o);});langSel.value=localStorage.getItem('rl_lang')||'en';}
-function populateVoices(a=0){voices=speechSynthesis.getVoices();if(!voices.length&&a<5)return setTimeout(()=>populateVoices(a+1),200<<a);filterVoices();voiceSel.value=localStorage.getItem('rl_voice')||'-1';}
-speechSynthesis.addEventListener('voiceschanged',populateVoices);
-function filterVoices(){const lang=langSel.value;voiceSel.innerHTML='<option value="-1">Default</option>';voices.filter(v=>v.lang.startsWith(lang)).forEach((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=v.name;voiceSel.appendChild(o);});}
-function previewVoice(){if(voiceSel.value==='-1')return;const u=new SpeechSynthesisUtterance(samplePhrase);u.voice=voices[voiceSel.value];u.rate=rate.value;speechSynthesis.speak(u);}
-
-/* ---------- API KEY ---------- */
-async function loadApiKey(){try{key=(await (await fetch('api_key.json')).json()).VoiceRSS_API_Key;}catch{}}
-
-/* ---------- CONTROLS ---------- */
-function pauseReading(){speechSynthesis.pause();if(fallbackAudio)fallbackAudio.pause();}
-function resumeReading(){if(speechSynthesis.paused)speechSynthesis.resume();if(fallbackAudio)fallbackAudio.play();}
-function stopReading(){speechSynthesis.cancel();if(fallbackAudio){fallbackAudio.pause();fallbackAudio=null;}reset();}
-function reset(){highlight();bar.value=0;pText.querySelector('strong').textContent='0%';elapsed.textContent='00:00:00';remain.textContent='00:00:00';}
-
-/* ---------- READING ---------- */
-function splitText(t){return t.match(new RegExp('[\\s\\S]{1,'+chunkSize+'}(?:\\s|$)','g'))||[];}
-function startReading(resetPos=true){
-  const txt=txtInput.value.trim();if(!txt){alert('Enter some text first');return;}
-  if(resetPos){startIdx=0;reset();}stopReading();
-  const chunks=splitText(txt);
-  if(useVoiceRSSFallback&&(!voices.length||voiceSel.value==='-1'))return speakFallback(chunks.join(' '));
-  readChunks(chunks);
+function highlightByChar(globalChar){
+  const idx = spanStarts.findIndex((start,i)=> globalChar>=start && (i===spanStarts.length-1 || globalChar<spanStarts[i+1]));
+  [...display.children].forEach(s=>s.classList.remove('highlight'));
+  if(idx>=0) display.children[idx].classList.add('highlight');
 }
-function readChunks(chunks){if(!chunks.length)return;
-  utter=new SpeechSynthesisUtterance(chunks.shift());
-  if(voiceSel.value!=='-1'&&voices[voiceSel.value])utter.voice=voices[voiceSel.value];
-  utter.rate=rate.value;startTime=Date.now();
-  utter.onend=()=>readChunks(chunks);
-  utter.onboundary=e=>updateProgress(e.charIndex,txtInput.value.length);
-  speechSynthesis.speak(utter);
+
+/* ===== Core Speaking Logic ===== */
+function chunkText(text){
+  const re = new RegExp(`([\\s\\S]{1,${CHUNK_CHAR_LIMIT}})(?:\\s|$)`, 'g');
+  const chunks=[]; let m;
+  while((m=re.exec(text))!==null) chunks.push(m[1]);
+  return chunks;
 }
+function prepareQueue(){
+  const chunks = chunkText(fullText.slice(charOffset));
+  utterQueue = chunks.map((chunk,i)=>{
+    const ut = new SpeechSynthesisUtterance(chunk);
+    ut.rate = parseFloat(rateCtrl.value);
+    if(voiceSel.value!=='-1' && voices[voiceSel.value]) ut.voice = voices[voiceSel.value];
+    ut._startOffset = charOffset + chunks.slice(0,i).join('').length;   // global char where this utter starts
+    ut.onboundary = e=>{
+      const globalChar = ut._startOffset + e.charIndex;
+      highlightByChar(globalChar);
+      updateProgress(globalChar);
+    };
+    ut.onend = ()=>{ if(utterQueue.length) speakNext(); else finish(); };
+    return ut;
+  });
+}
+function speak(forceRestart=false){
+  if(!fullText.trim()){ alert('Enter some text first'); return; }
+  if(forceRestart){ stop(); charOffset=0; }
+  if(useVoiceRSSFallback && (!voices.length || voiceSel.value==='-1')){
+    speakFallback(fullText.slice(charOffset));
+    return;
+  }
+  prepareQueue();
+  startTime = Date.now() - (charOffset/fullText.length)*estimateTotalDuration();
+  speakNext();
+}
+function speakNext(){
+  currentUtter = utterQueue.shift();
+  if(currentUtter) speechSynthesis.speak(currentUtter);
+}
+function pause(){ speechSynthesis.pause(); if(fallbackAudio) fallbackAudio.pause(); }
+function resume(){ speechSynthesis.resume(); if(fallbackAudio) fallbackAudio.play(); }
+function stop(){ speechSynthesis.cancel(); utterQueue = []; if(fallbackAudio){ fallbackAudio.pause(); fallbackAudio=null; } finish(); }
+function finish(){ highlightByChar(fullText.length); bar.value=100; pText.firstElementChild.textContent='100 %'; }
+
+/* ===== Progress ===== */
+function estimateTotalDuration(){ return fullText.split(/\s+/).length * 0.5; } // 0.5 s/word @ rate 1
+function updateProgress(globalChar){
+  const pct = Math.round(globalChar/fullText.length*100);
+  bar.value = pct;
+  pText.firstElementChild.textContent = pct+' %';
+  const elapsed = Math.floor((Date.now()-startTime)/1000);
+  const remain  = Math.max(0, Math.round(estimateTotalDuration()-elapsed));
+  elapsedSpan.textContent = fmt(elapsed);
+  remainSpan.textContent  = fmt(remain);
+}
+function fmt(s){const h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor(s%3600/60)).padStart(2,'0'),sec=String(s%60).padStart(2,'0');return`${h}:${m}:${sec}`;}
+
+/* ===== Voice Preview ===== */
+function previewVoice(){ if(voiceSel.value==='-1') return; const u=new SpeechSynthesisUtterance(SAMPLE_PHRASE); u.voice=voices[voiceSel.value]; speechSynthesis.speak(u); }
+
+/* ===== VoiceRSS Fallback (unchanged UX, now promise-driven) ===== */
 async function speakFallback(text){
-  if(!key){alert('VoiceRSS key missing');return;}
-  const r=Math.round(((rate.value-0.5)/1.5)*10-5),url=`https://api.voicerss.org/?key=${key}&hl=${langSel.value}&c=MP3&r=${r}&src=${encodeURIComponent(text)}`;
-  const blob=await (await fetch(url)).blob();fallbackAudio=new Audio(URL.createObjectURL(blob));fallbackAudio.play();startTime=Date.now();
-  const total=text.split(/\s+/).length,timer=setInterval(()=>{if(!fallbackAudio||fallbackAudio.paused)return clearInterval(timer);const idx=Math.min(Math.floor((Date.now()-startTime)/500),total);updateProgress(idx,txtInput.value.length);},500);
-  fallbackAudio.onended=()=>{clearInterval(timer);reset();};
+  if(!voiceRSSKey){ alert('VoiceRSS key missing'); return; }
+  stop();   // ensure any prior audio stopped
+  const rateMap = Math.round(((parseFloat(rateCtrl.value)-0.5)/1.5)*10-5);
+  startTime = Date.now();
+  for(const chunk of chunkText(text)){
+    const url=`https://api.voicerss.org/?key=${voiceRSSKey}&hl=${langSel.value}&c=MP3&r=${rateMap}&src=${encodeURIComponent(chunk)}`;
+    const blob=await fetch(url).then(r=>r.blob());
+    await playBlob(blob, chunk.length);
+  }
+  finish();
 }
-function updateProgress(chars,totalChars){
-  const pct=Math.round(chars/totalChars*100);bar.value=pct;pText.querySelector('strong').textContent=pct+'%';
-  const el=Math.floor((Date.now()-startTime)/1000),rem=Math.round((totalChars-chars)/(chars?chars/el:1));
-  elapsed.textContent=formatTime(el);remain.textContent=formatTime(rem);
+function playBlob(blob,chunkLen){
+  return new Promise(res=>{
+    fallbackAudio = new Audio(URL.createObjectURL(blob));
+    fallbackAudio.play();
+    const startChar = charOffset;
+    const timer=setInterval(()=>{
+      const playedPct = fallbackAudio.currentTime/fallbackAudio.duration;
+      updateProgress(startChar + Math.round(chunkLen*playedPct));
+    },200);
+    fallbackAudio.onended=()=>{ clearInterval(timer); charOffset+=chunkLen; res(); };
+  });
 }
-function formatTime(s){const h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor(s%3600/60)).padStart(2,'0'),sec=String(Math.floor(s%60)).padStart(2,'0');return`${h}:${m}:${sec}`;}
 </script>
 </body>
 </html>
