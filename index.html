@@ -23,6 +23,7 @@ progress::-webkit-progress-value{background:#0f0}
 <!-- AdSense (UNCHANGED) -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
 <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY">
+<script src="samjs.min.js"></script>
 </head>
 
 <body>
@@ -80,6 +81,7 @@ let boundarySeen = false;
 let fallbackAud  = null;
 let keyRSS       = null;
 let isSpeaking   = false;
+let sam          = null;
 
 /* ==========  INIT  ========== */
 (async function init(){
@@ -100,6 +102,7 @@ let isSpeaking   = false;
 
   await unlockAudio();
   await loadVoices();
+  sam = new SamJs();
   buildDisplay();
   autoSize();
 })();
@@ -215,14 +218,23 @@ function highlight(charIdx){
   if(child) child.classList.add('highlight');
 }
 
-/* ==========  FALLBACK (VoiceRSS)  ========== */
+/* ==========  FALLBACK  ========== */
 async function fallbackSpeak(){
-  if(!keyRSS){alert('No local voices & no VoiceRSS key');return;}
   progChar=0; startTime=Date.now(); isSpeaking=true;
   const chunks = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g'))||[];
-  for(const chunk of chunks){
-    await playViaRSS(chunk);
-    progChar+=chunk.length;
+  if(keyRSS){
+    for(const chunk of chunks){
+      await playViaRSS(chunk);
+      progChar+=chunk.length;
+    }
+  } else if(sam){
+    for(const chunk of chunks){
+      await playViaSAM(chunk);
+      progChar+=chunk.length;
+      updateMeter(progChar);
+    }
+  } else {
+    alert('No available voices');
   }
   finish();
 }
@@ -235,6 +247,19 @@ function playViaRSS(textPart){
     const tID=setInterval(()=>updateMeter(base+Math.round(len*(aud.currentTime/aud.duration||0))),200);
     aud.onended=()=>{clearInterval(tID); res();};
     document.addEventListener('visibilitychange',()=>{if(!document.hidden) aud.play();});
+  });
+}
+function playViaSAM(textPart){
+  return new Promise(res=>{
+    const len=textPart.length,base=progChar;
+    const est= len / (180*5/60) / rateR.value; // estimate seconds
+    const start=Date.now();
+    const tID=setInterval(()=>{
+      const ratio=Math.min(1,(Date.now()-start)/1000/est);
+      updateMeter(base+Math.round(len*ratio));
+      if(ratio>=1) clearInterval(tID);
+    },200);
+    sam.speak(textPart).then(()=>{clearInterval(tID); res();});
   });
 }
 
