@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text-to-Speech Website</title>
     <link rel="stylesheet" href="styles.css">
-<script src="https://unpkg.com/mespeak/mespeak.min.js"></script>
 </head>
 <body>
     <h1>Text-to-Speech Reader</h1>
@@ -57,10 +56,6 @@
         let previousText = "";
         let readingStartTime = null;
         let cachedSpans = null; // Cache spans for performance optimization
-
-window.mespeakLoaded=false;
-mespeak.loadConfig("https://unpkg.com/mespeak/mespeak_config.json");
-mespeak.loadVoice("https://unpkg.com/mespeak/voices/en/en.json",()=>{window.mespeakLoaded=true;});
 
         const textDisplay = document.getElementById('textDisplay');
         const textInput = document.getElementById('textInput');
@@ -184,11 +179,6 @@ mespeak.loadVoice("https://unpkg.com/mespeak/voices/en/en.json",()=>{window.mesp
 
             if (!text) {
                 alert('Please enter some text to read aloud.');
-                return;
-            }
-
-            if(voices.length===0 || voicesDropdown.value==='-1'){
-                mespeak.speak(text,{speed:parseFloat(rateControl.value)*175});
                 return;
             }
 

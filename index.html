@@ -55,7 +55,7 @@ progress::-webkit-progress-value{background:#0f0}
        data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
   <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
 </div>
-<script src="https://unpkg.com/mespeak/mespeak.min.js"></script>
+
 <script>
 /* ==========  CONSTANTS  ========== */
 const CHUNK   = 900;          // 900 chars per utterance
@@ -68,10 +68,6 @@ const txt   = $('txt'), langSel=$('lang'), voiceSel=$('voice'),
       bar   = $('bar'), ela=$('ela'), rem=$('rem'), pct=$('meter').firstElementChild,
       startB=$('start'), pauseB=$('pause'), resumeB=$('resume'), stopB=$('stop'),
       disp  = $('disp');
-
-window.mespeakLoaded=false;
-mespeak.loadConfig("https://unpkg.com/mespeak/mespeak_config.json");
-mespeak.loadVoice("https://unpkg.com/mespeak/voices/en/en.json",()=>{window.mespeakLoaded=true;});
 
 /* ==========  GLOBALS  ========== */
 let voices       = [];
@@ -221,17 +217,6 @@ function highlight(charIdx){
 
 /* ==========  FALLBACK (VoiceRSS)  ========== */
 async function fallbackSpeak(){
-  if(window.mespeakLoaded){
-    progChar=0; startTime=Date.now(); isSpeaking=true;
-    const chunks = txt.value.match(new RegExp(`[\s\S]{1,${CHUNK}}(?:\s|$)`,'g'))||[];
-    for(const chunk of chunks){
-      await playViaMeSpeak(chunk);
-      progChar+=chunk.length;
-      updateMeter(progChar);
-    }
-    finish();
-    return;
-  }
   if(!keyRSS){alert('No local voices & no VoiceRSS key');return;}
   progChar=0; startTime=Date.now(); isSpeaking=true;
   const chunks = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g'))||[];
@@ -250,15 +235,6 @@ function playViaRSS(textPart){
     const tID=setInterval(()=>updateMeter(base+Math.round(len*(aud.currentTime/aud.duration||0))),200);
     aud.onended=()=>{clearInterval(tID); res();};
     document.addEventListener('visibilitychange',()=>{if(!document.hidden) aud.play();});
-  });
-}
-
-function playViaMeSpeak(textPart){
-  return new Promise(res=>{
-    mespeak.speak(textPart,{
-      speed:+rateR.value*175,
-      amplitude:100
-    },res);
   });
 }
 
