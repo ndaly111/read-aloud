@@ -23,6 +23,7 @@ progress::-webkit-progress-value{background:#0f0}
 <!-- AdSense (UNCHANGED) -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
 <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY">
+<script src="mespeak.min.js"></script>
 </head>
 
 <body>
@@ -77,8 +78,7 @@ let progChar     = 0;
 let totalChars   = 0;
 let startTime    = 0;
 let boundarySeen = false;
-let fallbackAud  = null;
-let keyRSS       = null;
+let meSpeakReady = false;
 let isSpeaking   = false;
 
 /* ==========  INIT  ========== */
@@ -89,14 +89,13 @@ let isSpeaking   = false;
   voiceSel.addEventListener('change',()=>{ if(voiceSel.value!=='-1') previewVoice(); });
 
   startB.onclick = () => startSpeak();
-  pauseB.onclick = () => {speechSynthesis.pause(); fallbackAud?.pause();};
-  resumeB.onclick= () => {speechSynthesis.resume(); fallbackAud?.play();};
+  pauseB.onclick = () => {speechSynthesis.pause();};
+  resumeB.onclick = () => {speechSynthesis.resume();};
   stopB.onclick  = stopAll;
 
   txt.addEventListener('input',buildDisplay);
   window.addEventListener('resize', autoSize);
 
-  try { keyRSS = (await fetch('api_key.json').then(r=>r.json())).VoiceRSS_API_Key; } catch{}
 
   await unlockAudio();
   await loadVoices();
@@ -105,6 +104,18 @@ let isSpeaking   = false;
 })();
 
 /* ==========  AUDIO UNLOCK  ========== */
+/* ==========  MESPEAK SETUP  ========== */
+function loadMeSpeak(){
+  return new Promise(res=>{
+    if(meSpeakReady) return res();
+    meSpeak.loadConfig("mespeak_config.json",()=>{
+      meSpeak.loadVoice("mespeak_voices/en/en-us.json",()=>{
+        meSpeakReady=true;
+        res();
+      });
+    });
+  });
+}
 function unlockAudio(){
   return new Promise(res=>{
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -214,34 +225,19 @@ function highlight(charIdx){
   Array.from(disp.children).forEach(s=>s.classList.remove('highlight'));
   if(child) child.classList.add('highlight');
 }
-
-/* ==========  FALLBACK (VoiceRSS)  ========== */
+/* ==========  FALLBACK (meSpeak)  ========== */
 async function fallbackSpeak(){
-  if(!keyRSS){alert('No local voices & no VoiceRSS key');return;}
-  progChar=0; startTime=Date.now(); isSpeaking=true;
-  const chunks = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g'))||[];
-  for(const chunk of chunks){
-    await playViaRSS(chunk);
-    progChar+=chunk.length;
-  }
-  finish();
-}
-function playViaRSS(textPart){
-  return new Promise(async res=>{
-    const rVal=Math.round(((rateR.value-0.5)/1.5)*10-5);
-    const url=`https://api.voicerss.org/?key=${keyRSS}&hl=${langSel.value}&c=MP3&r=${rVal}&src=${encodeURIComponent(textPart)}`;
-    const aud=new Audio(url); fallbackAud=aud; aud.play();
-    const len=textPart.length,base=progChar;
-    const tID=setInterval(()=>updateMeter(base+Math.round(len*(aud.currentTime/aud.duration||0))),200);
-    aud.onended=()=>{clearInterval(tID); res();};
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden) aud.play();});
+  await loadMeSpeak();
+  const chunks = txt.value.match(new RegExp(`[\s\S]{1,${CHUNK}}(?:\s|$)`,"g"))||[];
+  chunks.forEach(chunk=>{
+    meSpeak.speak(chunk,{speed: Math.round(175*rateR.value)});
   });
+  finish();
 }
 
 /* ==========  STOP / FINISH  ========== */
 function stopAll(){
   speechSynthesis.cancel(); queue=[]; isSpeaking=false;
-  fallbackAud?.pause(); fallbackAud=null; resetMeter();
 }
 function finish(){isSpeaking=false; updateMeter(totalChars);}
 function resetMeter(){bar.value=0; pct.textContent='0 %'; ela.textContent='00:00:00'; rem.textContent='00:00:00';}

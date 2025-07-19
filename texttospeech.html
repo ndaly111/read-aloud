@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text-to-Speech Website</title>
     <link rel="stylesheet" href="styles.css">
+<script src="mespeak.min.js"></script>
 </head>
 <body>
     <h1>Text-to-Speech Reader</h1>
@@ -52,6 +53,7 @@
     <script>
         let speechSynthesisUtterance;
         let voices = [];
+        let meSpeakReady = false;
         let startWordIndex = 0;
         let previousText = "";
         let readingStartTime = null;
@@ -76,6 +78,17 @@
             "de-DE": ["Hans", "Marlene"],
             "it-IT": ["Alice", "Luca"],
         };
+        function loadMeSpeak(){
+            return new Promise(res=>{
+                if(meSpeakReady) return res();
+                meSpeak.loadConfig("mespeak_config.json",()=>{
+                    meSpeak.loadVoice("mespeak_voices/en/en-us.json",()=>{
+                        meSpeakReady = true;
+                        res();
+                    });
+                });
+            });
+        }
 
         let excludedVoices = [];
 
@@ -188,9 +201,15 @@
             }
 
             const words = text.split(/(\s+)/);
-            const selectedText = words.slice(startWordIndex).join('');
 
+            const selectedText = words.slice(startWordIndex).join("");
             speechSynthesisUtterance = new SpeechSynthesisUtterance(selectedText);
+            if(!voices.length || voicesDropdown.value === "-1") {
+                loadMeSpeak().then(()=>{
+                    meSpeak.speak(selectedText,{speed: parseFloat(rateControl.value)*175});
+                });
+                return;
+            }
 
             const selectedVoiceIndex = parseInt(voicesDropdown.value, 10);
             if (!isNaN(selectedVoiceIndex) && voices[selectedVoiceIndex]) {
