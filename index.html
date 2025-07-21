@@ -20,7 +20,7 @@ progress::-webkit-progress-value{background:#0f0}
 @media(max-width:640px){body{font-size:13px}}
 </style>
 
-<!-- AdSense (UNCHANGED) -->
+<!-- (unchanged) AdSense / verification -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
 <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY">
 </head>
@@ -38,10 +38,10 @@ progress::-webkit-progress-value{background:#0f0}
     <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
   </label><br><br>
 
-  <button id="start" class="btn">Start</button>
-  <button id="pause" class="btn">Pause</button>
+  <button id="start"  class="btn">Start</button>
+  <button id="pause"  class="btn">Pause</button>
   <button id="resume" class="btn">Resume</button>
-  <button id="stop" class="btn">Stop</button><br><br>
+  <button id="stop"   class="btn">Stop</button><br><br>
 
   <progress id="bar" value="0" max="100"></progress>
   <div id="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
@@ -55,223 +55,11 @@ progress::-webkit-progress-value{background:#0f0}
        data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
   <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
 </div>
+
+<!-- ①  meSpeak library (must load first) -->
 <script src="https://unpkg.com/mespeak/mespeak.min.js"></script>
-<script>
-/* ==========  CONSTANTS  ========== */
-const CHUNK   = 900;          // 900 chars per utterance
-const LANGS   = {en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian'};
-const $       = id=>document.getElementById(id);
 
-/* ==========  DOM refs  ========== */
-const txt   = $('txt'), langSel=$('lang'), voiceSel=$('voice'),
-      rateR = $('rate'), rateV=$('rv'),
-      bar   = $('bar'), ela=$('ela'), rem=$('rem'), pct=$('meter').firstElementChild,
-      startB=$('start'), pauseB=$('pause'), resumeB=$('resume'), stopB=$('stop'),
-      disp  = $('disp');
-
-window.mespeakLoaded=false;
-mespeak.loadConfig("https://unpkg.com/mespeak/mespeak_config.json");
-mespeak.loadVoice("https://unpkg.com/mespeak/voices/en/en.json",()=>{window.mespeakLoaded=true;});
-
-/* ==========  GLOBALS  ========== */
-let voices       = [];
-let queue        = [];
-let utter        = null;
-let progChar     = 0;
-let totalChars   = 0;
-let startTime    = 0;
-let boundarySeen = false;
-let fallbackAud  = null;
-let keyRSS       = null;
-let isSpeaking   = false;
-
-/* ==========  INIT  ========== */
-(async function init(){
-  Object.entries(LANGS).forEach(([c,n])=>langSel.add(new Option(n,c)));
-  rateR.oninput = ()=>rateV.textContent=rateR.value;
-
-  voiceSel.addEventListener('change',()=>{ if(voiceSel.value!=='-1') previewVoice(); });
-
-  startB.onclick = () => startSpeak();
-  pauseB.onclick = () => {speechSynthesis.pause(); fallbackAud?.pause();};
-  resumeB.onclick= () => {speechSynthesis.resume(); fallbackAud?.play();};
-  stopB.onclick  = stopAll;
-
-  txt.addEventListener('input',buildDisplay);
-  window.addEventListener('resize', autoSize);
-
-  try { keyRSS = (await fetch('api_key.json').then(r=>r.json())).VoiceRSS_API_Key; } catch{}
-
-  await unlockAudio();
-  await loadVoices();
-  buildDisplay();
-  autoSize();
-})();
-
-/* ==========  AUDIO UNLOCK  ========== */
-function unlockAudio(){
-  return new Promise(res=>{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const unlock = ()=>{
-      const buf=ctx.createBuffer(1,1,22050);
-      const src=ctx.createBufferSource(); src.buffer=buf; src.connect(ctx.destination); src.start(0);
-      document.body.removeEventListener('touchend',unlock);
-      res();
-    };
-    document.body.addEventListener('touchend',unlock,{once:true});
-  });
-}
-
-/* ==========  VOICES  ========== */
-function loadVoices(timeout=3000){
-  return new Promise(res=>{
-    const t0=Date.now();
-    const poll=()=>{
-      voices=speechSynthesis.getVoices();
-      if(voices.length||Date.now()-t0>timeout){populateVoiceSel();res();}
-      else setTimeout(poll,200);
-    };
-    // nudge iOS
-    speechSynthesis.speak(new SpeechSynthesisUtterance(' '));
-    poll();
-  });
-}
-function populateVoiceSel(){
-  voiceSel.innerHTML='<option value="-1">Default</option>';
-  voices.filter(v=>v.lang.startsWith(langSel.value))
-        .forEach((v,i)=>voiceSel.add(new Option(v.name,i)));
-}
-function previewVoice(){
-  const u=new SpeechSynthesisUtterance('Hi'); u.voice=voices[+voiceSel.value]; u.rate=+rateR.value; speechSynthesis.speak(u);
-}
-
-/* ==========  DISPLAY BUILD  ========== */
-function buildDisplay(){
-  disp.innerHTML='';
-  totalChars = txt.value.length;
-  let pos=0;
-  txt.value.split(/(\s+)/).forEach((tok,i)=>{
-    const s=document.createElement('span'); s.textContent=tok;
-    disp.appendChild(s);
-    pos+=tok.length;
-  });
-  resetMeter();
-}
-
-/* ==========  START SPEAK  ========== */
-function startSpeak(){
-  if(isSpeaking) stopAll();
-  if(!txt.value.trim()) {alert('Type or paste some text'); return;}
-  if(!voices.length || voiceSel.value==='-1') { fallbackSpeak(); return; }
-
-  queue = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g')) || [];
-  progChar=0; startTime=Date.now(); boundarySeen=false; isSpeaking=true;
-  speakNext();
-  requestAnimationFrame(progressLoop);
-}
-function speakNext(){
-  if(!queue.length){finish(); return;}
-  const chunk=queue.shift();
-  utter=new SpeechSynthesisUtterance(chunk);
-  utter.rate=+rateR.value;
-  if(voiceSel.value!=='-1') utter.voice = voices[+voiceSel.value];
-  const chunkStart=progChar;
-  utter.onboundary = e=>{
-    progChar = chunkStart + e.charIndex;
-    boundarySeen = true;
-  };
-  utter.onend = ()=>{ progChar = chunkStart+chunk.length; speakNext(); };
-  speechSynthesis.speak(utter);
-}
-
-/* ==========  PROGRESS LOOP  ========== */
-function progressLoop(){
-  if(!isSpeaking) return;
-  if(!boundarySeen){ // fall back to time-based estimate after 0.5 s without boundary
-    const elapsed=(Date.now()-startTime)/1000;
-    progChar=Math.min(totalChars, Math.round(elapsed* (1/0.55)*5 )); // crude ~180wpm
-  }
-  updateMeter(progChar);
-  requestAnimationFrame(progressLoop);
-}
-
-/* ==========  UPDATE METER  ========== */
-function updateMeter(c){
-  const p=Math.round(c/totalChars*100);
-  bar.value=p; pct.textContent=p+' %';
-  const el=Math.floor((Date.now()-startTime)/1000);
-  const estTotal=Math.round(totalChars/ (180*5/60) /rateR.value ); // 180 wpm *5chars/word
-  const rm=Math.max(0,estTotal-el);
-  ela.textContent=formatTime(el); rem.textContent=formatTime(rm);
-  highlight(c);
-}
-function formatTime(s){const h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor(s%3600/60)).padStart(2,'0'),sc=String(s%60).padStart(2,'0');return `${h}:${m}:${sc}`;}
-
-/* ==========  HIGHLIGHT  ========== */
-function highlight(charIdx){
-  let sum=0,child;
-  for(const span of disp.childNodes){
-    const len=span.textContent.length;
-    if(charIdx>=sum && charIdx<sum+len){child=span;break;}
-    sum+=len;
-  }
-  Array.from(disp.children).forEach(s=>s.classList.remove('highlight'));
-  if(child) child.classList.add('highlight');
-}
-
-/* ==========  FALLBACK (VoiceRSS)  ========== */
-async function fallbackSpeak(){
-  if(window.mespeakLoaded){
-    progChar=0; startTime=Date.now(); isSpeaking=true;
-    const chunks = txt.value.match(new RegExp(`[\s\S]{1,${CHUNK}}(?:\s|$)`,'g'))||[];
-    for(const chunk of chunks){
-      await playViaMeSpeak(chunk);
-      progChar+=chunk.length;
-      updateMeter(progChar);
-    }
-    finish();
-    return;
-  }
-  if(!keyRSS){alert('No local voices & no VoiceRSS key');return;}
-  progChar=0; startTime=Date.now(); isSpeaking=true;
-  const chunks = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK}}(?:\\s|$)`,'g'))||[];
-  for(const chunk of chunks){
-    await playViaRSS(chunk);
-    progChar+=chunk.length;
-  }
-  finish();
-}
-function playViaRSS(textPart){
-  return new Promise(async res=>{
-    const rVal=Math.round(((rateR.value-0.5)/1.5)*10-5);
-    const url=`https://api.voicerss.org/?key=${keyRSS}&hl=${langSel.value}&c=MP3&r=${rVal}&src=${encodeURIComponent(textPart)}`;
-    const aud=new Audio(url); fallbackAud=aud; aud.play();
-    const len=textPart.length,base=progChar;
-    const tID=setInterval(()=>updateMeter(base+Math.round(len*(aud.currentTime/aud.duration||0))),200);
-    aud.onended=()=>{clearInterval(tID); res();};
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden) aud.play();});
-  });
-}
-
-function playViaMeSpeak(textPart){
-  return new Promise(res=>{
-    mespeak.speak(textPart,{
-      speed:+rateR.value*175,
-      amplitude:100
-    },res);
-  });
-}
-
-/* ==========  STOP / FINISH  ========== */
-function stopAll(){
-  speechSynthesis.cancel(); queue=[]; isSpeaking=false;
-  fallbackAud?.pause(); fallbackAud=null; resetMeter();
-}
-function finish(){isSpeaking=false; updateMeter(totalChars);}
-function resetMeter(){bar.value=0; pct.textContent='0 %'; ela.textContent='00:00:00'; rem.textContent='00:00:00';}
-
-/* ==========  AUTO-SIZE  ========== */
-function autoSize(){txt.style.height='auto';txt.style.height=txt.scrollHeight+'px';}
-</script>
+<!-- ②  main logic (now in its own file) -->
+<script src="readaloud.js"></script>
 </body>
 </html>
