@@ -112,15 +112,13 @@ let isSpeaking   = false;
 function unlockAudio(){
   return new Promise(res=>{
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    if(ctx.state==='running'){res();return;}
-    const unlock=()=>{
-      if(ctx.state==='suspended') ctx.resume();
+    const unlock = ()=>{
       const buf=ctx.createBuffer(1,1,22050);
       const src=ctx.createBufferSource(); src.buffer=buf; src.connect(ctx.destination); src.start(0);
-      ['touchend','click','keydown'].forEach(e=>document.body.removeEventListener(e,unlock));
+      document.body.removeEventListener('touchend',unlock);
       res();
     };
-    ['touchend','click','keydown'].forEach(e=>document.body.addEventListener(e,unlock,{once:true}));
+    document.body.addEventListener('touchend',unlock,{once:true});
   });
 }
 
