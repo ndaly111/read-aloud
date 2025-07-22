@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>Read-Aloud | FREE Text-to-Speech</title>
 
-<!-- retro css (short) -->
+<!-- ——— Retro CSS (unchanged) ——— -->
 <style>
 body{margin:0;background:#000080 url("bg_tile.gif") repeat;color:#fffc;font:14px Verdana}
 #top{background:#000040;border-bottom:3px double #ff0;text-align:center;padding:6px}
@@ -20,46 +20,54 @@ progress::-webkit-progress-value{background:#0f0}
 @media(max-width:640px){body{font-size:13px}}
 </style>
 
-<!-- (unchanged) AdSense / verification -->
+<!-- (optional) AdSense & verification — keep or remove as needed -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
 <meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY">
 </head>
 
 <body>
-<div id="top"><h1>Read-Aloud</h1></div>
+  <div id="top"><h1>Read-Aloud</h1></div>
 
-<div class="panel">
-  <textarea id="txt" placeholder="Paste or type text here…"></textarea><br><br>
+  <div class="panel">
+    <textarea id="txt" placeholder="Paste or type text here…"></textarea><br><br>
 
-  <label>Language <select id="lang"></select></label>
-  <label style="margin-left:12px">Voice <select id="voice"><option value="-1">Default</option></select></label><br><br>
+    <label>Language
+      <select id="lang"></select>
+    </label>
+    <label style="margin-left:12px">Voice
+      <select id="voice"><option value="-1">Default</option></select>
+    </label><br><br>
 
-  <label>Speed <span id="rv">1</span>x
-    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
-  </label><br><br>
+    <label>Speed <span id="rv">1</span>x
+      <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+    </label><br><br>
 
-  <button id="start"  class="btn">Start</button>
-  <button id="pause"  class="btn">Pause</button>
-  <button id="resume" class="btn">Resume</button>
-  <button id="stop"   class="btn">Stop</button><br><br>
+    <button id="start"  class="btn">Start</button>
+    <button id="pause"  class="btn">Pause</button>
+    <button id="resume" class="btn">Resume</button>
+    <button id="stop"   class="btn">Stop</button><br><br>
 
-  <progress id="bar" value="0" max="100"></progress>
-  <div id="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
+    <progress id="bar" value="0" max="100"></progress>
+    <div id="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
 
-  <div id="disp" aria-live="polite" style="margin-top:8px"></div>
-</div>
+    <div id="disp" aria-live="polite" style="margin-top:8px"></div>
+  </div>
 
-<!-- ad unit -->
-<div style="text-align:center;margin:14px">
-  <ins class="adsbygoogle" style="display:inline-block;width:468px;height:60px"
-       data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
-  <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
-</div>
+  <!-- (optional) Ad unit -->
+  <div style="text-align:center;margin:14px">
+    <ins class="adsbygoogle" style="display:inline-block;width:468px;height:60px"
+         data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
+    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+  </div>
 
-<!-- ①  meSpeak library (must load first) -->
-<script src="https://unpkg.com/mespeak/mespeak.min.js"></script>
+  <!-- —— Fallback synth: meSpeak.js + English voice —— -->
+  <script src="https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak.min.js"></script>
+  <script>
+    mespeak.loadConfig("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak_config.json");
+    mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json");
+  </script>
 
-<!-- ②  main logic (now in its own file) -->
-<script src="readaloud.js"></script>
+  <!-- —— Main logic (place your new readaloud.js in the same folder) —— -->
+  <script src="readaloud.js"></script>
 </body>
 </html>
