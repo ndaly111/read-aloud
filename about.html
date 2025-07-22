@@ -1,62 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>About | Read-Aloud</title>
-  <meta name="description" content="Learn more about Read-Aloud, our free text-to-speech tool that converts text to natural-sounding speech for enhanced accessibility, productivity, and learning.">
-  <link rel="stylesheet" href="styles.css">
-  
-  <!-- Adsense and GTM scripts can be included here if needed -->
+<meta charset="utf-8">
+<title>About | Read-Aloud</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Mission statement and team details for the free, browser-based Read-Aloud text-to-speech tool.">
+<style>
+body{margin:0;font:16px/1.6 Georgia,serif;background:#fffef9;color:#111}
+header,footer{background:#004080;color:#fff;padding:14px;text-align:center}
+header a,footer a{color:#fff;text-decoration:none;margin:0 6px}
+main{max-width:900px;margin:auto;padding:28px}
+h1{margin-top:0}
+.ads{text-align:center;margin:32px 0}
+</style>
 </head>
+
 <body>
-  <!-- HEADER: Logo & Navigation -->
-  <header>
-    <div class="container">
-      <div class="logo">Read-Aloud</div>
-      <nav aria-label="Main Navigation">
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="about.html" class="active">About</a></li>
-          <li><a href="index.html#tool-interface">Tool</a></li>
-          <li><a href="index.html#blog">Blog</a></li>
-          <li><a href="index.html#how-it-works">How It Works</a></li>
-          <li><a href="index.html#faq">FAQ</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
+<header>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="voices.html">Voices</a>
+    <a href="help.html">Help</a>
+    <a href="about.html">About</a>
+    <a href="privacy.html">Privacy</a>
+  </nav>
+</header>
 
-  <!-- MAIN CONTENT: About Section -->
-  <main>
-    <section id="about">
-      <div class="container">
-        <h2>About This Tool</h2>
-        <p>
-          Our free text-to-speech (TTS) tool turns written words into clear, easy-to-listen audio. Whether you’re studying, multitasking, or navigating accessibility challenges, Read-Aloud offers a simple way to have text read aloud.
-        </p>
-        <p>
-          We built this tool to help students, professionals, and individuals with visual impairments or dyslexia. Using the latest in web speech APIs (or fallback audio from VoiceRSS), our site aims to provide accurate, convenient audio playback in multiple languages.
-        </p>
-        <p>
-          We also strive to keep this service lightweight, free, and privacy-friendly—no sign-ups required. For more tips on using TTS effectively, check out our <a href="index.html#blog">blog</a>.
-        </p>
-      </div>
-    </section>
-  </main>
+<main>
+  <h1>About Read-Aloud</h1>
 
-  <!-- FOOTER -->
-  <footer>
-    <div class="container">
-      <p>&copy; 2025 Read-Aloud.com. All rights reserved.</p>
-      <nav>
-        <ul>
-          <li><a href="/privacy">Privacy Policy</a></li>
-          <li><a href="/terms">Terms of Use</a></li>
-          <li><a href="/contact">Contact</a></li>
-        </ul>
-      </nav>
-    </div>
-  </footer>
+  <p><strong>Read-Aloud</strong> started in 2025 with one goal: <em>make high-quality,
+  distraction-free text-to-speech available to everyone, on any device,
+  without forcing users to create an account or upload their documents.</em></p>
+
+  <h2>What makes us different?</h2>
+  <ul>
+    <li><strong>100 % client-side processing</strong> – Your text never leaves your browser.</li>
+    <li><strong>No paywalls</strong> – We fund hosting with lightweight, non-intrusive ads.</li>
+    <li><strong>Accessibility first</strong> – WCAG-AA contrast, keyboard shortcuts and screen-reader-friendly labels.</li>
+    <li><strong>Open tech stack</strong> – Web Speech API and open-source meSpeak for fallback.</li>
+  </ul>
+
+  <h2>Who runs the site?</h2>
+  <p>Read-Aloud is maintained by <strong>Nick Daly</strong>, a knowledge-management analyst and
+     accessibility enthusiast based in Maryland, USA.  
+     You can reach Nick directly via the <a href="contact.html">contact form</a>.</p>
+
+  <div class="ads">
+    <!-- 468×60 ad -->
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:468px;height:60px"
+         data-ad-client="ca-pub-4003447295960802"
+         data-ad-slot="YOUR_SLOT_ID"></ins>
+    <script async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+  </div>
+
+  <h2>Open-source credits</h2>
+  <ul>
+    <li>Web Speech API (W3C / browser vendors)</li>
+    <li>meSpeak.js – © 2012–2024 Norbert Landsteiner, MIT Licence</li>
+    <li>Retro tile background – Public-domain via <a href="https://www.transparenttextures.com">Transparent Textures</a></li>
+  </ul>
+</main>
+
+<footer>
+  © 2025 Read-Aloud · <a href="terms.html">Terms</a>
+</footer>
 </body>
 </html>
