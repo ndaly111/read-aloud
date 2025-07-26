@@ -6,103 +6,133 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>Read-Aloud | FREE Text-to-Speech</title>
 
-<!-- ——— Retro CSS (unchanged) ——— -->
+<!-- ——— Retro CSS ——— -->
 <style>
 body{margin:0;background:#000080 url("bg_tile.gif") repeat;color:#fffc;font:14px Verdana}
-
-/* top banner */
+/* banner */
 #top{background:#000040;border-bottom:3px double #ff0;text-align:center;padding:6px}
 #top h1{margin:4px 0;font:48px "Comic Sans MS";color:#0f0;text-shadow:2px 2px #f0f}
-
-/* -------- navigation bar -------- */
+/* nav */
 #mainNav{background:#002060;border-bottom:3px double #ff0;text-align:center;padding:6px}
 #mainNav a{color:#fff;text-decoration:none;margin:0 10px;font:15px/1.4 Verdana}
 #mainNav a:hover,#mainNav a:focus{text-decoration:underline}
-
-/* main tool panel */
+/* support bar */
+#supportBar{position:relative;background:#000048;border-bottom:3px double #ff0;
+            font:14px Verdana;padding:4px 10px;color:#fff;display:flex;
+            justify-content:center;align-items:center;gap:16px}
+#supportBar .fill{position:absolute;top:0;left:0;height:100%;
+                  background:#ff0;opacity:.35}
+#supportBar span{position:relative;z-index:2;white-space:nowrap}
+.coffeeBtn{background:#ff0;border:2px outset #333;padding:4px 12px;
+           font:14px Tahoma;color:#000;text-decoration:none;cursor:pointer}
+.coffeeBtn:hover,.coffeeBtn:focus{background:#ffe95c}
+@media(max-width:480px){#supportBar{flex-direction:column;gap:6px}
+ .coffeeBtn{width:100%;text-align:center}}
+/* tool panel */
 .panel{margin:14px;background:#001a66;border:2px outset #ff0;padding:12px}
-textarea{width:100%;min-height:120px;padding:4px;border:3px inset #666;font:15px/1.4 "Courier New";box-sizing:border-box}
-.btn,.panel button{background:#ff0;border:2px outset #333;font:14px Tahoma;padding:6px 14px;color:#000;cursor:pointer}
+textarea{width:100%;min-height:120px;padding:4px;border:3px inset #666;
+         font:15px/1.4 "Courier New";box-sizing:border-box}
+.btn{background:#ff0;border:2px outset #333;font:14px Tahoma;padding:6px 14px;color:#000;cursor:pointer}
 .highlight{background:#f0f;color:#000}
 progress{width:100%;height:12px;border:2px inset #333;background:#333}
 progress::-webkit-progress-value{background:#0f0}
 @media(max-width:640px){body{font-size:13px}}
-
-/* simple footer */
+/* footer */
 footer{background:#002060;color:#fff;padding:8px 0;text-align:center;font:14px Verdana}
 footer a{color:#fff;text-decoration:none;margin:0 6px}
 footer a:hover{text-decoration:underline}
 </style>
 
-<!-- (optional) AdSense & verification -->
+<!-- AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
-<meta name="google-site-verification" content="ndECWtgXIkiPKk8wKFXTkCd2JSwMnWBKZ4H2uOtQpjY">
 </head>
-
 <body>
 
-  <!-- site title -->
-  <div id="top"><h1>Read-Aloud</h1></div>
+<!-- header -->
+<div id="top"><h1>Read-Aloud</h1></div>
+<nav id="mainNav">
+  <a href="index.html">Home</a>
+  <a href="voices.html">Voices</a>
+  <a href="help.html">Help</a>
+  <a href="about.html">About</a>
+  <a href="privacy.html">Privacy</a>
+</nav>
 
-  <!-- navigation menu -->
-  <nav id="mainNav">
-    <a href="index.html">Home</a>
-    <a href="voices.html">Voices</a>
-    <a href="help.html">Help</a>
-    <a href="about.html">About</a>
-    <a href="privacy.html">Privacy</a>
-  </nav>
+<!-- support / goal bar -->
+<div id="supportBar" role="region" aria-label="Support Read-Aloud">
+  <div class="fill" id="goalFill"></div>
+  <span id="goalMsg" class="msg"></span>
+  <a href="https://coff.ee/readaloud" target="_blank" rel="noopener"
+     class="coffeeBtn" aria-label="Buy me a coffee">☕ Support</a>
+</div>
 
-  <!-- main TTS panel -->
-  <div class="panel">
-    <textarea id="txt" placeholder="Paste or type text here…"></textarea><br><br>
+<!-- main TTS panel -->
+<div class="panel">
+  <textarea id="txt" placeholder="Paste or type text here…"></textarea><br><br>
+  <label>Language <select id="lang"></select></label>
+  <label style="margin-left:12px">Voice
+    <select id="voice"><option value="-1">Default</option></select>
+  </label><br><br>
+  <label>Speed <span id="rv">1</span>x
+    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+  </label><br><br>
+  <button id="start"  class="btn">Start</button>
+  <button id="pause"  class="btn">Pause</button>
+  <button id="resume" class="btn">Resume</button>
+  <button id="stop"   class="btn">Stop</button><br><br>
+  <progress id="bar" value="0" max="100"></progress>
+  <div id="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
+  <div id="disp" aria-live="polite" style="margin-top:8px"></div>
+</div>
 
-    <label>Language
-      <select id="lang"></select>
-    </label>
-    <label style="margin-left:12px">Voice
-      <select id="voice"><option value="-1">Default</option></select>
-    </label><br><br>
+<!-- banner ad -->
+<div style="text-align:center;margin:14px">
+  <ins class="adsbygoogle" style="display:inline-block;width:468px;height:60px"
+       data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
+  <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+</div>
 
-    <label>Speed <span id="rv">1</span>x
-      <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
-    </label><br><br>
+<!-- meSpeak fallback -->
+<script src="https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak.min.js"></script>
+<script>
+mespeak.loadConfig("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak_config.json");
+mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json");
+</script>
 
-    <button id="start"  class="btn">Start</button>
-    <button id="pause"  class="btn">Pause</button>
-    <button id="resume" class="btn">Resume</button>
-    <button id="stop"   class="btn">Stop</button><br><br>
+<!-- main logic -->
+<script src="readaloud.js"></script>
 
-    <progress id="bar" value="0" max="100"></progress>
-    <div id="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
+<!-- automation for visit count + goal bar -->
+<script>
+/* ---------- Hosting goal constants ---------- */
+const RAISED = 19;   // update this number whenever Ko-fi balance changes
+const GOAL   = 60;
+/* ---------- Visit counter (CountAPI) -------- */
+fetch('https://api.countapi.xyz/hit/read-aloud-site/visits')
+  .then(r=>r.json())
+  .then(data=>{
+     const visits = data.value.toLocaleString();
+     initBanner(visits);
+  })
+  .catch(()=>initBanner('many')); // fallback
 
-    <div id="disp" aria-live="polite" style="margin-top:8px"></div>
-  </div>
+function initBanner(visits){
+  const pct = Math.min(100,(RAISED/GOAL*100));
+  document.getElementById('goalFill').style.width = pct + '%';
+  document.getElementById('goalMsg').innerHTML =
+    `Free &amp; private TTS for <strong>${visits}</strong> readers — `
+   + `<strong>$${RAISED} of $${GOAL}</strong> yearly hosting funded.`;
+  document.getElementById('supportBar')
+          .setAttribute('aria-valuenow',RAISED);
+}
+</script>
 
-  <!-- (optional) Ad unit -->
-  <div style="text-align:center;margin:14px">
-    <ins class="adsbygoogle" style="display:inline-block;width:468px;height:60px"
-         data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
-    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
-  </div>
-
-  <!-- —— Fallback synth: meSpeak.js + English voice —— -->
-  <script src="https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak.min.js"></script>
-  <script>
-    mespeak.loadConfig("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak_config.json");
-    mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json");
-  </script>
-
-  <!-- —— Main logic —— -->
-  <script src="readaloud.js"></script>
-
-  <!-- footer links -->
-  <footer>
+<!-- footer -->
+<footer>
   © 2025 Read-Aloud ·
-    <a href="https://coff.ee/readaloud">Buy me a Coffee</a> .
-    <a href="privacy.html">Privacy</a> ·
-    <a href="terms.html">Terms</a>
-  </footer>
-
+  <a href="https://coff.ee/readaloud" target="_blank" rel="noopener">Buy me a coffee</a> ·
+  <a href="privacy.html">Privacy</a> ·
+  <a href="terms.html">Terms</a>
+</footer>
 </body>
 </html>
