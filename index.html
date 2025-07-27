@@ -14,40 +14,21 @@ body{margin:0;background:#000080 url("bg_tile.gif") repeat;color:#fffc;font:14px
 #top{background:#000040;border-bottom:3px double #ff0;text-align:center;padding:6px}
 #top h1{margin:4px 0;font:48px "Comic Sans MS";color:#0f0;text-shadow:2px 2px #f0f}
 
-/* navigation */
+/* nav */
 #mainNav{background:#002060;border-bottom:3px double #ff0;text-align:center;padding:6px}
 #mainNav a{color:#fff;text-decoration:none;margin:0 10px;font:15px/1.4 Verdana}
 #mainNav a:hover,#mainNav a:focus{text-decoration:underline}
 
-/* — subtle support bar — */
-#supportBar{
-  position:relative;
-  background:#00124a;
-  border-bottom:2px solid #334;
-  font:13px Verdana;
-  padding:3px 8px;
-  color:#e0e0ff;
-  display:flex;justify-content:center;align-items:center;gap:10px;
-  line-height:1.25;
-}
-#supportBar .fill{
-  position:absolute;top:0;left:0;height:100%;
-  background:#ff0;opacity:.20;           /* muted yellow */
-}
+/* subtle support bar */
+#supportBar{position:relative;background:#00124a;border-bottom:2px solid #334;
+            font:13px Verdana;padding:3px 8px;color:#e0e0ff;
+            display:flex;justify-content:center;align-items:center;gap:10px}
+#supportBar .fill{position:absolute;top:0;left:0;height:100%;background:#ff0;opacity:.20}
 #supportBar .msg{position:relative;z-index:2;white-space:nowrap}
-.coffeeBtn{
-  position:relative;z-index:2;
-  color:#ff0;text-decoration:none;
-  border-bottom:1px dotted #ff0;
-  padding:0 2px;
-}
-.coffeeBtn:hover,.coffeeBtn:focus{
-  background:#ff0;color:#000;border:none
-}
-@media(max-width:480px){
-  #supportBar .msg{font-size:12px}
-  #supportBar{gap:6px;flex-wrap:wrap}
-}
+.coffeeBtn{position:relative;z-index:2;color:#ff0;text-decoration:none;
+           border-bottom:1px dotted #ff0;padding:0 2px}
+.coffeeBtn:hover,.coffeeBtn:focus{background:#ff0;color:#000;border:none}
+@media(max-width:480px){#supportBar{gap:6px;flex-wrap:wrap;font-size:12px}}
 
 /* tool panel */
 .panel{margin:14px;background:#001a66;border:2px outset #ff0;padding:12px}
@@ -65,14 +46,13 @@ footer a{color:#fff;text-decoration:none;margin:0 6px}
 footer a:hover{text-decoration:underline}
 </style>
 
-<!-- AdSense -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802"
-        crossorigin="anonymous"></script>
+<!-- Google AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
 </head>
 
 <body>
 
-<!-- title & nav -->
+<!-- header -->
 <div id="top"><h1>Read-Aloud</h1></div>
 <nav id="mainNav">
   <a href="index.html">Home</a>
@@ -82,7 +62,7 @@ footer a:hover{text-decoration:underline}
   <a href="privacy.html">Privacy</a>
 </nav>
 
-<!-- support / goal bar -->
+<!-- support bar -->
 <div id="supportBar" role="region" aria-label="Support Read-Aloud">
   <div class="fill" id="goalFill"></div>
   <span id="goalMsg" class="msg"></span>
@@ -90,7 +70,7 @@ footer a:hover{text-decoration:underline}
      class="coffeeBtn" aria-label="Buy me a coffee">☕ Buy me a coffee</a>
 </div>
 
-<!-- main TTS panel -->
+<!-- main panel -->
 <div class="panel">
   <textarea id="txt" placeholder="Paste or type text here…"></textarea><br><br>
 
@@ -113,11 +93,21 @@ footer a:hover{text-decoration:underline}
   <div id="disp" aria-live="polite" style="margin-top:8px"></div>
 </div>
 
-<!-- banner ad -->
+<!-- Google 468×60 banner -->
 <div style="text-align:center;margin:14px">
   <ins class="adsbygoogle" style="display:inline-block;width:468px;height:60px"
-       data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_AD_SLOT"></ins>
+       data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_GOOGLE_SLOT"></ins>
   <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+</div>
+
+<!-- Amazon 300×250 banner + disclosure -->
+<div style="text-align:center;margin:14px">
+  <script type="text/javascript"
+          src="//ws-na.amazon-adsystem.com/widgets/q?ServiceVersion=20070822&OneJS=1&MarketPlace=US&operation=GetAdHtml&ad_type=Banner300x250&tracking_id=nickdaly0c-20">
+  </script>
+  <div style="font:11px Arial;color:#bbb;margin-top:3px">
+    As an Amazon Associate I earn from qualifying purchases.
+  </div>
 </div>
 
 <!-- meSpeak fallback -->
@@ -130,29 +120,27 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 <!-- main logic -->
 <script src="readaloud.js"></script>
 
-<!-- auto goal / visit counter -->
+<!-- visit counter + goal fill -->
 <script>
-const RAISED = 19;           // ← update here
+const RAISED = 19;  /* update whenever balance changes */
 const GOAL   = 60;
 
-/* visit counter via CountAPI */
 fetch('https://api.countapi.xyz/hit/read-aloud-site/visits')
-  .then(r=>r.json()).then(d=>updateBar(d.value))
-  .catch(()=>updateBar('many'));
+  .then(r=>r.json()).then(d=>updateBar(d.value)).catch(()=>updateBar('many'));
 
 function updateBar(visits){
-  const pct = Math.min(100,(RAISED/GOAL*100));
+  const pct = Math.min(100, RAISED/GOAL*100);
   document.getElementById('goalFill').style.width = pct + '%';
   document.getElementById('goalMsg').innerHTML =
-    `Free TTS for <strong>${visits.toLocaleString()}</strong> readers — `
-   + `<strong>$${RAISED} of $${GOAL}</strong> hosting funded`;
+      `Free TTS for <strong>${visits.toLocaleString()}</strong> readers — `
+    + `<strong>$${RAISED} of $${GOAL}</strong> hosting funded`;
 }
 </script>
 
 <!-- footer -->
 <footer>
   © 2025 Read-Aloud ·
-  <a href="https://coff.ee/readaloud" target="_blank" rel="noopener">Buy&nbsp;me&nbsp;a&nbsp;coffee</a> ·
+  <a href="https://coff.ee/readaloud" target="_blank" rel="noopener">Buy me a coffee</a> ·
   <a href="privacy.html">Privacy</a> ·
   <a href="terms.html">Terms</a>
 </footer>
