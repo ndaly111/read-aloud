@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: read-aloud-premium
+    runtime: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install -r read-aloud-premium/requirements-premium.txt
+    startCommand: uvicorn read-aloud-premium.server.premium_api:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true
+    envVars:
+      - key: GOOGLE_VOICE
+        sync: false
