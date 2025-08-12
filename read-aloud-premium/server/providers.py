@@ -99,7 +99,7 @@ def synth(text: str, key: str, speaking_rate: float = 1.0) -> bytes:
         # and credentials file configured via the
         # GOOGLE_APPLICATION_CREDENTIALS environment variable.
         from google.cloud import texttospeech as tts
-        client = tts.TextToSpeechClient()
+        
         input_text = tts.SynthesisInput(text=text)
         voice_params = tts.VoiceSelectionParams(
             language_code="en-US", name=voice["voice_name"]
