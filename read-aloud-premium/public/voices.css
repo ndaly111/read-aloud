@@ -1,0 +1,53 @@
+/* Shared styles for voices and premium pages */
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  margin: 0;
+  background: #fafafa;
+  color: #333;
+}
+.wrap {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+.voice-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding: 12px 0;
+}
+.voice-row .label {
+  font-size: 16px;
+}
+.voice-row .actions button {
+  padding: 8px 12px;
+  background: #007aff;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+}
+.voice-row .actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.chip {
+  margin-left: 8px;
+  font-size: 12px;
+  background: #eee;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.custom-text {
+  margin: 16px 0;
+}
+.custom-text textarea {
+  width: 100%;
+  font-size: 14px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.player {
+  margin-top: 20px;
+}
