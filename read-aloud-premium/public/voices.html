@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Voice Demos • read‑aloud</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="stylesheet" href="voices.css">
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Voice Demos</h1>
+      <p>Select a voice and click <strong>Play</strong> to hear a short sample. You can also provide your own text for the preview.</p>
+      <div id="voice-list"></div>
+      <div class="custom-text">
+        <label for="customText">Custom preview text (optional):</label>
+        <textarea id="customText" rows="3" placeholder="Type a sentence…"></textarea>
+      </div>
+      <div class="player">
+        <audio id="audio" controls preload="none"></audio>
+      </div>
+    </main>
+    <script src="voices.js"></script>
+  </body>
+</html>
