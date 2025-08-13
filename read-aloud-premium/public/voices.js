@@ -2,7 +2,7 @@
   const API_BASE = window.API_BASE || "";
 const api = (path) => API_BASE + "/api" + path;
 
-  ccnst listEl = document.getElementById('voice-list');
+  const listEl = document.getElementById('voice-list');
 
 onst audioEl = document.getElementById('audio');
   const customText = document.getElementById('customText');
