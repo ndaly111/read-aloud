@@ -82,7 +82,25 @@ CANCEL_URL = os.getenv(
 )
 
 # FastAPI instance
+
+
 app = FastAPI(title="read-aloud Premium API")
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://read-aloud.com",
+        "https://ndaly111.github.io",  # GH Pages fallback
+        "http://localhost:5500",       # local static test
+        "http://127.0.0.1:5500",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 
 
