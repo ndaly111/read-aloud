@@ -2,9 +2,9 @@
   const API_BASE = window.API_BASE || "";
 const api = (path) => API_BASE + "/api" + path;
 
-  cconst listEl = document.getElementById('voice-list');
+  ccnst listEl = document.getElementById('voice-list');
 
-    onst audioEl = document.getElementById('audio');
+onst audioEl = document.getElementById('audio');
   const customText = document.getElementById('customText');
 
   // Fetch available voices
