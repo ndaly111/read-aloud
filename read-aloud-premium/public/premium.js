@@ -1,9 +1,10 @@
 (async function () {
   // Helper to build API URLs relative to the backend. All API calls
   // assume the server is hosted at the root of the same domain.
-  const api = (path) => '/api' + path;
+  
 
-  // Element references
+  const API_BASE = window.API_BASE || "";
+const api = (path) => API_BASE + '/api' + path;
   const listEl = document.getElementById('voice-list');
   const audioEl = document.getElementById('audio');
   const customPreviewText = document.getElementById('customText');
