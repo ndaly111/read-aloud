@@ -1,7 +1,10 @@
 (async function () {
-  const api = (path) => '/api' + path;
-  const listEl = document.getElementById('voice-list');
-  const audioEl = document.getElementById('audio');
+  const API_BASE = window.API_BASE || "";
+const api = (path) => API_BASE + "/api" + path;
+
+  cconst listEl = document.getElementById('voice-list');
+
+    onst audioEl = document.getElementById('audio');
   const customText = document.getElementById('customText');
 
   // Fetch available voices
