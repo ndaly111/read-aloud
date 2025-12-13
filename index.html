@@ -102,17 +102,91 @@ footer a:hover{text-decoration:underline}
             
 <!-- Amazon Affiliate Ad Widget (Responsive) -->
 <div style="margin:14px auto; max-width:320px; text-align:center;">
+  <p style="font:14px Verdana; color:#fff; margin:0 0 6px;">
+    We hand-pick assistive reading tools that pair well with Read-Aloud. Purchases made
+    through these recommendations support the site at no extra cost to you.
+  </p>
+  <div id="amazonWidget"></div>
+  <div id="curatedLinks" style="display:none; text-align:left; font:14px Verdana;"></div>
   <script type="text/javascript">
-    amzn_assoc_placement = "adunit0";
-    amzn_assoc_tracking_id = "nickdaly-20";
-    amzn_assoc_ad_mode = "search";
-    amzn_assoc_ad_type = "smart";
-    amzn_assoc_marketplace = "amazon";
-    amzn_assoc_region = "US";
-    amzn_assoc_default_search_phrase = "";
-    amzn_assoc_default_category = "All";
+    const searchPhrases = [
+      "text to speech microphone",
+      "reading pen for dyslexia",
+      "dyslexia tools",
+      "assistive reading tablet",
+      "audio book headphones"
+    ];
+
+    // Rotate phrases weekly to keep the widget aligned with high-intent searches.
+    const rotationIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24 * 7)) % searchPhrases.length;
+    const selectedPhrase = searchPhrases[rotationIndex];
+
+    // Flip to curated links for experiments without changing the markup.
+    const useCuratedLinks = false;
+    const curatedProducts = [
+      {
+        title: "Text-to-Speech USB Microphone",
+        href: "https://www.amazon.com/s?k=text+to+speech+microphone&tag=nickdaly-20",
+        note: "Clear capture for narrating and dictation."
+      },
+      {
+        title: "Reading Pen for Dyslexia",
+        href: "https://www.amazon.com/s?k=reading+pen+dyslexia&tag=nickdaly-20",
+        note: "Scan-and-read support for faster comprehension."
+      },
+      {
+        title: "Assistive Listening Headphones",
+        href: "https://www.amazon.com/s?k=audio+book+headphones&tag=nickdaly-20",
+        note: "Comfortable for long listening sessions."
+      }
+    ];
+
+    if (useCuratedLinks) {
+      const list = document.createElement('ul');
+      curatedProducts.forEach(item => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '6px';
+        const link = document.createElement('a');
+        link.href = item.href;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.textContent = item.title;
+        link.style.color = '#ff0';
+        li.appendChild(link);
+        if (item.note) {
+          const note = document.createElement('div');
+          note.textContent = item.note;
+          note.style.color = '#e0e0ff';
+          note.style.fontSize = '12px';
+          note.style.marginLeft = '4px';
+          li.appendChild(note);
+        }
+        list.appendChild(li);
+      });
+      const curatedContainer = document.getElementById('curatedLinks');
+      curatedContainer.appendChild(list);
+      curatedContainer.style.display = 'block';
+    } else {
+      const widget = document.getElementById('amazonWidget');
+      const configScript = document.createElement('script');
+      configScript.type = 'text/javascript';
+      configScript.text = `
+        amzn_assoc_placement = "adunit0";
+        amzn_assoc_tracking_id = "nickdaly-20";
+        amzn_assoc_ad_mode = "search";
+        amzn_assoc_ad_type = "smart";
+        amzn_assoc_marketplace = "amazon";
+        amzn_assoc_region = "US";
+        amzn_assoc_default_search_phrase = "${selectedPhrase}";
+        amzn_assoc_default_category = "All";
+      `;
+      widget.appendChild(configScript);
+
+      const loaderScript = document.createElement('script');
+      loaderScript.src = "//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US";
+      widget.appendChild(loaderScript);
+    }
   </script>
-  <script src="//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US"></script>
 </div>
 
 
