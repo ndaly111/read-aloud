@@ -122,7 +122,7 @@ footer a:hover{text-decoration:underline}
     const selectedPhrase = searchPhrases[rotationIndex];
 
     // Flip to curated links for experiments without changing the markup.
-    const useCuratedLinks = false;
+    let useCuratedLinks = false;
     const curatedProducts = [
       {
         title: "Text-to-Speech USB Microphone",
@@ -141,7 +141,16 @@ footer a:hover{text-decoration:underline}
       }
     ];
 
-    if (useCuratedLinks) {
+    const showCuratedLinks = () => {
+      if (useCuratedLinks) return;
+      useCuratedLinks = true;
+
+      const widget = document.getElementById('amazonWidget');
+      widget.innerHTML = '';
+
+      const curatedContainer = document.getElementById('curatedLinks');
+      curatedContainer.innerHTML = '';
+
       const list = document.createElement('ul');
       curatedProducts.forEach(item => {
         const li = document.createElement('li');
@@ -163,9 +172,12 @@ footer a:hover{text-decoration:underline}
         }
         list.appendChild(li);
       });
-      const curatedContainer = document.getElementById('curatedLinks');
       curatedContainer.appendChild(list);
       curatedContainer.style.display = 'block';
+    };
+
+    if (useCuratedLinks) {
+      showCuratedLinks();
     } else {
       const widget = document.getElementById('amazonWidget');
       const configScript = document.createElement('script');
@@ -184,7 +196,15 @@ footer a:hover{text-decoration:underline}
 
       const loaderScript = document.createElement('script');
       loaderScript.src = "//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US";
+      loaderScript.onerror = showCuratedLinks;
       widget.appendChild(loaderScript);
+
+      setTimeout(() => {
+        const hasIframe = widget.querySelector('iframe');
+        if (!hasIframe) {
+          showCuratedLinks();
+        }
+      }, 2500);
     }
   </script>
 </div>
