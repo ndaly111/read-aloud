@@ -1,83 +1,115 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>How to Use Read‑Aloud (Step‑by‑Step) | Read‑Aloud</title>
-  <meta name="description" content="Step-by-step instructions for using Read‑Aloud: paste text, choose a voice, adjust speed, and listen distraction-free in your browser." />
+<meta charset="utf-8">
+<title>How to Use Read‑Aloud (Step‑by‑Step) | Read‑Aloud</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Step-by-step instructions for using Read‑Aloud: paste text, choose a voice, adjust speed, use shortcuts, and troubleshoot common issues.">
+<style>
+body{margin:0;font:16px/1.75 Arial,Helvetica,sans-serif;background:#fff;color:#111}
+header,footer{background:#004080;color:#fff;padding:12px;text-align:center}
+header a,footer a{color:#fff;text-decoration:none;margin:0 8px}
+header a:hover,footer a:hover{text-decoration:underline}
+main{max-width:900px;margin:auto;padding:24px}
+h1{margin-top:0}
+.small{color:#444;font-size:0.95em}
+.box{background:#f7f7f7;border:1px solid #ddd;padding:12px;border-radius:10px}
+.specific{background:#fff7d6;border:1px solid #f0d36b;padding:12px;border-radius:10px}
+.template{background:#eef7ff;border:1px solid #b8d8ff;padding:12px;border-radius:10px;overflow:auto}
+ul{padding-left:20px}
+hr{margin:24px 0}
+code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+kbd{border:1px solid #bbb;border-bottom:2px solid #999;border-radius:6px;padding:2px 6px;background:#fff}
+</style>
 </head>
+
 <body>
+<header>
   <nav>
-    <a href="/">Home</a>
-    <a href="/voices.html">Voices</a>
-    <a href="/help.html">Help</a>
-    <a href="/guides.html">Guides</a>
-    <a href="/about.html">About</a>
-    <a href="/privacy.html">Privacy</a>
+    <a href="index.html">Home</a>
+    <a href="voices.html">Voices</a>
+    <a href="help.html">Help</a>
+    <a href="guides.html">Guides</a>
+    <a href="about.html">About</a>
+    <a href="privacy.html">Privacy</a>
   </nav>
+</header>
 
-  <main>
-    <h1>How to Use Read‑Aloud (Step‑by‑Step)</h1>
-    <p>Last updated: December 2025</p>
+<main>
+  <h1>How to Use Read‑Aloud (Step‑by‑Step)</h1>
+  <p class="small"><strong>Last updated:</strong> December 2025</p>
 
-    <h2>Quick start (30 seconds)</h2>
-    <ol>
-      <li>Go to the <a href="/">Read‑Aloud tool</a>.</li>
-      <li>Paste your text into the main text box.</li>
-      <li>Select a <strong>Language</strong> and <strong>Voice</strong> (or keep the defaults).</li>
-      <li>Adjust <strong>Speed</strong> if you want (0.9× is a good starting point for studying).</li>
-      <li>Press <strong>Start</strong>.</li>
-    </ol>
-
-    <h2>What each control does</h2>
+  <h2>Read‑Aloud specifics</h2>
+  <div class="specific">
     <ul>
-      <li><strong>Language / Voice:</strong> choose the voice your browser/device provides for that language.</li>
-      <li><strong>Speed:</strong> slower helps catch details; faster helps skim for gist.</li>
-      <li><strong>Start:</strong> begins reading from the top (or from your current position, depending on your browser behavior).</li>
-      <li><strong>Pause / Resume:</strong> stop and continue without losing your place.</li>
-      <li><strong>Stop:</strong> ends playback.</li>
+      <li><strong>Your voices come from your browser/OS.</strong> If your voice list looks different on another device or browser, that’s normal.</li>
+      <li><strong>If a voice sounds robotic:</strong> try a different voice, or try another browser (desktop Chrome/Edge are often the most reliable).</li>
+      <li><strong>iPhone/iPad “no sound”:</strong> check <a href="help.html">Help</a> (Ring/Silent switch, Lockdown Mode, refresh, and tap <strong>Start</strong> again).</li>
     </ul>
+    <p class="small">More detail: <a href="guide-browser-compatibility.html">Browser compatibility &amp; voice availability</a></p>
+  </div>
 
-    <h2>Pick a voice that matches your task</h2>
+  <h2>Quick start (30 seconds)</h2>
+  <ol>
+    <li>Open the <a href="index.html">Read‑Aloud tool</a>.</li>
+    <li>Paste your text into the main text box.</li>
+    <li>Select a <strong>Language</strong> and <strong>Voice</strong> (or keep <em>Default</em>).</li>
+    <li>Adjust <strong>Speed</strong> if you want (0.9× is a good starting point for studying).</li>
+    <li>Press <strong>Start</strong>.</li>
+  </ol>
+
+  <h2>What each control does</h2>
+  <ul>
+    <li><strong>Language / Voice:</strong> selects which installed voice your browser uses for speech.</li>
+    <li><strong>Speed:</strong> slower helps comprehension; faster helps you skim for gist.</li>
+    <li><strong>Start:</strong> begins reading the text you pasted.</li>
+    <li><strong>Pause / Resume:</strong> stop and continue without restarting from the top.</li>
+    <li><strong>Stop:</strong> ends playback and resets progress.</li>
+    <li><strong>Progress bar + timer:</strong> shows how far through the text you are, plus elapsed/remaining time estimates.</li>
+  </ul>
+
+  <h2>Keyboard shortcuts</h2>
+  <div class="box">
     <ul>
-      <li><strong>Studying:</strong> a clear, neutral voice + slightly slower speed (0.85–0.95×).</li>
-      <li><strong>Proofreading:</strong> neutral voice + 0.9× to catch missing words and repeated phrases.</li>
-      <li><strong>Language learning:</strong> target-language voice + slower speed at first; increase over time.</li>
+      <li><kbd>Ctrl</kbd> + <kbd>Enter</kbd> (or <kbd>⌘</kbd> + <kbd>Enter</kbd> on Mac) — Start / Restart</li>
+      <li><kbd>Space</kbd> — Pause or Resume</li>
+      <li><kbd>Esc</kbd> — Stop and reset progress</li>
     </ul>
-    <p>
-      Tip: preview options on the <a href="/voices.html">Voice Gallery</a> and pick one that feels “invisible” (not distracting).
-    </p>
+  </div>
 
-    <h2>Best practices for longer text</h2>
-    <ul>
-      <li><strong>Chunk it:</strong> break huge documents into sections (headings/paragraph blocks).</li>
-      <li><strong>Use two passes:</strong> pass 1 for understanding, pass 2 for details.</li>
-      <li><strong>Keep your “source” document open:</strong> if you’re editing while listening, fix the original and replay that section.</li>
-    </ul>
+  <h2>A quick “does it work?” test</h2>
+  <p>Paste this into the tool to test punctuation, numbers, and pausing:</p>
+  <div class="template">
+<pre>Hi! This is a quick Read‑Aloud test.
 
-    <h2>If you’re on iPhone/iPad</h2>
-    <p>
-      Mobile browsers can be stricter about audio playback. Make sure you tap <strong>Start</strong> (a user action) to begin audio,
-      and check your device volume. If you still get “no sound” or “no voices,” use the <a href="/help.html">Help</a> page troubleshooting section.
-    </p>
+At 7:30 p.m., I’ll read for 10 minutes—then I’ll take a short break.
+If the voice sounds strange, I will try another voice or slow down to 0.9×.
+Question: does it pause correctly after commas, periods, and question marks?</pre>
+  </div>
 
-    <h2>Privacy note (simple rule)</h2>
-    <p>
-      If the text is sensitive, treat it like you would any clipboard content: don’t paste private text on shared devices, and avoid pasting while screen-sharing.
-      For details, see <a href="/guide-privacy.html">Privacy‑First Text‑to‑Speech</a>.
-    </p>
+  <h2>Common problems (and fixes)</h2>
+  <ul>
+    <li><strong>“I pressed Start but hear nothing (iPhone/iPad)”</strong>: make sure the Ring/Silent switch isn’t set to silent, disable Lockdown Mode, refresh the page, then tap <strong>Start</strong> again. See <a href="help.html">Help</a>.</li>
+    <li><strong>“My voice list is empty”</strong>: refresh, tap <strong>Start</strong> once, then check again. If needed, try another browser or update your OS.</li>
+    <li><strong>“It stops mid‑way through a long text”</strong>: split your text into smaller chunks (headings/sections) and play them one at a time.</li>
+  </ul>
 
-    <hr />
+  <h2>Privacy note (simple rule)</h2>
+  <p>
+    If the text is sensitive, treat it like clipboard content: avoid pasting private text on shared devices, and don’t paste while screen‑sharing.
+    For details, see <a href="guide-privacy.html">Privacy‑First Text‑to‑Speech</a>.
+  </p>
 
-    <p>
-      Next: <a href="/guide-study.html">Study with TTS</a> ·
-      <a href="/guide-proofread.html">Proofread by Ear</a> ·
-      <a href="/guides.html">All Guides</a>
-    </p>
-  </main>
+  <hr>
+  <p class="small">
+    Next: <a href="guide-study.html">Study with TTS</a> ·
+    <a href="guide-proofread.html">Proofread by Ear</a> ·
+    <a href="guides.html">All Guides</a>
+  </p>
+</main>
 
-  <footer>
-    <p>© 2025 Read‑Aloud · <a href="/contact.html">Contact</a> · <a href="/terms.html">Terms</a></p>
-  </footer>
+<footer>
+  © 2025 Read‑Aloud · <a href="contact.html">Contact</a> · <a href="terms.html">Terms</a>
+</footer>
 </body>
 </html>
