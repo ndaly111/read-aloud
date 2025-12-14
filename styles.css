@@ -9,6 +9,11 @@ body {
     color: #333;
 }
 
+.small {
+    font-size: 0.9em;
+    color: #444;
+}
+
 /* Container for centering content where needed */
 .container {
     width: 90%;
