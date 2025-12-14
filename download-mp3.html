@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Download MP3 (Offline Voice) · Read‑Aloud</title>
+  <meta name="description" content="Generate a downloadable WAV or MP3 using an offline TTS voice. This does not export your browser's system voices." />
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 920px; margin: 0 auto; padding: 20px; line-height: 1.4; }
+    nav { display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 16px; }
+    nav a { text-decoration:none; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(127,127,127,.35); }
+    h1 { margin: 12px 0 8px; }
+    .note { padding: 12px 14px; border: 1px solid rgba(127,127,127,.35); border-radius: 12px; background: rgba(127,127,127,.08); }
+    .grid { display:grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
+    @media (min-width: 900px) { .grid { grid-template-columns: 1.15fr .85fr; } }
+    textarea { width: 100%; min-height: 240px; padding: 10px; border-radius: 12px; border: 1px solid rgba(127,127,127,.35); font: inherit; }
+    label { display:block; font-weight: 600; margin: 10px 0 6px; }
+    select, input[type="number"], input[type="text"] { width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid rgba(127,127,127,.35); font: inherit; }
+    .row { display:flex; gap: 10px; flex-wrap: wrap; }
+    .row > * { flex: 1 1 220px; }
+    button { padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(127,127,127,.35); font: inherit; cursor:pointer; }
+    button.primary { font-weight: 700; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .actions { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .status { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; opacity: .9; white-space: pre-wrap; }
+    footer { margin-top: 18px; opacity: .8; font-size: 14px; }
+    .fineprint { font-size: 14px; opacity: .9; }
+    .audio-wrap { margin-top: 10px; }
+    audio { width: 100%; }
+  </style>
+
+  <!-- MP3 encoder (small, browser-safe) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+</head>
+<body>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/voices.html">Voices</a>
+    <a href="/help.html">Help</a>
+    <a href="/guides.html">Guides</a>
+    <a href="/about.html">About</a>
+    <a href="/privacy.html">Privacy</a>
+  </nav>
+
+  <h1>Download MP3 (offline voice)</h1>
+
+  <div class="note">
+    <div><strong>Important:</strong> Browsers don’t provide a way to capture their built‑in system voices (Web Speech API) into an MP3 file. That’s why this page uses an <em>offline</em> synthesizer voice for exporting.</div>
+    <div style="margin-top:8px" class="fineprint">Your text is processed locally in your browser on this page. (No server upload.)</div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <label for="text">Text to export</label>
+      <textarea id="text" placeholder="Paste or type text here…"></textarea>
+
+      <div class="actions">
+        <button class="primary" id="btnMp3">Generate MP3</button>
+        <button id="btnWav">Generate WAV</button>
+        <button id="btnClear" title="Clear text">Clear</button>
+      </div>
+
+      <div class="audio-wrap" id="audioWrap" style="display:none">
+        <label>Preview</label>
+        <audio id="audio" controls></audio>
+      </div>
+
+      <div style="margin-top:10px" class="status" id="status">Loading…</div>
+    </div>
+
+    <div>
+      <label for="voice">Offline voice</label>
+      <select id="voice">
+        <option value="en/en-us" selected>English (US)</option>
+        <option value="en/en">English</option>
+        <option value="en/en-sc">English (Scottish)</option>
+        <option value="en/en-rp">English (RP)</option>
+        <option value="es/es">Spanish</option>
+        <option value="es-la/es-la">Spanish (Latin America)</option>
+        <option value="fr/fr">French</option>
+        <option value="de/de">German</option>
+        <option value="it/it">Italian</option>
+        <option value="nl/nl">Dutch</option>
+        <option value="pt/pt-br">Portuguese (Brazil)</option>
+        <option value="sv/sv">Swedish</option>
+        <option value="tr/tr">Turkish</option>
+      </select>
+
+      <div class="row">
+        <div>
+          <label for="speed">Speed (words per minute)</label>
+          <input id="speed" type="number" min="80" max="300" step="5" value="175" />
+          <div class="fineprint">Offline voice speed is in <em>words per minute</em>.</div>
+        </div>
+        <div>
+          <label for="pitch">Pitch (0–99)</label>
+          <input id="pitch" type="number" min="0" max="99" step="1" value="50" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="bitrate">MP3 bitrate (kbps)</label>
+          <select id="bitrate">
+            <option value="96">96 kbps (small)</option>
+            <option value="128" selected>128 kbps (default)</option>
+            <option value="160">160 kbps</option>
+            <option value="192">192 kbps (bigger)</option>
+          </select>
+        </div>
+        <div>
+          <label for="filename">Filename (optional)</label>
+          <input id="filename" type="text" placeholder="read-aloud-export" />
+          <div class="fineprint">“.mp3” / “.wav” will be added automatically.</div>
+        </div>
+      </div>
+
+      <div class="fineprint" style="margin-top:12px">
+        Tips:
+        <ul>
+          <li>For very long text, export in chunks (e.g., 2–5 minutes at a time) to avoid heavy CPU usage—especially on phones.</li>
+          <li>If you want <strong>natural</strong> voices in the MP3, you’ll need a server-side TTS provider (which means sending text off-device).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    © 2025 Read‑Aloud · <a href="/terms.html">Terms</a>
+  </footer>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+
+  const els = {
+    text: $("text"),
+    voice: $("voice"),
+    speed: $("speed"),
+    pitch: $("pitch"),
+    bitrate: $("bitrate"),
+    filename: $("filename"),
+    btnMp3: $("btnMp3"),
+    btnWav: $("btnWav"),
+    btnClear: $("btnClear"),
+    status: $("status"),
+    audioWrap: $("audioWrap"),
+    audio: $("audio"),
+  };
+
+  function setStatus(msg) { els.status.textContent = msg; }
+  function disableButtons(disabled) {
+    els.btnMp3.disabled = disabled;
+    els.btnWav.disabled = disabled;
+    els.btnClear.disabled = disabled;
+  }
+
+  function safeBaseName() {
+    const raw = (els.filename.value || "").trim();
+    if (raw) return raw.replace(/[^a-z0-9\-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 60) || "read-aloud-export";
+    return "read-aloud-export";
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  // --- Load meSpeak (offline synthesizer) ---
+  const MESPEAK_CANDIDATE_SCRIPTS = [
+    "/mespeak/mespeak.js",
+    "/mespeak.js",
+    "/js/mespeak.js",
+    "mespeak.js",
+    "https://cdn.jsdelivr.net/gh/btopro/mespeak@master/mespeak.js"
+  ];
+
+  function loadScript(url) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = url;
+      s.async = true;
+      s.onload = () => resolve(url);
+      s.onerror = () => reject(new Error("Failed to load: " + url));
+      document.head.appendChild(s);
+    });
+  }
+
+  function dirnameUrl(url) {
+    const u = new URL(url, window.location.href);
+    const path = u.pathname;
+    const basePath = path.substring(0, path.lastIndexOf("/") + 1);
+    return u.origin + basePath;
+  }
+
+  let voiceBaseUrl = null;
+
+  async function loadMeSpeak() {
+    for (const url of MESPEAK_CANDIDATE_SCRIPTS) {
+      try {
+        await loadScript(url);
+        if (!window.meSpeak) continue;
+
+        const base = dirnameUrl(url);
+        // Try loading config if this meSpeak build needs it.
+        try {
+          if (typeof meSpeak.loadConfig === "function") {
+            // most builds use mespeak_config.json next to mespeak.js
+            meSpeak.loadConfig(base + "mespeak_config.json");
+          }
+        } catch (_) {}
+
+        // Prefer voices/ next to mespeak.js (common layout)
+        const candidateVoiceBases = [
+          base + "voices/",
+          base + "mespeak/voices/",
+          window.location.origin + "/voices/",
+          window.location.origin + "/mespeak/voices/",
+          "https://cdn.jsdelivr.net/gh/btopro/mespeak@master/voices/"
+        ];
+
+        // Find a voiceBase that can actually load a known voice.
+        for (const vb of candidateVoiceBases) {
+          try {
+            await loadVoiceWithBase("en/en-us", vb);
+            voiceBaseUrl = vb;
+            return;
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
+    throw new Error("Could not load the offline voice engine (meSpeak).");
+  }
+
+  function loadVoiceWithBase(voiceId, baseUrl) {
+    return new Promise((resolve, reject) => {
+      const voiceUrl = baseUrl + voiceId + ".json";
+      if (!window.meSpeak || typeof meSpeak.loadVoice !== "function") {
+        reject(new Error("meSpeak.loadVoice is not available."));
+        return;
+      }
+      meSpeak.loadVoice(voiceUrl, (success, msgOrId) => {
+        if (!success) reject(new Error(msgOrId || "Voice load failed: " + voiceUrl));
+        else resolve(true);
+      });
+    });
+  }
+
+  async function loadSelectedVoice() {
+    const voiceId = els.voice.value;
+    if (!voiceBaseUrl) throw new Error("Voice base URL not set.");
+    await loadVoiceWithBase(voiceId, voiceBaseUrl);
+  }
+
+  // WAV parsing -> PCM Int16 arrays
+  function readAscii(view, offset, len) {
+    let s = "";
+    for (let i = 0; i < len; i++) s += String.fromCharCode(view.getUint8(offset + i));
+    return s;
+  }
+
+  function parseWav(arrayBuffer) {
+    const view = new DataView(arrayBuffer);
+    if (readAscii(view, 0, 4) !== "RIFF" || readAscii(view, 8, 4) !== "WAVE") {
+      throw new Error("Not a valid WAV (missing RIFF/WAVE header).");
+    }
+
+    let pos = 12;
+    let fmt = null;
+    let dataOffset = null;
+    let dataSize = null;
+
+    while (pos + 8 <= view.byteLength) {
+      const id = readAscii(view, pos, 4);
+      const size = view.getUint32(pos + 4, true);
+      const chunkData = pos + 8;
+
+      if (id === "fmt ") {
+        const audioFormat = view.getUint16(chunkData + 0, true);
+        const numChannels = view.getUint16(chunkData + 2, true);
+        const sampleRate = view.getUint32(chunkData + 4, true);
+        const bitsPerSample = view.getUint16(chunkData + 14, true);
+        fmt = { audioFormat, numChannels, sampleRate, bitsPerSample };
+      } else if (id === "data") {
+        dataOffset = chunkData;
+        dataSize = size;
+        break;
+      }
+
+      pos = chunkData + size;
+      if (size % 2 === 1) pos += 1;
+    }
+
+    if (!fmt) throw new Error("WAV parse error: missing fmt chunk.");
+    if (dataOffset == null || dataSize == null) throw new Error("WAV parse error: missing data chunk.");
+    if (fmt.audioFormat !== 1) throw new Error("Unsupported WAV: only PCM (format 1) is supported.");
+    if (fmt.numChannels < 1 || fmt.numChannels > 2) throw new Error("Unsupported WAV: only mono/stereo supported.");
+    if (fmt.bitsPerSample !== 8 && fmt.bitsPerSample !== 16) throw new Error("Unsupported WAV: expected 8-bit or 16-bit PCM.");
+
+    const bytesPerSample = fmt.bitsPerSample / 8;
+    const frameCount = Math.floor(dataSize / (bytesPerSample * fmt.numChannels));
+    const channels = Array.from({ length: fmt.numChannels }, () => new Int16Array(frameCount));
+
+    for (let i = 0; i < frameCount; i++) {
+      for (let ch = 0; ch < fmt.numChannels; ch++) {
+        const sampleIndex = i * fmt.numChannels + ch;
+        const sampleOffset = dataOffset + sampleIndex * bytesPerSample;
+        let sample16;
+
+        if (fmt.bitsPerSample === 8) {
+          const u8 = view.getUint8(sampleOffset);
+          sample16 = (u8 - 128) << 8;
+        } else {
+          sample16 = view.getInt16(sampleOffset, true);
+        }
+        channels[ch][i] = sample16;
+      }
+    }
+
+    return { sampleRate: fmt.sampleRate, numChannels: fmt.numChannels, channels };
+  }
+
+  async function encodeMp3FromWavBuffer(wavArrayBuffer, kbps, onProgress) {
+    const wav = parseWav(wavArrayBuffer);
+    const mp3Encoder = new lamejs.Mp3Encoder(wav.numChannels, wav.sampleRate, kbps);
+
+    const blockSize = 1152;
+    const mp3Chunks = [];
+    const totalSamples = wav.channels[0].length;
+
+    for (let i = 0; i < totalSamples; i += blockSize) {
+      const left = wav.channels[0].subarray(i, i + blockSize);
+      let mp3buf;
+
+      if (wav.numChannels === 1) {
+        mp3buf = mp3Encoder.encodeBuffer(left);
+      } else {
+        const right = wav.channels[1].subarray(i, i + blockSize);
+        mp3buf = mp3Encoder.encodeBuffer(left, right);
+      }
+
+      if (mp3buf && mp3buf.length) mp3Chunks.push(mp3buf);
+      if (onProgress) onProgress(Math.min(1, i / totalSamples));
+      if (i % (blockSize * 120) === 0) await new Promise(r => setTimeout(r, 0));
+    }
+
+    const end = mp3Encoder.flush();
+    if (end && end.length) mp3Chunks.push(end);
+
+    return new Blob(mp3Chunks, { type: "audio/mpeg" });
+  }
+
+  function toArrayBufferMaybe(stream) {
+    if (!stream) return null;
+    if (stream instanceof ArrayBuffer) return stream;
+    if (ArrayBuffer.isView(stream)) {
+      const u8 = new Uint8Array(stream.buffer, stream.byteOffset, stream.byteLength);
+      return u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+    }
+    if (Array.isArray(stream)) return new Uint8Array(stream).buffer;
+    return null;
+  }
+
+  function synthesizeWav(text, opts) {
+    return new Promise((resolve, reject) => {
+      const options = Object.assign({}, opts, { rawdata: true });
+      let returned;
+
+      try {
+        returned = meSpeak.speak(text, options, (success, id, wavStream) => {
+          const buf = toArrayBufferMaybe(wavStream) || toArrayBufferMaybe(returned);
+          if (success && buf) resolve(buf);
+          else if (!success) reject(new Error("Speech synthesis failed."));
+          else reject(new Error("Speech synthesis did not return WAV data."));
+        });
+      } catch (e) {
+        reject(e);
+        return;
+      }
+
+      const buf = toArrayBufferMaybe(returned);
+      if (buf) resolve(buf); // older builds return stream synchronously
+    });
+  }
+
+  // --- UI actions ---
+  els.btnClear.addEventListener("click", () => {
+    els.text.value = "";
+    els.audioWrap.style.display = "none";
+    els.audio.removeAttribute("src");
+    setStatus("Cleared.");
+  });
+
+  els.voice.addEventListener("change", async () => {
+    try {
+      disableButtons(true);
+      setStatus("Loading voice…");
+      await loadSelectedVoice();
+      setStatus("Voice loaded.");
+    } catch (e) {
+      setStatus("Voice load error: " + (e && e.message ? e.message : e));
+    } finally {
+      disableButtons(false);
+    }
+  });
+
+  els.btnWav.addEventListener("click", async () => {
+    const text = (els.text.value || "").trim();
+    if (!text) { setStatus("Paste some text first."); return; }
+
+    disableButtons(true);
+    els.audioWrap.style.display = "none";
+    els.audio.removeAttribute("src");
+
+    try {
+      setStatus("Synthesizing WAV…");
+      await loadSelectedVoice();
+
+      const wavBuf = await synthesizeWav(text, {
+        speed: Number(els.speed.value) || 175,
+        pitch: Number(els.pitch.value) || 50,
+      });
+
+      const wavBlob = new Blob([wavBuf], { type: "audio/wav" });
+      const filename = safeBaseName() + ".wav";
+      downloadBlob(wavBlob, filename);
+
+      const url = URL.createObjectURL(wavBlob);
+      els.audio.src = url;
+      els.audioWrap.style.display = "block";
+
+      setStatus("WAV ready: " + filename);
+    } catch (e) {
+      setStatus("Error: " + (e && e.message ? e.message : e));
+    } finally {
+      disableButtons(false);
+    }
+  });
+
+  els.btnMp3.addEventListener("click", async () => {
+    const text = (els.text.value || "").trim();
+    if (!text) { setStatus("Paste some text first."); return; }
+
+    disableButtons(true);
+    els.audioWrap.style.display = "none";
+    els.audio.removeAttribute("src");
+
+    try {
+      const kbps = Number(els.bitrate.value) || 128;
+      setStatus("Synthesizing WAV…");
+      await loadSelectedVoice();
+
+      const wavBuf = await synthesizeWav(text, {
+        speed: Number(els.speed.value) || 175,
+        pitch: Number(els.pitch.value) || 50,
+      });
+
+      setStatus("Encoding MP3 (" + kbps + " kbps)… 0%");
+      const mp3Blob = await encodeMp3FromWavBuffer(wavBuf, kbps, (p) => {
+        const pct = Math.floor(p * 100);
+        if (pct % 5 === 0) setStatus("Encoding MP3 (" + kbps + " kbps)… " + pct + "%");
+      });
+
+      const filename = safeBaseName() + ".mp3";
+      downloadBlob(mp3Blob, filename);
+
+      const url = URL.createObjectURL(mp3Blob);
+      els.audio.src = url;
+      els.audioWrap.style.display = "block";
+
+      setStatus("MP3 ready: " + filename);
+    } catch (e) {
+      setStatus("Error: " + (e && e.message ? e.message : e));
+    } finally {
+      disableButtons(false);
+    }
+  });
+
+  // --- Boot ---
+  (async () => {
+    try {
+      disableButtons(true);
+      if (!window.lamejs || !window.lamejs.Mp3Encoder) throw new Error("MP3 encoder failed to load.");
+      setStatus("Loading offline voice engine…");
+      await loadMeSpeak();
+      await loadSelectedVoice();
+      setStatus("Ready. Paste text and click “Generate MP3”.");
+    } catch (e) {
+      setStatus(
+        "Startup error: " + (e && e.message ? e.message : e) +
+        "\n\nFix: Make sure your repo contains meSpeak (mespeak.js + voices folder), or allow the fallback CDN URLs. Some ad blockers block CDNs."
+      );
+    } finally {
+      disableButtons(false);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
