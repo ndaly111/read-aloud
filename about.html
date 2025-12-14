@@ -2,16 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>About | Read-Aloud</title>
+<title>About | Read‑Aloud</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Learn who runs Read-Aloud and why this free text-to-speech tool exists.">
+<meta name="description" content="Read‑Aloud is a free, privacy‑first text‑to‑speech tool that reads your text out loud in your browser using your device’s voices.">
 <style>
-body{margin:0;font:16px/1.6 Georgia,serif;background:#fffef9;color:#111}
-header,footer{background:#004080;color:#fff;padding:14px;text-align:center}
-header a,footer a{color:#fff;text-decoration:none;margin:0 6px}
-main{max-width:900px;margin:auto;padding:28px}
-h1{margin-top:0}
-.ads{text-align:center;margin:32px 0}
+  body{margin:0;font:16px/1.75 Arial,Helvetica,sans-serif;background:#fff;color:#111}
+  header,footer{background:#004080;color:#fff;padding:12px;text-align:center}
+  header a,footer a{color:#fff;text-decoration:none;margin:0 8px}
+  header a:hover,footer a:hover{text-decoration:underline}
+  main{max-width:980px;margin:auto;padding:24px}
+  h1{margin-top:0}
+  .small{color:#444;font-size:0.95em}
+  .box{background:#f7f7f7;border:1px solid #ddd;padding:12px;border-radius:10px}
+  .highlight{background:#fff7d6;border:1px solid #f0d36b;padding:12px;border-radius:10px}
+  ul{padding-left:20px}
+  hr{margin:24px 0}
 </style>
 </head>
 
@@ -21,62 +26,102 @@ h1{margin-top:0}
     <a href="index.html">Home</a>
     <a href="voices.html">Voices</a>
     <a href="help.html">Help</a>
-    <a href="about.html">About</a>
+    <a href="guides.html">Guides</a>
+    <a href="about.html" aria-current="page">About</a>
     <a href="privacy.html">Privacy</a>
   </nav>
 </header>
 
 <main>
-  <h1>About Read-Aloud</h1>
+  <h1>About Read‑Aloud</h1>
+  <p class="small"><strong>Last updated:</strong> December 2025</p>
 
-  <p><strong>Read-Aloud</strong> is an independent, hobby-run project that aims to
-  place a distraction-free, privacy-first text-to-speech tool in every browser.
-  We believe you shouldn’t need to upload your documents—or open your wallet—
-  just to listen to your own words.</p>
+  <p>
+    <strong>Read‑Aloud</strong> is an independent, hobby‑run project built to make text‑to‑speech simple:
+    paste text, choose a voice and speed, and press <strong>Start</strong>.
+    The goal is a distraction‑free tool you can open instantly—no accounts, no uploads, no complicated setup.
+  </p>
 
-  <h2>What makes the site different?</h2>
-  <ul>
-    <li><strong>100 % client-side processing</strong> – Your text never leaves
-        your device.</li>
-    <li><strong>No paywalls</strong> – Hosting costs are covered by a few small,
-        clearly marked ads.</li>
-    <li><strong>Accessibility first</strong> – High-contrast design, keyboard
-        shortcuts, and screen-reader-friendly labels.</li>
-    <li><strong>Open tech stack</strong> – Web Speech API for natural voices and
-        open-source meSpeak as an offline fallback.</li>
-  </ul>
-
-  <h2>Who runs the site?</h2>
-  <p>Hi! I’m <strong>Nick</strong>, a long-time text-to-speech enthusiast.  
-     I maintain the codebase, answer support email, and pay the yearly domain
-     bill. Read-Aloud is a spare-time project, so I appreciate bug reports and
-     feature ideas from users.</p>
-
-  <p>If you’d like to say thanks, you can <a href="https://coff.ee/readaloud"
-     target="_blank" rel="noopener">buy me a coffee</a>—but using the tool and
-     sharing it with friends is support enough!</p>
-
-  <div class="ads">
-    <!-- 468×60 ad -->
-    <ins class="adsbygoogle"
-         style="display:inline-block;width:468px;height:60px"
-         data-ad-client="ca-pub-4003447295960802"
-         data-ad-slot="YOUR_SLOT_ID"></ins>
-    <script async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+  <div class="highlight">
+    <strong>One sentence summary:</strong> Read‑Aloud reads your text out loud in your browser using the voices already on your device.
   </div>
 
-  <h2>Open-source credits</h2>
+  <h2>What makes Read‑Aloud different</h2>
   <ul>
-    <li>Web Speech API – W3C & browser vendors</li>
-    <li>meSpeak.js – © 2012-2024 Norbert Landsteiner, MIT Licence</li>
-    <li>Retro background tile – Public Domain via <a href="https://www.transparenttextures.com">Transparent Textures</a></li>
+    <li><strong>Privacy-first by design:</strong> your pasted text is spoken by your browser/OS speech engine, not uploaded to our servers.</li>
+    <li><strong>Fast and lightweight:</strong> no login, no paywall, no “app install” required.</li>
+    <li><strong>Built for real use-cases:</strong> studying, proofreading, accessibility support, and language practice.</li>
+    <li><strong>Keyboard-friendly:</strong> we publish keyboard shortcuts and keep controls simple and clearly labeled.</li>
   </ul>
+
+  <h2>How it works (Read‑Aloud specifics)</h2>
+  <div class="box">
+    <ul>
+      <li><strong>Voices come from your browser/OS.</strong> That means the voice list can differ on Chrome vs Safari vs Firefox—and it can differ by device.</li>
+      <li><strong>If a voice sounds robotic:</strong> try another voice, or try a different browser. (Desktop Chrome/Edge are often the most reliable.)</li>
+      <li><strong>Offline use:</strong> once the page loads, system voices often keep working without an internet connection. If your browser has no voices, the fallback offline voice may require an initial download first.</li>
+      <li><strong>iPhone/iPad note:</strong> iOS can be strict about audio playback. If you hear nothing or the voice list is empty, check the troubleshooting steps on the <a href="help.html">Help</a> page.</li>
+    </ul>
+    <p class="small">
+      Deep dive: <a href="guide-browser-compatibility.html">Browser compatibility &amp; voice availability</a>
+    </p>
+  </div>
+
+  <h2>About MP3 downloads</h2>
+  <p>
+    Read‑Aloud currently supports <strong>browser playback</strong>. MP3 export is not enabled for system voices.
+    Exporting a reliable MP3 directly from browser text‑to‑speech is harder than it looks (and many approaches require sending text to a server).
+  </p>
+  <p class="small">
+    Details: <a href="guide-mp3-export.html">Why MP3 export is hard in browser TTS</a>
+  </p>
+
+  <h2>Privacy and data</h2>
+  <p>
+    Read‑Aloud is designed so that the text you paste stays on your device while speech is generated.
+    For the full details (including any third‑party services such as analytics or ads, if enabled),
+    see the <a href="privacy.html">Privacy Policy</a>.
+  </p>
+
+  <h2>How this site stays online</h2>
+  <p>
+    Read‑Aloud is kept online through a combination of:
+  </p>
+  <ul>
+    <li><strong>Optional support:</strong> a small donation link (“Buy me a coffee”).</li>
+    <li><strong>Clearly marked recommendations:</strong> when we recommend assistive tools, purchases may support the site at no extra cost to you.</li>
+    <li><strong>Small, clearly labeled ads (optional):</strong> if ads are enabled in the future, they will be clearly marked and kept lightweight.</li>
+  </ul>
+
+  <div class="highlight">
+    If you’d like to say thanks, you can <a href="https://coff.ee/readaloud" target="_blank" rel="noopener">buy me a coffee</a>.
+    Sharing the tool with someone who needs it also helps a lot.
+  </div>
+
+  <h2>Who runs the site?</h2>
+  <p>
+    Hi! I’m Nick. I maintain the codebase, handle support email, and keep the site running.
+    Read‑Aloud is a spare‑time project, so bug reports and specific feature requests are genuinely helpful.
+  </p>
+
+  <h2>Credits</h2>
+  <ul>
+    <li><strong>Web Speech API</strong> — provided by browser vendors</li>
+    <li><strong>meSpeak.js</strong> — open-source fallback voice engine</li>
+    <li><strong>Background texture</strong> — public domain texture source</li>
+  </ul>
+
+  <hr>
+  <p class="small">
+    Next: <a href="guides.html">Guides</a> ·
+    <a href="help.html">Help</a> ·
+    <a href="contact.html">Contact</a> ·
+    <a href="terms.html">Terms</a>
+  </p>
 </main>
 
 <footer>
-  © 2025 Read-Aloud · <a href="contact.html">Contact</a> · <a href="terms.html">Terms</a>
+  © 2025 Read‑Aloud · <a href="contact.html">Contact</a> · <a href="terms.html">Terms</a>
 </footer>
 </body>
 </html>
