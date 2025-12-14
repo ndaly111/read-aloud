@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Browser Compatibility & Voice Availability | Read‑Aloud</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="A practical compatibility guide for read-aloud.com: why voice lists differ across browsers, what works best on desktop and mobile, and how to fix 'no voices' or 'no sound'.">
+<style>
+body{margin:0;font:16px/1.75 Arial,Helvetica,sans-serif;background:#fff;color:#111}
+header,footer{background:#004080;color:#fff;padding:12px;text-align:center}
+header a,footer a{color:#fff;text-decoration:none;margin:0 8px}
+header a:hover,footer a:hover{text-decoration:underline}
+main{max-width:980px;margin:auto;padding:24px}
+h1{margin-top:0}
+.small{color:#444;font-size:0.95em}
+.box{background:#f7f7f7;border:1px solid #ddd;padding:12px;border-radius:10px}
+.specific{background:#fff7d6;border:1px solid #f0d36b;padding:12px;border-radius:10px}
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th,td{border:1px solid #ddd;padding:10px;vertical-align:top}
+th{background:#f2f2f2}
+ul{padding-left:20px}
+hr{margin:24px 0}
+</style>
+</head>
+
+<body>
+<header>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="voices.html">Voices</a>
+    <a href="help.html">Help</a>
+    <a href="guides.html">Guides</a>
+    <a href="about.html">About</a>
+    <a href="privacy.html">Privacy</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Browser Compatibility &amp; Voice Availability (Read‑Aloud)</h1>
+  <p class="small"><strong>Last updated:</strong> December 2025</p>
+
+  <p>
+    Read‑Aloud uses the <strong>Web Speech API</strong> in your browser (plus a small offline fallback voice).
+    The most important thing to understand is this:
+  </p>
+
+  <div class="specific">
+    <strong>Voices come from your browser/OS, not from Read‑Aloud.</strong>
+    <ul>
+      <li>Different browsers can expose different voice lists on the same device.</li>
+      <li>Different operating systems ship with different voices.</li>
+      <li>Installing additional system voices (in your OS settings) can change what you see in the Voice dropdown.</li>
+    </ul>
+  </div>
+
+  <h2>Quick recommendations</h2>
+  <ul>
+    <li><strong>Windows:</strong> Chrome or Edge are usually the most reliable for voice availability.</li>
+    <li><strong>Mac:</strong> Safari and Chrome both work well; if a voice is missing in one, try the other.</li>
+    <li><strong>iPhone/iPad:</strong> Safari works, but iOS is strict about audio playback. If you hear nothing, use the troubleshooting below.</li>
+    <li><strong>Android:</strong> Chrome works well; voice availability depends on the system TTS voices installed.</li>
+  </ul>
+
+  <h2>Compatibility &amp; voice availability matrix</h2>
+  <p class="small">
+    Web Speech speech synthesis is supported broadly in modern browsers (for example: Chrome 33+, Edge 14+, Safari 7+, Firefox 49+).
+    The table below focuses on the real-world issues you’ll actually run into on Read‑Aloud.
+  </p>
+
+  <table aria-label="Browser compatibility and voice availability matrix">
+    <thead>
+      <tr>
+        <th style="width:22%">Browser / device</th>
+        <th style="width:18%">TTS support</th>
+        <th style="width:30%">What you’ll typically see</th>
+        <th style="width:30%">Most common issue &amp; fix</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Chrome (Windows/Mac)</strong></td>
+        <td>Supported</td>
+        <td>Usually a solid voice list; quality depends on OS voices installed.</td>
+        <td>
+          <strong>Issue:</strong> voice list loads late.<br>
+          <strong>Fix:</strong> wait a moment, or refresh once.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Edge (Windows)</strong></td>
+        <td>Supported</td>
+        <td>Often similar to Chrome; can surface different voice names depending on Windows.</td>
+        <td>
+          <strong>Issue:</strong> voice sounds “off.”<br>
+          <strong>Fix:</strong> try a different voice; reduce speed to 0.9×.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Safari (Mac)</strong></td>
+        <td>Supported</td>
+        <td>Uses macOS system voices; often very natural if you have voices installed.</td>
+        <td>
+          <strong>Issue:</strong> fewer voices than expected.<br>
+          <strong>Fix:</strong> install more macOS voices, or try Chrome.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Safari (iPhone/iPad)</strong></td>
+        <td>Supported</td>
+        <td>Uses iOS voices; audio requires a user action (tap Start).</td>
+        <td>
+          <strong>Issue:</strong> “Start” but no sound / voices empty.<br>
+          <strong>Fix:</strong> check Ring/Silent switch, disable Lockdown Mode, refresh, then tap Start again. See <a href="help.html">Help</a>.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Firefox (desktop)</strong></td>
+        <td>Supported</td>
+        <td>Voice list depends on platform; may differ from Chrome/Safari.</td>
+        <td>
+          <strong>Issue:</strong> voices differ from what you expected.<br>
+          <strong>Fix:</strong> that’s normal—try another browser to compare.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Chrome (Android)</strong></td>
+        <td>Supported</td>
+        <td>Voices come from Android’s system TTS engine; you may be able to download additional voices.</td>
+        <td>
+          <strong>Issue:</strong> language voice missing.<br>
+          <strong>Fix:</strong> install/download voices in Android settings, then reload Read‑Aloud.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>In‑app browsers</strong><br><span class="small">(Instagram, Reddit, etc.)</span></td>
+        <td>Sometimes</td>
+        <td>May behave differently from the full browser; voice lists can be limited.</td>
+        <td>
+          <strong>Fix:</strong> open Read‑Aloud in your main browser (Safari/Chrome) instead of the in‑app view.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>“No voices” or “no sound” troubleshooting</h2>
+  <div class="box">
+    <ul>
+      <li><strong>Refresh once.</strong> Voice lists can load late.</li>
+      <li><strong>Tap Start.</strong> On mobile, audio often requires a direct user action.</li>
+      <li><strong>iPhone/iPad:</strong> check Ring/Silent switch (not orange), disable Lockdown Mode, refresh, then tap Start again. (Full checklist: <a href="help.html">Help</a>.)</li>
+      <li><strong>Try another browser.</strong> Chrome/Edge/Safari can expose different voice lists.</li>
+      <li><strong>Try another voice.</strong> Some voices sound robotic or handle punctuation differently.</li>
+    </ul>
+  </div>
+
+  <h2>Offline use</h2>
+  <p>
+    Once the page loads, system voices often work without a connection. If your browser has no voices available,
+    Read‑Aloud can fall back to a built‑in robotic voice after its first download.
+  </p>
+
+  <hr>
+  <p class="small">
+    Related: <a href="guide-how-to-use.html">How to Use Read‑Aloud</a> ·
+    <a href="guide-mp3-export.html">Why MP3 export is hard</a> ·
+    <a href="guides.html">All Guides</a>
+  </p>
+</main>
+
+<footer>
+  © 2025 Read‑Aloud · <a href="contact.html">Contact</a> · <a href="terms.html">Terms</a>
+</footer>
+</body>
+</html>
