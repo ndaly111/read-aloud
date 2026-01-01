@@ -1,50 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-SVGML1VGPG');
-</script>
-
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Audio Stream</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-SVGML1VGPG');</script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
+  <meta charset="utf-8">
+  <title>Audio Samples &amp; Streams | Read‑Aloud</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Listen to a sample audio stream and learn how Read‑Aloud handles live playback using local system voices." />
+  <link rel="canonical" href="https://www.read-aloud.com/audio.html">
+  <link rel="stylesheet" href="site.css">
 </head>
 <body>
 <header>
-  <nav id="mainNav">
+  <div class="navbar">
+    <div class="logo">Read‑Aloud</div>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="app.html">Tool</a>
+      <a href="guides.html">Guides</a>
+      <a href="help.html">Help</a>
+      <a href="voices.html">Voices</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="breadcrumb"><a href="index.html">Home</a> <span aria-hidden="true">›</span> Audio</div>
+  <h1>Audio Samples &amp; Streams</h1>
+  <p class="lead">Want to check your speakers before using the tool? Play the sample stream below and then switch to the in-browser player when you are ready.</p>
+
+  <section class="card">
+    <h2>Sample stream</h2>
+    <p>This embedded stream helps you confirm your device volume before starting a Read‑Aloud session.</p>
+    <iframe src="https://tunein.com/embed/player/s23713/" style="width:100%; height:120px;" scrolling="no" frameborder="no" title="Sample audio stream"></iframe>
+    <p class="small">If the stream is blocked on a managed network, try connecting through a personal hotspot or skip straight to the player.</p>
+  </section>
+
+  <section class="card">
+    <h2>After the sound check</h2>
+    <p>
+      Once you know your speakers or headphones are working, open the <a href="app.html">Read‑Aloud tool</a>
+      and paste your text. The player uses system voices instead of this stream, so volume and tone may
+      differ. Adjust your preferred voice and speed inside the player.
+    </p>
+    <p class="small">If you hear the stream but not the player, reload the page to trigger the browser’s audio permission prompt.</p>
+  </section>
+
+  <section class="card">
+    <h2>Why we keep audio local</h2>
+    <p>
+      The stream above is just a test. The text-to-speech player relies on voices installed on your device
+      and does not send your text to a server. If you have trouble hearing the stream or the player, visit
+      the <a href="help.html">Help Center</a> for device-specific fixes.
+    </p>
+    <p>
+      Testing with a neutral stream also helps you rule out Bluetooth hiccups or system mute toggles
+      before you paste important text. If the stream works but Read‑Aloud is silent, switch voices or
+      browsers using the checklists in the Help Center to reload the device speech engine.
+    </p>
+  </section>
+</main>
+
+<footer>
+  <div>
     <a href="index.html">Home</a>
-    <a href="voices.html">Voices</a>
-    <a href="help.html">Help</a>
+    <a href="app.html">Tool</a>
     <a href="guides.html">Guides</a>
-    <a href="recommendations.html">Recommendations</a>
+    <a href="help.html">Help</a>
+    <a href="voices.html">Voices</a>
     <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
     <a href="privacy.html">Privacy</a>
     <a href="terms.html">Terms</a>
-  </nav>
-</header>
-  <h1>Embedded Audio Stream</h1>
-  <p>Listen to the station below:</p>
-
-  <!-- TuneIn IFRAME -->
-  <iframe 
-    src="https://tunein.com/embed/player/s23713/" 
-    style="width:100%; height:100px;" 
-    scrolling="no" 
-    frameborder="no">
-  </iframe>
-
-  <!-- Link to go back to your homepage -->
-  <p><a href="index.html">Back to Home</a></p>
-
-  <footer>
-  © 2025 Read‑Aloud · <a href="contact.html">Contact</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a><br>
-  <strong>As an Amazon Associate I earn from qualifying purchases.</strong>
+    <a href="privacy.html#controls">Privacy settings</a>
+    <a href="recommendations.html" rel="sponsored nofollow">Recommendations</a>
+    <a href="sitemap.xml">Sitemap</a>
+  </div>
+  <div class="legal">© 2025 Read‑Aloud. Test audio, then enjoy local voices.</div>
 </footer>
 </body>
 </html>
