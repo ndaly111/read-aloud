@@ -1,56 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-SVGML1VGPG');
-</script>
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>How It Works | Read-Aloud</title>
-  <meta name="description" content="Learn how our text-to-speech reader works in just a few simple steps.">
-  <link rel="stylesheet" href="styles.css">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-SVGML1VGPG');</script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
+  <meta charset="utf-8">
+  <title>How Read‑Aloud Works</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Understand how Read‑Aloud uses the browser Speech Synthesis API, local voices, and progress tracking to read text aloud." />
+  <link rel="canonical" href="https://www.read-aloud.com/how-it-works.html">
+  <link rel="stylesheet" href="site.css">
 </head>
 <body>
-  <!-- HEADER -->
-  <header>
-  <nav id="mainNav">
-    <a href="index.html">Home</a>
-    <a href="voices.html">Voices</a>
-    <a href="help.html">Help</a>
-    <a href="guides.html">Guides</a>
-    <a href="recommendations.html">Recommendations</a>
-    <a href="about.html">About</a>
-    <a href="privacy.html">Privacy</a>
-    <a href="terms.html">Terms</a>
-  </nav>
+<header>
+  <div class="navbar">
+    <div class="logo">Read‑Aloud</div>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="app.html">Tool</a>
+      <a href="guides.html">Guides</a>
+      <a href="help.html">Help</a>
+      <a href="voices.html">Voices</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
 </header>
 
-  <!-- MAIN CONTENT: How It Works -->
-  <main>
-    <section id="how-it-works">
-      <div class="container">
-        <h2>How It Works</h2>
-        <p>
-          Simply paste your text into the area on our homepage, select your language and voice, adjust the reading speed, and click “Start.” Enjoy real-time word highlighting and progress tracking as your text is read aloud.
-        </p>
-        <p>
-          For more in-depth guidance, check out our <a href="faq.html">FAQ</a> or <a href="contact.html">contact us</a> if you have specific questions.
-        </p>
-      </div>
-    </section>
-  </main>
+<main>
+  <div class="breadcrumb"><a href="index.html">Home</a> <span aria-hidden="true">›</span> How It Works</div>
+  <h1>How Read‑Aloud Works</h1>
+  <p class="lead">A quick explanation of what happens after you press Start. No plugins, no uploads—just the voices already on your device.</p>
 
-  <!-- FOOTER -->
-  <footer>
-  © 2025 Read‑Aloud · <a href="contact.html">Contact</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a><br>
-  <strong>As an Amazon Associate I earn from qualifying purchases.</strong>
+  <section class="card">
+    <h2>1) Text stays local</h2>
+    <p>
+      When you paste text into <a href="app.html">the tool</a>, it never leaves your browser. Read‑Aloud
+      calls the Speech Synthesis API built into Chrome, Edge, Safari, and other modern browsers. That API
+      turns your text into audio using voices your operating system already includes.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>2) Voices are discovered on your device</h2>
+    <p>
+      The tool requests the list of voices from the browser, filters them by the language dropdown you
+      choose, and populates the menu. If you add more voices in system settings, a quick refresh pulls
+      them into the list. See the <a href="voices.html">Voice Gallery</a> for install steps.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>3) Playback is chunked for stability</h2>
+    <p>
+      Long passages are split into manageable chunks before speaking. As each chunk finishes, the progress
+      bar and percentage update. If you change speed mid-way, the next chunk uses the new rate. This keeps
+      playback responsive without overwhelming the browser.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>4) Controls stay keyboard-friendly</h2>
+    <p>
+      Keyboard shortcuts work after the first tap that grants audio permission: Start (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>), Pause, Resume, Stop, and a quick focus shortcut (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>) to jump back into the text box.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>5) Limits to keep in mind</h2>
+    <p>
+      The browser may pause audio when a device sleeps, and MP3 export is not available because the API
+      does not return audio files. For offline use, load the page and start playback once while online to
+      cache the voice. More details live in the <a href="help.html">Help Center</a>.
+    </p>
+  </section>
+</main>
+
+<footer>
+  <div>
+    <a href="index.html">Home</a>
+    <a href="app.html">Tool</a>
+    <a href="guides.html">Guides</a>
+    <a href="help.html">Help</a>
+    <a href="voices.html">Voices</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <a href="privacy.html#controls">Privacy settings</a>
+    <a href="recommendations.html" rel="sponsored nofollow">Recommendations</a>
+    <a href="sitemap.xml">Sitemap</a>
+  </div>
+  <div class="legal">© 2025 Read‑Aloud. Built on the Speech Synthesis API.</div>
 </footer>
 </body>
 </html>
