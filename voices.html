@@ -1,115 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-SVGML1VGPG');
-</script>
-
-<meta charset="utf-8">
-<title>Voice Gallery | Read-Aloud</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Sample the most popular browser voices before you read text aloud. Click any button to hear a 5-second demo.">
-<style>
-body{margin:0;font:16px/1.5 Arial,Helvetica,sans-serif;background:#f9f9ff;color:#111}
-header,footer{background:#004080;color:#fff;padding:12px;text-align:center}
-header a,footer a{color:#fff;text-decoration:none;margin:0 6px}
-main{max-width:900px;margin:auto;padding:20px}
-h1{margin-top:0;text-align:center}
-.small{font-size:0.9em;color:#e0e0e0}
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.voice card{background:#fff;border:1px solid #ddd;border-radius:6px;padding:12px}
-button.demo{width:100%;padding:10px;background:#ff0;border:2px solid #777;cursor:pointer;font:15px/1.2 Tahoma;color:#000}
-.ads{margin:28px 0;text-align:center}
-</style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SVGML1VGPG');
+  </script>
+  <meta charset="utf-8">
+  <title>Voice Gallery | System Voices and How to Add More</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Learn why Read‑Aloud voice lists differ by browser, how to install additional system voices on iOS, macOS, Windows, and Android, and how to fix missing voices." />
+  <link rel="canonical" href="https://read-aloud.com/voices.html">
+  <link rel="stylesheet" href="/site.css">
 </head>
-
 <body>
 <header>
-  <nav id="mainNav">
-    <a href="index.html">Home</a>
-    <a href="voices.html" aria-current="page">Voices</a>
-    <a href="help.html">Help</a>
-    <a href="guides.html">Guides</a>
-    <a href="recommendations.html">Recommendations</a>
-    <a href="about.html">About</a>
-    <a href="privacy.html">Privacy</a>
-    <a href="terms.html">Terms</a>
-  </nav>
+  <div class="navbar">
+    <div class="logo">Read‑Aloud</div>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/index.html">Home</a>
+      <a href="/app.html">Tool</a>
+      <a href="/guides.html">Guides</a>
+      <a href="/help.html">Help</a>
+      <a href="/voices.html" aria-current="page">Voices</a>
+      <a href="/about.html">About</a>
+    </nav>
+  </div>
 </header>
 
 <main>
+  <div class="breadcrumb"><a href="/index.html">Home</a> <span aria-hidden="true">›</span> Voices</div>
   <h1>Voice Gallery</h1>
-  <p>Preview eleven of the most widely-installed system voices.  
-     Click a button to hear the classic pangram <em>“The quick brown fox jumps over the lazy dog.”</em>  
-     All audio is generated locally in your browser—nothing is uploaded.</p>
+  <p class="lead">Read‑Aloud lists the text-to-speech voices already installed on your device. Here is why lists differ by browser and how to add more voices on every major platform.</p>
 
-  <section class="grid" id="voiceGrid"></section>
+  <section>
+    <h2>Why voice lists look different</h2>
+    <div class="card">
+      <p>
+        Read‑Aloud uses the Speech Synthesis API built into your browser. That API surfaces the voices
+        shipped with your operating system plus any optional packs you have installed. macOS and iOS
+        often ship with several natural voices, while some Windows builds include only a handful until
+        you add language packs. ChromeOS and many Android devices rely on Google’s system TTS engine,
+        which exposes different options depending on region and device manufacturer.
+      </p>
+      <p>
+        The browser also matters. Chrome and Edge often expose the newest voices first, while Firefox
+        may list fewer voices on some platforms. If you switch browsers and see additional options,
+        that is expected: each browser filters the system catalog differently. Regardless of the list,
+        all playback happens locally—the tool does not stream your text to a cloud engine.
+      </p>
+    </div>
+  </section>
 
-  <div class="ads">
-    <!-- 728×90 display ad -->
-    <ins class="adsbygoogle"
-         style="display:inline-block;width:728px;height:90px"
-         data-ad-client="ca-pub-4003447295960802"
-         data-ad-slot="YOUR_SLOT_ID"></ins>
-    <script async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
-  </div>
+  <section>
+    <h2>How to install or enable voices</h2>
+    <div class="grid two-col">
+      <div class="card">
+        <h3>iOS and iPadOS</h3>
+        <ul>
+          <li>Open <em>Settings → Accessibility → Spoken Content</em> and tap <strong>Voices</strong>.</li>
+          <li>Select a language, then download an enhanced voice such as “Siri Voice 4.” Enhanced voices sound more natural but may take longer to download.</li>
+          <li>Return to Read‑Aloud and reload the page. The new voice should appear in the list after the download finishes.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>macOS</h3>
+        <ul>
+          <li>Open <em>System Settings → Accessibility → Spoken Content</em> and choose <strong>System Voice → Manage Voices</strong>.</li>
+          <li>Add the languages and specific voices you want, then allow downloads to complete.</li>
+          <li>Restart the browser to refresh the Speech Synthesis catalog.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Windows 10/11</h3>
+        <ul>
+          <li>Open <em>Settings → Time &amp; Language → Speech</em> and review the <strong>Manage voices</strong> section.</li>
+          <li>Use <strong>Add voices</strong> to install language packs that include TTS voices. Choose voices that match the language you paste most often.</li>
+          <li>Restart the browser; Edge and Chrome tend to expose new voices immediately after a reboot.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Android</h3>
+        <ul>
+          <li>Open <em>Settings → System → Languages &amp; input → Text-to-speech output</em>.</li>
+          <li>Select <strong>Preferred engine</strong> (often Google’s engine) and tap the gear icon to manage installed voices.</li>
+          <li>Download offline voice data for the languages you use. Some manufacturers hide voices under “Offline speech recognition.”</li>
+          <li>Reopen Read‑Aloud in Chrome. If the voice list is still short, try enabling “Use network voices” in the same settings panel.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
-  <h2 id="how">How this helps you</h2>
-  <ul>
-    <li><strong>Dyslexia &amp; ADHD-friendly&nbsp;reading</strong> – pick a pace and accent that keeps you engaged.</li>
-    <li><strong>Language practice</strong> – try Spanish or French voices to reinforce pronunciation.</li>
-    <li><strong>Voice-over work</strong> –sample multiple tones before recording audio.</li>
-  </ul>
+  <section>
+    <h2>What to do if voices are missing</h2>
+    <div class="card">
+      <p>
+        If the list still looks sparse after installing voices, try these quick fixes:
+      </p>
+      <ul>
+        <li>Close and reopen the browser. Some platforms only refresh the list on launch.</li>
+        <li>Disable battery saver or low-power modes that might pause voice downloads mid-way.</li>
+        <li>On desktop, open a private window to rule out extensions blocking the Speech Synthesis API.</li>
+        <li>Ensure your system language settings match the voice language you want; mismatched locales sometimes hide voices.</li>
+      </ul>
+      <p>
+        Still stuck? Send your device model, OS version, browser version, and a screenshot of the empty
+        dropdown through the <a href="/contact.html">Contact page</a>. We maintain a running list of
+        browser quirks and can suggest a specific pairing that works for your setup.
+      </p>
+    </div>
+  </section>
+
+  <section class="related">
+    <h3>Related guides</h3>
+    <ul>
+      <li><a href="/guides/tts-voice-selection.html">How to Choose the Best Voice</a></li>
+      <li><a href="/guides/tts-for-students.html">Student listening workflow</a></li>
+      <li><a href="/guides/tts-for-adhd-focus.html">Focus and pacing with timers</a></li>
+      <li><a href="/guides/tts-privacy-safety.html">Privacy &amp; safety habits</a></li>
+    </ul>
+  </section>
 </main>
 
 <footer>
-  © 2025 Read‑Aloud · <a href="contact.html">Contact</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a><br>
-  <strong>As an Amazon Associate I earn from qualifying purchases.</strong>
+  <div>
+    <a href="/index.html">Home</a>
+    <a href="/app.html">Tool</a>
+    <a href="/guides.html">Guides</a>
+    <a href="/help.html">Help</a>
+    <a href="/voices.html" aria-current="page">Voices</a>
+    <a href="/about.html">About</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+    <a href="privacy.html#controls">Privacy settings</a>
+    <a href="/recommendations.html" rel="sponsored nofollow">Recommendations</a>
+    <a href="/sitemap.xml">Sitemap</a>
+  </div>
+  <div class="legal">© 2025 Read‑Aloud. Voice availability depends on your operating system and browser.</div>
 </footer>
-
-<script>
-/* ------- build demo buttons ------- */
-const voicesWanted = [
-  {lang:'en-US', label:'English US – Female'},
-  {lang:'en-US', label:'English US – Male'},
-  {lang:'en-GB', label:'English UK – Female'},
-  {lang:'en-GB', label:'English UK – Male'},
-  {lang:'es-ES', label:'Español – Femenino'},
-  {lang:'es-ES', label:'Español – Masculino'},
-  {lang:'fr-FR', label:'Français – Féminin'},
-  {lang:'fr-FR', label:'Français – Masculin'},
-  {lang:'de-DE', label:'Deutsch – Weiblich'},
-  {lang:'de-DE', label:'Deutsch – Männlich'},
-  {lang:'it-IT', label:'Italiano – Femmina'}
-];
-
-function populate() {
-  const all = speechSynthesis.getVoices();
-  const grid = document.getElementById('voiceGrid');
-  grid.innerHTML = '';
-  voicesWanted.forEach(w=>{
-    const v = all.find(x=>x.lang===w.lang && x.name.toLowerCase().includes('female')===w.label.includes('Female') && x.name.toLowerCase().includes('male')===w.label.includes('Male')) || all.find(x=>x.lang===w.lang);
-    const card = document.createElement('div');
-    card.className='voice card';
-    card.innerHTML = `<p>${w.label}</p><button class="demo">Play demo</button>`;
-    card.querySelector('button').onclick = ()=>{
-      const u = new SpeechSynthesisUtterance('The quick brown fox jumps over the lazy dog.');
-      if (v) u.voice = v;
-      speechSynthesis.speak(u);
-    };
-    grid.appendChild(card);
-  });
-}
-if (speechSynthesis.getVoices().length) populate();
-else speechSynthesis.onvoiceschanged = populate;
-</script>
 </body>
 </html>

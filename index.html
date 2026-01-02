@@ -1,293 +1,233 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-SVGML1VGPG');
-</script>
-
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=Edge">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>Read-Aloud | FREE Text-to-Speech</title>
-
-<!-- ——— Retro CSS ——— -->
-<style>
-body{margin:0;background:#000080 url("bg_tile.gif") repeat;color:#fffc;font:14px Verdana}
-
-/* banner push */
-#top{background:#000040;border-bottom:3px double #ff0;text-align:center;padding:6px}
-#top h1{margin:4px 0;font:48px "Comic Sans MS";color:#0f0;text-shadow:2px 2px #f0f}
-
-/* nav */
-#mainNav{background:#002060;border-bottom:3px double #ff0;text-align:center;padding:6px}
-#mainNav a{color:#fff;text-decoration:none;margin:0 10px;font:15px/1.4 Verdana}
-#mainNav a:hover,#mainNav a:focus{text-decoration:underline}
-
-/* subtle support bar */
-#supportBar{position:relative;background:#00124a;border-bottom:2px solid #334;
-            font:13px Verdana;padding:3px 8px;color:#e0e0ff;
-            display:flex;justify-content:center;align-items:center;gap:10px}
-#supportBar .fill{position:absolute;top:0;left:0;height:100%;background:#ff0;opacity:.20}
-#supportBar .msg{position:relative;z-index:2;white-space:nowrap}
-.coffeeBtn{position:relative;z-index:2;color:#ff0;text-decoration:none;
-           border-bottom:1px dotted #ff0;padding:0 2px}
-.coffeeBtn:hover,.coffeeBtn:focus{background:#ff0;color:#000;border:none}
-@media(max-width:480px){#supportBar{gap:6px;flex-wrap:wrap;font-size:12px}}
-
-/* tool panel */
-.panel{margin:14px;background:#001a66;border:2px outset #ff0;padding:12px}
-textarea{width:100%;min-height:120px;padding:4px;border:3px inset #666;
-         font:15px/1.4 "Courier New";box-sizing:border-box}
-.btn{background:#ff0;border:2px outset #333;font:14px Tahoma;padding:6px 14px;color:#000;cursor:pointer}
-.highlight{background:#f0f;color:#000}
-progress{width:100%;height:12px;border:2px inset #333;background:#333}
-progress::-webkit-progress-value{background:#0f0}
-@media(max-width:640px){body{font-size:13px}}
-
-/* footer */
-footer{background:#002060;color:#fff;padding:8px 0;text-align:center;font:14px Verdana}
-footer a{color:#fff;text-decoration:none;margin:0 6px}
-footer a:hover{text-decoration:underline}
-footer .small{display:block;font-size:12px;color:#e0e0ff;margin-top:4px}
-</style>
-
-<!-- Google AdSense -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4003447295960802" crossorigin="anonymous"></script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SVGML1VGPG');
+  </script>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <title>Read‑Aloud | Free Text-to-Speech for Everyday Reading</title>
+  <meta name="description" content="Read‑Aloud turns text into speech directly in your browser. Learn how students, writers, and accessibility-minded readers use the tool plus guides, help, and support." />
+  <link rel="canonical" href="https://read-aloud.com/">
+  <link rel="stylesheet" href="/site.css">
 </head>
-
 <body>
-
-<!-- header -->
 <header>
-  <div id="top"><h1>Read-Aloud</h1></div>
-  <nav id="mainNav">
-    <a href="index.html" aria-current="page">Home</a>
-    <a href="voices.html">Voices</a>
-    <a href="help.html">Help</a>
-    <a href="guides.html">Guides</a>
-    <a href="recommendations.html">Recommendations</a>
-    <a href="about.html">About</a>
-    <a href="privacy.html">Privacy</a>
-    <a href="terms.html">Terms</a>
-  </nav>
+  <div class="navbar">
+    <div class="logo">Read‑Aloud</div>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/index.html" aria-current="page">Home</a>
+      <a href="/app.html">Tool</a>
+      <a href="/guides.html">Guides</a>
+      <a href="/help.html">Help</a>
+      <a href="/voices.html">Voices</a>
+      <a href="/about.html">About</a>
+    </nav>
+  </div>
 </header>
 
-<!-- support bar -->
-<div id="supportBar" role="region" aria-label="Support Read-Aloud">
-  <div class="fill" id="goalFill"></div>
-  <span id="goalMsg" class="msg"></span>
-  <a href="https://coff.ee/readaloud" target="_blank" rel="noopener"
-     class="coffeeBtn" aria-label="Buy me a coffee">☕ Buy me a coffee</a>
-</div>
+<main>
+  <section class="hero">
+    <p class="tag">Free in-browser text-to-speech</p>
+    <h1>Read‑Aloud turns any text into natural speech without sign ups or downloads.</h1>
+    <p>
+      Paste the text you own, choose a system voice you like, and let Read‑Aloud read back articles,
+      homework, reports, or drafts. The tool runs fully in your browser using built-in voices,
+      so nothing you paste leaves your device.
+    </p>
+    <p class="lead">
+      This page explains what the tool does, when to use it, how to avoid common issues,
+      and where to find deeper guides written for students, writers, and accessibility-minded readers.
+    </p>
+    <div style="margin-top:18px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+      <a class="button-primary" href="/app.html">Open the Tool</a>
+      <span class="small">Looking for help? Visit the <a href="/help.html" style="color:#fff;text-decoration:underline;">Help Center</a>.</span>
+    </div>
+  </section>
 
-<!-- main panel -->
-<div class="panel">
-  <textarea id="txt" placeholder="Paste or type text here…"></textarea><br><br>
+  <section>
+    <h2>What Read‑Aloud is and why it exists</h2>
+    <div class="grid two-col">
+      <div class="card">
+        <p>
+          Read‑Aloud started as a simple browser experiment: could a distraction-free web page make
+          the native speech synthesis API friendlier for everyday reading? Over time it grew into a
+          focused tool with progress meters, keyboard shortcuts, and clear privacy defaults so you
+          can keep your attention on the text instead of fiddling with menus.
+        </p>
+        <p>
+          Students use it to turn lecture notes into listenable study sessions. Writers and editors
+          rely on it to catch phrasing issues their eyes skipped over. Readers with low vision use it
+          to rest their eyes during long documents. Language learners pair slower playback with their
+          own reading to practice pronunciation and rhythm.
+        </p>
+      </div>
+      <div class="card">
+        <p>
+          The tool is deliberately lightweight. There is no account system, no cloud conversion, and
+          no upload to third parties. It leans on voices that already live inside your operating
+          system or browser. That design keeps latency low and makes the experience safe for school
+          laptops, locked-down tablets, and privacy-conscious professionals.
+        </p>
+        <p>
+          Everything you need stays on one page. If you want a quick walkthrough, the
+          <a href="guide-how-to-use.html">How to Use Read‑Aloud</a> guide and the
+          <a href="/guides.html">Guides library</a> break down the controls with screenshots and
+          practical routines.
+        </p>
+      </div>
+    </div>
+  </section>
 
-  <label>Language <select id="lang"></select></label>
-  <label style="margin-left:12px">Voice
-    <select id="voice"><option value="-1">Default</option></select>
-  </label><br><br>
+  <section>
+    <h2>How the tool works (and what it does not do)</h2>
+    <div class="card">
+      <p>
+        Read‑Aloud slices your text into manageable chunks, queues them for the Speech Synthesis
+        API, and updates the progress bar as each chunk finishes. Voice selection happens locally:
+        the tool asks your browser for available voices, filters them by language, and presents the
+        list in the dropdown. If you change the rate slider, the next chunk uses the new speed so you
+        can adjust pacing on the fly.
+      </p>
+      <p>
+        Because the tool uses system voices, playback quality depends on your operating system. On
+        macOS and iOS you will see premium-quality voices like “Siri Voice 4.” On Windows and some
+        Android builds you may see a smaller list. The <a href="/voices.html">Voice Gallery</a>
+        explains why voice lists differ and how to add more options.
+      </p>
+      <p>
+        The browser sandbox means a few limits: MP3 export is not available because the Speech
+        Synthesis API does not provide audio blobs; background playback may pause when a laptop goes
+        to sleep; and some mobile browsers require a tap before they allow audio output. These limits
+        are described in more depth on the <a href="download-mp3.html">MP3 export note</a> and in
+        the <a href="/help.html">Help Center</a> troubleshooting checklists.
+      </p>
+    </div>
+  </section>
 
-  <label>Speed <span id="rv">1</span>x
-    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
-  </label><br><br>
+  <section>
+    <h2>Who the tool is for</h2>
+    <div class="grid three-col">
+      <div class="card">
+        <h3>Students</h3>
+        <p>
+          Turn reading assignments into short listening sprints. Copy the section you need, set a
+          comfortable voice, and let the progress meter keep you honest about pacing. Pair the tool
+          with a timer and active-recall prompts from the
+          <a href="/guides/tts-study-loop-templates.html">Study Loop Templates guide</a>.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Writers &amp; editors</h3>
+        <p>
+          Listening exposes clunky phrasing that looks fine on screen. Keep the speed at 1.0× and tap
+          <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd> to pause when you hear a sentence worth
+          rewriting. The <a href="/guides/tts-for-writers.html">Proofreading guide for writers</a>
+          outlines a repeatable workflow.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Accessibility &amp; focus</h3>
+        <p>
+          Readers managing eye strain, ADHD, or dyslexia often blend listening with on-screen
+          tracking. Use the slow-speed range (0.8–1.0×) and shorter chunks to keep place. The
+          <a href="/guides/tts-for-adhd-focus.html">Focus guide</a> and
+          <a href="/guides/tts-for-dyslexia-support.html">Dyslexia guide</a> include pacing ideas.
+        </p>
+      </div>
+    </div>
+  </section>
 
-  <button id="start"  class="btn">Start</button>
-  <button id="pause"  class="btn">Pause</button>
-  <button id="resume" class="btn">Resume</button>
-  <button id="stop"   class="btn">Stop</button><br><br>
+  <section>
+    <h2>Privacy posture and data handling</h2>
+    <div class="card">
+      <p>
+        Everything you paste stays in your browser tab. Read‑Aloud does not send text to a server,
+        store documents, or log what you type. Analytics capture only high-level usage to understand
+        which pages are visited, not what content you listen to. Ads are limited to informational
+        pages like this one; the <a href="/app.html">Tool page</a> intentionally avoids ad loading so
+        user-pasted text is never next to ad code.
+      </p>
+      <p>
+        For extra caution, avoid pasting confidential contracts, protected student records, or
+        regulated medical details. When in doubt, use short excerpts or scrub sensitive fields. The
+        <a href="/guides/tts-privacy-safety.html">Privacy &amp; Safety guide</a> lists safe habits
+        and explains why Read‑Aloud leans on local voices instead of cloud synthesis.
+      </p>
+    </div>
+  </section>
 
-  <progress id="bar" value="0" max="100"></progress>
-  <div id="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
-  <div id="disp" aria-live="polite" style="margin-top:8px"></div>
-</div>
+  <section>
+    <h2>Troubleshooting at a glance</h2>
+    <div class="grid two-col">
+      <div class="card">
+        <h3>Common quick fixes</h3>
+        <ul>
+          <li>If you see an empty voice list, reload after unlocking your device audio or try another browser.</li>
+          <li>No sound on iPhone or iPad? Toggle the physical mute switch and confirm the tab has audio permission.</li>
+          <li>Text not finishing? Reduce the chunk size by shortening the pasted section and retry.</li>
+          <li>Hearing robotic output? Switch to a different system voice or lower the speed to 0.9×.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Where to get full answers</h3>
+        <p>
+          The <a href="/help.html">Help Center</a> documents platform-specific fixes, including
+          offline behavior, missing voices, and performance tips. You can also jump straight to the
+          <a href="/voices.html">Voice Gallery</a> for OS-specific install steps or send a detailed
+          report through the <a href="/contact.html">Contact page</a> using the bug report template.
+        </p>
+        <p>
+          If you prefer structured walkthroughs, start with the <a href="/guides.html">Guides</a>
+          collection. Each article ends with related links so you can dig deeper without searching
+          around the site.
+        </p>
+      </div>
+    </div>
+  </section>
 
-<!-- Helpful content section (improves site quality for visitors + AdSense review) -->
-<div class="panel">
-  <h2 style="margin-top:0;color:#ff0">What is Read‑Aloud?</h2>
-  <p>
-    <strong>Read‑Aloud</strong> is a free text‑to‑speech tool that reads your text out loud directly in your browser.
-    Paste anything you have the rights to use, pick a voice and speed, and press Start.
-  </p>
-  <p>
-    The tool is designed to be simple and distraction‑free. Many people use it for studying, proofreading,
-    accessibility support, and language practice.
-  </p>
+  <section>
+    <h2>How to make the most of Read‑Aloud</h2>
+    <div class="card">
+      <p>
+        Keep your sessions short and intentional. Break long papers into sections, use the Pause and
+        Resume buttons when you need to mark edits, and note tricky terms you want to double-check.
+        Consider pairing a comfortable pair of wired headphones with the Recommendations at the
+        bottom of this site for clearer audio and fewer distractions.
+      </p>
+      <p>
+        Looking for a place to start? Visit the <a href="/guides/tts-for-students.html">student
+        workflow guide</a>, try the <a href="/guides/tts-voice-selection.html">voice selection
+        playbook</a>, or copy the prompts from the
+        <a href="/guides/tts-study-loop-templates.html">study loop templates</a>. When you are ready
+        to listen, head to the <a href="/app.html">Tool</a> and press Start.
+      </p>
+    </div>
+  </section>
+</main>
 
-  <h3 style="color:#ff0;margin-bottom:6px">Popular Guides</h3>
-  <ul style="margin-top:6px">
-    <li><a href="guides.html" style="color:#ff0">Guides &amp; Tutorials (start here)</a></li>
-    <li><a href="guide-how-to-use.html" style="color:#ff0">How to Use Read‑Aloud (Step‑by‑Step)</a></li>
-    <li><a href="guide-study.html" style="color:#ff0">Study With Text‑to‑Speech</a></li>
-    <li><a href="guide-proofread.html" style="color:#ff0">Proofread by Ear</a></li>
-    <li><a href="guide-language-learning.html" style="color:#ff0">Language Learning With TTS</a></li>
-    <li><a href="guide-privacy.html" style="color:#ff0">Privacy‑First Text‑to‑Speech</a></li>
-    <li><a href="recommendations.html" style="color:#ff0">Recommended reading aids &amp; accessories</a></li>
-  </ul>
-
-  <p style="margin-top:12px;color:#e0e0ff">
-    Tip: If you run into issues on iPhone/iPad (no sound, no voices), see the <a href="help.html" style="color:#ff0">Help</a> page.
-  </p>
-</div>
-
-            
-
-
-<!-- Google 468×60 banner -->
-<div style="text-align:center;margin:14px">
-  <ins class="adsbygoogle" style="display:inline-block;width:468px;height:60px"
-       data-ad-client="ca-pub-4003447295960802" data-ad-slot="YOUR_GOOGLE_SLOT"></ins>
-  <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
-</div>
-            
-<!-- Amazon Affiliate Ad Widget (Responsive) -->
-<div style="margin:14px auto; max-width:320px; text-align:center;">
-  <p style="font:14px Verdana; color:#fff; margin:0 0 6px;">
-    We hand-pick assistive reading tools that pair well with Read-Aloud. Purchases made
-    through these recommendations support the site at no extra cost to you.
-  </p>
-  <div id="amazonWidget"></div>
-  <div id="curatedLinks" style="display:none; text-align:left; font:14px Verdana;"></div>
-  <script type="text/javascript">
-    const searchPhrases = [
-      "text to speech microphone",
-      "reading pen for dyslexia",
-      "dyslexia tools",
-      "assistive reading tablet",
-      "audio book headphones"
-    ];
-
-    // Rotate phrases weekly to keep the widget aligned with high-intent searches.
-    const rotationIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24 * 7)) % searchPhrases.length;
-    const selectedPhrase = searchPhrases[rotationIndex];
-
-    // Flip to curated links for experiments without changing the markup.
-    let useCuratedLinks = false;
-    const curatedProducts = [
-      {
-        title: "Text-to-Speech USB Microphone",
-        href: "https://www.amazon.com/s?k=text+to+speech+microphone&tag=nickdaly-20",
-        note: "Clear capture for narrating and dictation."
-      },
-      {
-        title: "Reading Pen for Dyslexia",
-        href: "https://www.amazon.com/s?k=reading+pen+dyslexia&tag=nickdaly-20",
-        note: "Scan-and-read support for faster comprehension."
-      },
-      {
-        title: "Assistive Listening Headphones",
-        href: "https://www.amazon.com/s?k=audio+book+headphones&tag=nickdaly-20",
-        note: "Comfortable for long listening sessions."
-      }
-    ];
-
-    const showCuratedLinks = () => {
-      if (useCuratedLinks) return;
-      useCuratedLinks = true;
-
-      const widget = document.getElementById('amazonWidget');
-      widget.innerHTML = '';
-
-      const curatedContainer = document.getElementById('curatedLinks');
-      curatedContainer.innerHTML = '';
-
-      const list = document.createElement('ul');
-      curatedProducts.forEach(item => {
-        const li = document.createElement('li');
-        li.style.marginBottom = '6px';
-        const link = document.createElement('a');
-        link.href = item.href;
-        link.target = '_blank';
-        link.rel = 'noopener';
-        link.textContent = item.title;
-        link.style.color = '#ff0';
-        li.appendChild(link);
-        if (item.note) {
-          const note = document.createElement('div');
-          note.textContent = item.note;
-          note.style.color = '#e0e0ff';
-          note.style.fontSize = '12px';
-          note.style.marginLeft = '4px';
-          li.appendChild(note);
-        }
-        list.appendChild(li);
-      });
-      curatedContainer.appendChild(list);
-      curatedContainer.style.display = 'block';
-    };
-
-    if (useCuratedLinks) {
-      showCuratedLinks();
-    } else {
-      const widget = document.getElementById('amazonWidget');
-      const configScript = document.createElement('script');
-      configScript.type = 'text/javascript';
-      configScript.text = `
-        amzn_assoc_placement = "adunit0";
-        amzn_assoc_tracking_id = "nickdaly-20";
-        amzn_assoc_ad_mode = "search";
-        amzn_assoc_ad_type = "smart";
-        amzn_assoc_marketplace = "amazon";
-        amzn_assoc_region = "US";
-        amzn_assoc_default_search_phrase = "${selectedPhrase}";
-        amzn_assoc_default_category = "All";
-      `;
-      widget.appendChild(configScript);
-
-      const loaderScript = document.createElement('script');
-      loaderScript.src = "//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US";
-      loaderScript.onerror = showCuratedLinks;
-      widget.appendChild(loaderScript);
-
-      setTimeout(() => {
-        const hasIframe = widget.querySelector('iframe');
-        if (!hasIframe) {
-          showCuratedLinks();
-        }
-      }, 2500);
-    }
-  </script>
-</div>
-
-
-<!-- meSpeak fallback -->
-<script src="https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak.min.js"></script>
-<script>
-mespeak.loadConfig("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak_config.json");
-mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json");
-</script>
-
-<!-- main logic -->
-<script src="readaloud.js"></script>
-
-<!-- visit counter + goal fill -->
-<script>
-const RAISED = 19;  /* update whenever balance changes */
-const GOAL   = 60;
-
-fetch('https://api.countapi.xyz/hit/read-aloud-site/visits')
-  .then(r=>r.json()).then(d=>updateBar(d.value)).catch(()=>updateBar('many'));
-
-function updateBar(visits){
-  const pct = Math.min(100, RAISED/GOAL*100);
-  document.getElementById('goalFill').style.width = pct + '%';
-  document.getElementById('goalMsg').innerHTML =
-      `Free TTS for <strong>${visits.toLocaleString()}</strong> readers — `
-    + `<strong>$${RAISED} of $${GOAL}</strong> hosting funded`;
-}
-</script>
-
-<!-- footer -->
 <footer>
-  © 2025 Read‑Aloud · <a href="contact.html">Contact</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a><br>
-  <strong>As an Amazon Associate I earn from qualifying purchases.</strong>
+  <div>
+    <a href="/index.html">Home</a>
+    <a href="/app.html">Tool</a>
+    <a href="/guides.html">Guides</a>
+    <a href="/help.html">Help</a>
+    <a href="/voices.html">Voices</a>
+    <a href="/about.html">About</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+    <a href="privacy.html#controls">Privacy settings</a>
+    <a href="/recommendations.html" rel="sponsored nofollow">Recommendations</a>
+    <a href="/sitemap.xml">Sitemap</a>
+  </div>
+  <div class="legal">© 2025 Read‑Aloud. As an Amazon Associate I earn from qualifying purchases.</div>
 </footer>
 </body>
 </html>
