@@ -1,28 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.read-aloud.com/</loc></url>
-  <url><loc>https://www.read-aloud.com/app.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides.html</loc></url>
-  <url><loc>https://www.read-aloud.com/help.html</loc></url>
-  <url><loc>https://www.read-aloud.com/voices.html</loc></url>
-  <url><loc>https://www.read-aloud.com/about.html</loc></url>
-  <url><loc>https://www.read-aloud.com/contact.html</loc></url>
-  <url><loc>https://www.read-aloud.com/privacy.html</loc></url>
-  <url><loc>https://www.read-aloud.com/terms.html</loc></url>
-  <url><loc>https://www.read-aloud.com/recommendations.html</loc></url>
-  <url><loc>https://www.read-aloud.com/benefits.html</loc></url>
-  <url><loc>https://www.read-aloud.com/blog.html</loc></url>
-  <url><loc>https://www.read-aloud.com/bookmark.html</loc></url>
-  <url><loc>https://www.read-aloud.com/download-mp3.html</loc></url>
-  <url><loc>https://www.read-aloud.com/how-it-works.html</loc></url>
-  <url><loc>https://www.read-aloud.com/support.html</loc></url>
-  <url><loc>https://www.read-aloud.com/Uses/proofreading.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides/tts-for-students.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides/tts-for-writers.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides/tts-for-adhd-focus.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides/tts-for-dyslexia-support.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides/tts-for-language-shadowing.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides/tts-voice-selection.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides/tts-study-loop-templates.html</loc></url>
-  <url><loc>https://www.read-aloud.com/guides/tts-privacy-safety.html</loc></url>
+  <url>
+    <loc>https://www.read-aloud.com/</loc>
+    <lastmod>2025-01-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
 </urlset>

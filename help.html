@@ -1,182 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-SVGML1VGPG');
-  </script>
-  <meta charset="utf-8">
-  <title>Help Center | Read‑Aloud Troubleshooting</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Read‑Aloud Help Center: checklists for no sound on iPhone/iPad, empty voice lists, offline behavior, long text performance, limitations, and FAQs." />
-  <link rel="canonical" href="https://read-aloud.com/help.html">
-  <link rel="stylesheet" href="/site.css">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SVGML1VGPG');
+</script>
+
+<meta charset="utf-8">
+<title>Help & FAQ | Read-Aloud</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Troubleshooting and frequently-asked questions for the free Read-Aloud text-to-speech tool.">
+<style>
+body{margin:0;font:16px/1.6 Arial,Helvetica,sans-serif;background:#fff;color:#111}
+header,footer{background:#004080;color:#fff;padding:12px;text-align:center}
+header a,footer a{color:#fff;text-decoration:none;margin:0 6px}
+footer .small{color:#e0e0ff;font-size:0.9em;display:block;margin-top:4px}
+main{max-width:900px;margin:auto;padding:24px}
+h1{margin-top:0;font-size:1.9em}
+h2{margin-top:1.6em}
+dl dt{font-weight:700;margin-top:12px}
+.ads{text-align:center;margin:32px 0}
+</style>
 </head>
+
 <body>
 <header>
-  <div class="navbar">
-    <div class="logo">Read‑Aloud</div>
-    <nav class="nav-links" aria-label="Primary">
-      <a href="/index.html">Home</a>
-      <a href="/app.html">Tool</a>
-      <a href="/guides.html">Guides</a>
-      <a href="/help.html" aria-current="page">Help</a>
-      <a href="/voices.html">Voices</a>
-      <a href="/about.html">About</a>
-    </nav>
-  </div>
+  <nav id="mainNav">
+    <a href="index.html">Home</a>
+    <a href="voices.html">Voices</a>
+    <a href="help.html" aria-current="page">Help</a>
+    <a href="guides.html">Guides</a>
+    <a href="recommendations.html">Recommendations</a>
+    <a href="about.html">About</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+  </nav>
 </header>
 
 <main>
-  <div class="breadcrumb"><a href="/index.html">Home</a> <span aria-hidden="true">›</span> Help</div>
-  <h1>Help Center</h1>
-  <p class="lead">Troubleshooting steps, platform-specific checklists, and answers to the questions we hear most often about Read‑Aloud.</p>
+  <h1>Help &amp; Frequently Asked Questions</h1>
 
-  <section class="table-of-contents card">
-    <h2 style="margin-top:0">Quick navigation</h2>
-    <ul>
-      <li><a href="#iphone-ipad">No sound on iPhone or iPad</a></li>
-      <li><a href="#empty-voices">Empty or missing voice list</a></li>
-      <li><a href="#offline">Using Read‑Aloud offline</a></li>
-      <li><a href="#long-text">Performance tips for long text</a></li>
-      <li><a href="#limitations">Known limitations</a></li>
-      <li><a href="#faq">Frequently asked questions</a></li>
-    </ul>
-  </section>
+  <h2>Quick Troubleshooting</h2>
+  <dl>
+    <dt>I clicked “Start” but hear nothing on iPhone.</dt>
+    <dd>
+      • Make sure the <strong>Ring/Silent switch</strong> (left side of device) is <em>not</em> orange.<br>
+      • Disable <strong>Lockdown Mode</strong> (Settings ▶ Privacy & Security).<br>
+      • Refresh the page and press <kbd>Start</kbd> again.
+    </dd>
 
-  <section id="iphone-ipad">
-    <h2>iPhone and iPad: fixing no-sound playback</h2>
-    <div class="card">
-      <p>
-        iOS and iPadOS protect speakers until you explicitly allow a page to play sound. If Read‑Aloud
-        looks like it is playing but you do not hear audio, work through this checklist in order.
-      </p>
-      <ol>
-        <li>Flip the physical mute switch to the unmuted position. Some models still route Safari audio through the ringer mute toggle.</li>
-        <li>Press the hardware volume up button twice while Safari is open to raise the media volume, not the ringer volume.</li>
-        <li>Tap inside the page once and press the <strong>Start</strong> button again. Mobile Safari requires a user gesture before allowing speech synthesis.</li>
-        <li>If you are using Guided Access or Focus modes, briefly exit them and retry; some profiles block web audio.</li>
-        <li>Try another browser such as Chrome for iOS. It still uses Safari’s engine but sometimes refreshes the voice list when Safari stalls.</li>
-      </ol>
-      <p>
-        If the issue persists, reboot the device to clear the speech queue, then open <a href="/app.html">read-aloud.com/app</a> as the first tab and retest.
-      </p>
-    </div>
-  </section>
+    <dt>Safari says the voice list is empty.</dt>
+    <dd>Our code sends a silent “kick” utterance, but some older iOS builds need a second tap on <kbd>Start</kbd>. If you still see no voices, switch to Chrome or update iOS.</dd>
 
-  <section id="empty-voices">
-    <h2>Empty or missing voice list</h2>
-    <div class="card">
-      <p>
-        Read‑Aloud depends on voices provided by your operating system. When the dropdown appears
-        empty, it usually means the browser could not load the list yet. Try these steps:
-      </p>
-      <ul>
-        <li>Reload the page after waiting five seconds. Some browsers populate the list only after the <code>voiceschanged</code> event fires.</li>
-        <li>Switch browsers. Chrome, Edge, and Safari expose more voices than some privacy or kiosk browsers.</li>
-        <li>Install additional system voices. On macOS, open <em>System Settings → Accessibility → Spoken Content</em>; on Windows, open <em>Settings → Time &amp; Language → Speech</em>; on Android, open <em>Settings → Text-to-speech output</em>.</li>
-        <li>If you are on a managed school device, confirm that speech synthesis is allowed. Some admin profiles disable it.</li>
-      </ul>
-      <p>
-        The <a href="/voices.html">Voice Gallery</a> explains how each platform exposes voices and how to add more. After installing a new voice, close and reopen the browser to refresh the list.
-      </p>
-    </div>
-  </section>
+    <dt>Can I use the tool offline?</dt>
+    <dd>Yes—once the page loads, system voices work without a connection. If your browser has no voices, the fallback robotic voice (meSpeak) requires the initial download but then works offline.</dd>
 
-  <section id="offline">
-    <h2>Using Read‑Aloud offline</h2>
-    <div class="card">
-      <p>
-        Read‑Aloud can keep speaking while offline as long as the page is already loaded and the
-        selected voice is stored locally. System voices on macOS, iOS, Windows, and ChromeOS usually
-        work without connectivity after the first use. Cloud-only voices offered by some extensions or
-        third-party engines will not show up here because the tool intentionally avoids external
-        streaming for privacy reasons.
-      </p>
-      <p>
-        Before boarding a flight or heading into a low-signal area, open <a href="/app.html">the tool</a>,
-        choose a voice, and press Start for a few seconds. That initial playback caches the voice. If
-        you later see errors offline, shorten the pasted text and make sure your device is not killing
-        the browser tab in battery-saver mode.
-      </p>
-    </div>
-  </section>
+    <dt>Does any text I paste leave my device?</dt>
+    <dd>No. Speech is generated by the browser’s own engine; we never send your text to our server.</dd>
 
-  <section id="long-text">
-    <h2>Performance tips for long text</h2>
-    <div class="card">
-      <p>
-        Very long pastes can overwhelm the browser queue. Break documents into smaller sections—three
-        to five minutes of listening time is a sweet spot—and press Resume between sections to keep
-        your place. Lowering the speed to 0.9× can also improve stability on older devices.
-      </p>
-      <ul>
-        <li>Use headings as cut points. Copy one chapter or subheading at a time.</li>
-        <li>Close other tabs running audio or heavy scripts to free memory.</li>
-        <li>If timing is important, note the progress percentage when you pause so you can resume from a nearby paragraph.</li>
-        <li>For research, keep a notepad next to the player and jot timestamps when you hear something to revisit.</li>
-      </ul>
-      <p>
-        The <a href="/guides/tts-for-adhd-focus.html">Focus guide</a> and
-        <a href="/guides/tts-voice-selection.html">Voice Selection guide</a> include pacing templates
-        that balance comprehension with speed.
-      </p>
-    </div>
-  </section>
+    <dt>Can I download the spoken audio?</dt>
+    <dd>Not yet. The current release is browser-only playback. We’re exploring a safe way to export MP3 in the future without exposing user text to third-party servers.</dd>
+  </dl>
 
-  <section id="limitations">
-    <h2>Known limitations</h2>
-    <div class="card">
-      <p>
-        Read‑Aloud runs entirely in your browser, so a few constraints are built-in:
-      </p>
-      <ul>
-        <li><strong>No MP3 export:</strong> The Speech Synthesis API does not return audio files. If you need recordings, consider native screen recording with system audio while respecting copyright.</li>
-        <li><strong>Sleep and lock screens:</strong> Laptops that go to sleep will pause playback. On mobile, keep the screen awake during long listens.</li>
-        <li><strong>Tab focus:</strong> Some browsers throttle background tabs. Keep Read‑Aloud in the foreground for the most reliable timing.</li>
-        <li><strong>Voice quality varies:</strong> The app lists what your device provides; premium voices require installing them at the OS level.</li>
-      </ul>
-      <p>
-        We track browser changes and update the <a href="/about.html">About page</a> with roadmap items when APIs evolve.
-      </p>
-    </div>
-  </section>
+  <h2>Keyboard Shortcuts</h2>
+  <ul>
+    <li><kbd>Ctrl + Enter</kbd> (or <kbd>⌘ + Enter</kbd> on Mac) – Start / Restart</li>
+    <li><kbd>Space</kbd> – Pause or Resume</li>
+    <li><kbd>Esc</kbd> – Stop and reset progress</li>
+  </ul>
 
-  <section id="faq">
-    <h2>Frequently asked questions</h2>
-    <div class="card">
-      <h3>Can I use Read‑Aloud for school?</h3>
-      <p>Yes. The tool is designed to be classroom-friendly and does not require sign-ins. Still, avoid pasting private student data.</p>
-      <h3>Does it work with PDFs?</h3>
-      <p>Copy the text from the PDF and paste it into the tool. Scanned PDFs without selectable text need OCR before they can be spoken.</p>
-      <h3>Is my text stored?</h3>
-      <p>No. Everything runs locally in your browser. Analytics track page visits only, not the text itself.</p>
-      <h3>Where can I get live help?</h3>
-      <p>Send a message through the <a href="/contact.html">Contact page</a>. Include your browser, device, and a short description of what happened so we can reproduce the issue.</p>
-    </div>
-  </section>
+  <div class="ads">
+    <!-- responsive ad -->
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-4003447295960802"
+         data-ad-slot="YOUR_SLOT_ID"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+  </div>
 </main>
 
 <footer>
-  <div>
-    <a href="/index.html">Home</a>
-    <a href="/app.html">Tool</a>
-    <a href="/guides.html">Guides</a>
-    <a href="/help.html" aria-current="page">Help</a>
-    <a href="/voices.html">Voices</a>
-    <a href="/about.html">About</a>
-    <a href="/contact.html">Contact</a>
-    <a href="/privacy.html">Privacy</a>
-    <a href="/terms.html">Terms</a>
-    <a href="privacy.html#controls">Privacy settings</a>
-    <a href="/recommendations.html" rel="sponsored nofollow">Recommendations</a>
-    <a href="/sitemap.xml">Sitemap</a>
-  </div>
-  <div class="legal">© 2025 Read‑Aloud. Troubleshooting content last updated for current browser releases.</div>
+  © 2025 Read‑Aloud · <a href="contact.html">Contact</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a><br>
+  <strong>As an Amazon Associate I earn from qualifying purchases.</strong>
 </footer>
 </body>
 </html>
