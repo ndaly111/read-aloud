@@ -20,7 +20,7 @@ Include only pages that are:
 - Not duplicates/typos/aliases unless intentionally canonical
 
 Do **not** include:
-- Typo URLs (e.g., `benifits.html` if it only exists as a misspelling/redirect)
+- Typo URLs (e.g., known misspellings that only redirect)
 - Dev/test pages
 - Old/deleted pages
 - Duplicate variants (e.g., both `/` and `/index.html` unless you want both indexed)
