@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://read-aloud.com/sitemap.xml
