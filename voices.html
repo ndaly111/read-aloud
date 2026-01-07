@@ -1,56 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-SVGML1VGPG');
-</script>
-
 <meta charset="utf-8">
 <title>Voice Gallery | Read-Aloud</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Sample the most popular browser voices before you read text aloud. Click any button to hear a 5-second demo.">
 <link rel="canonical" href="https://read-aloud.com/voices.html">
-<style>
-body{margin:0;font:16px/1.5 Arial,Helvetica,sans-serif;background:#f9f9ff;color:#111}
-header,footer{background:#004080;color:#fff;padding:12px;text-align:center}
-header a,footer a{color:#fff;text-decoration:none;margin:0 6px}
-main{max-width:900px;margin:auto;padding:20px}
-h1{margin-top:0;text-align:center}
-.small{font-size:0.9em;color:#e0e0e0}
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.voice card{background:#fff;border:1px solid #ddd;border-radius:6px;padding:12px}
-button.demo{width:100%;padding:10px;background:#ff0;border:2px solid #777;cursor:pointer;font:15px/1.2 Tahoma;color:#000}
-</style>
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/pages/voices.css">
 </head>
 
 <body>
-<header>
-  <nav id="mainNav">
-    <a href="/index.html">Home</a>
-    <a href="/voices.html">Voices</a>
-    <a href="/help.html">Help</a>
-    <a href="/guides.html">Guides</a>
-    <a href="/blog/">Blog</a>
-    <a href="/recommendations.html">Resources</a>
-    <a href="/about.html">About</a>
-    <a href="/privacy.html">Privacy</a>
-    <a href="/terms.html">Terms</a>
-  </nav>
-</header>
-
-<main>
-  <h1>Voice Gallery</h1>
+<a class="skip-link" href="#main">Skip to content</a>
+<header id="siteHeader"></header>
+<noscript>
+  <div class="site-header">
+    <div class="container">
+      <div class="header-inner">
+        <a class="brand" href="index.html">
+          <span class="brand-badge" aria-hidden="true"></span>
+          <span>Read‑Aloud</span>
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="index.html">Tool</a><a href="guides.html">Guides</a><a href="voices.html">Voices</a><a href="help.html">Help</a><a href="blog/index.html">Blog</a><a href="about.html">About</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+</noscript>
+<main id="main" class="main">
+  <div class="container"><h1>Voice Gallery</h1>
   <p>Preview eleven of the most widely-installed system voices.
      Click a button to hear the classic pangram <em>“The quick brown fox jumps over the lazy dog.”</em>
      All audio is generated locally in your browser—nothing is uploaded.</p>
 
-  <section class="grid" id="voiceGrid"></section>
+  <section class="grid voice-grid" id="voiceGrid"></section>
 
   <h2 id="how">How this helps you</h2>
   <ul>
@@ -58,12 +42,8 @@ button.demo{width:100%;padding:10px;background:#ff0;border:2px solid #777;cursor
     <li><strong>Language practice</strong> – try Spanish or French voices to reinforce pronunciation.</li>
     <li><strong>Voice-over work</strong> –sample multiple tones before recording audio.</li>
   </ul>
+  </div>
 </main>
-
-<footer>
-  © 2025 Read‑Aloud · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a><br>
-</footer>
-
 <script>
 /* ------- build demo buttons ------- */
 const voicesWanted = [
@@ -87,8 +67,8 @@ function populate() {
   voicesWanted.forEach(w=>{
     const v = all.find(x=>x.lang===w.lang && x.name.toLowerCase().includes('female')===w.label.includes('Female') && x.name.toLowerCase().includes('male')===w.label.includes('Male')) || all.find(x=>x.lang===w.lang);
     const card = document.createElement('div');
-    card.className='voice card';
-    card.innerHTML = `<p>${w.label}</p><button class="demo">Play demo</button>`;
+    card.className='voice-card card';
+    card.innerHTML = `<p>${w.label}</p><button class="btn btn-primary">Play demo</button>`;
     card.querySelector('button').onclick = ()=>{
       const u = new SpeechSynthesisUtterance('The quick brown fox jumps over the lazy dog.');
       if (v) u.voice = v;
@@ -100,5 +80,21 @@ function populate() {
 if (speechSynthesis.getVoices().length) populate();
 else speechSynthesis.onvoiceschanged = populate;
 </script>
+<noscript>
+  <div class="site-footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-links" aria-label="Footer">
+          <a href="contact.html">Contact</a><a href="updates/index.html">Updates</a><a href="recommendations.html">Resources</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a>
+        </div>
+        <div>© 2026 Read‑Aloud</div>
+      </div>
+    </div>
+  </div>
+</noscript>
+<footer id="siteFooter"></footer>
+<script src="assets/js/site.js" defer></script>
+<script src="assets/js/cookie-consent.js" defer></script>
+<script src="assets/js/google-tags-after-consent.js" defer></script>
 </body>
 </html>
