@@ -1,0 +1,10 @@
+.voice-grid{
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+}
+.voice-card{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.voice-card p{margin:0}
+.voice-card .btn{width:100%}

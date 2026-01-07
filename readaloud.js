@@ -215,6 +215,9 @@ function autoSize() {
 /* ========== FALLBACK (meSpeak) ========== */
 async function useMeSpeakFallback() {
   alert('Using fallback voice (Web Speech not available).');
+  if (window.mespeakReady) {
+    await window.mespeakReady;
+  }
   if (!window.mespeakLoaded) {
     alert('meSpeak is not yet ready. Please try again in a second.');
     return;
