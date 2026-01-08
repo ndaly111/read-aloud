@@ -1,56 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-SVGML1VGPG');
-</script>
-
 <meta charset="utf-8">
 <title>Blog &amp; Updates | Read‑Aloud</title>
 <link rel="canonical" href="https://read-aloud.com/blog/">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Articles and updates written for people who use read‑aloud.com: privacy, voices, troubleshooting, study workflows, and what’s new.">
 
-<style>
-  body{margin:0;font:16px/1.75 Arial,Helvetica,sans-serif;background:#fff;color:#111}
-  header,footer{background:#004080;color:#fff;padding:12px;text-align:center}
-  header a,footer a{color:#fff;text-decoration:none;margin:0 8px}
-  header a:hover,footer a:hover{text-decoration:underline}
-  main{max-width:980px;margin:auto;padding:24px}
-  h1{margin-top:0}
-  .small{color:#444;font-size:0.95em}
-  .box{background:#f7f7f7;border:1px solid #ddd;padding:12px;border-radius:10px}
-  .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
-  @media (min-width:900px){.grid{grid-template-columns:1.2fr 0.8fr}}
-  .card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px}
-  .card h2,.card h3{margin:0 0 10px 0}
-  .meta{color:#555;font-size:0.95em;margin:6px 0 0 0}
-  .tag{display:inline-block;background:#eef7ff;border:1px solid #b8d8ff;color:#003a66;
-       padding:2px 8px;border-radius:999px;font-size:12px;margin-right:6px}
-  ul{padding-left:20px}
-  hr{margin:24px 0}
-</style>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/cookie-consent.js" defer></script>
 </head>
 
 <body>
-<header>
-  <nav id="mainNav">
-    <a href="/index.html">Home</a>
-    <a href="/voices.html">Voices</a>
-    <a href="/help.html">Help</a>
-    <a href="/guides.html">Guides</a>
-    <a href="/blog/">Blog</a>
-    <a href="/recommendations.html">Resources</a>
-    <a href="/about.html">About</a>
-    <a href="/privacy.html">Privacy</a>
-    <a href="/terms.html">Terms</a>
-  </nav>
+<header class="site-header">
+  <div class="nav-container">
+    <a class="logo" href="/index.html">Read‑Aloud</a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/index.html">Home</a>
+      <a href="/guides.html">Guides</a>
+      <a href="/voices.html">Voices</a>
+      <a href="/help.html">Help</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="/recommendations.html">Resources</a>
+    </nav>
+  </div>
 </header>
 
 <main>
@@ -107,8 +80,10 @@
   </p>
 </main>
 
-<footer>
-  © 2025 Read‑Aloud · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+<footer class="site-footer">
+  <div class="footer-container">
+    <span>© 2025 Read‑Aloud</span> · <a href="/about.html">About</a> · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+  </div>
 </footer>
 </body>
 </html>
