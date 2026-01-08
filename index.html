@@ -41,25 +41,38 @@
 <main>
 <!-- main panel -->
 <div class="panel">
-  <textarea id="txt" placeholder="Paste or type text here…"></textarea><br><br>
+  <div class="tool-grid">
+    <div>
+      <textarea id="txt" placeholder="Paste or type text here…"></textarea>
+      <div id="disp" aria-live="polite" style="margin-top:8px"></div>
+    </div>
 
-  <label>Language <select id="lang"></select></label>
-  <label style="margin-left:12px">Voice
-    <select id="voice"><option value="-1">Default</option></select>
-  </label><br><br>
+    <div class="controls">
+      <div class="control-row">
+        <label>Language <select id="lang"></select></label>
+        <label>Voice
+          <select id="voice"><option value="-1">Default</option></select>
+        </label>
+      </div>
 
-  <label>Speed <span id="rv">1</span>x
-    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
-  </label><br><br>
+      <label>Speed <span id="rv">1</span>x
+        <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+      </label>
 
-  <button id="start"  class="btn">Start</button>
-  <button id="pause"  class="btn">Pause</button>
-  <button id="resume" class="btn">Resume</button>
-  <button id="stop"   class="btn">Stop</button><br><br>
+      <div class="button-row" role="group" aria-label="Playback controls">
+        <button id="start" class="btn">Start</button>
+        <button id="pause" class="btn btn--secondary">Pause</button>
+        <button id="resume" class="btn btn--secondary">Resume</button>
+        <button id="stop" class="btn btn--danger">Stop</button>
+      </div>
 
-  <progress id="bar" value="0" max="100"></progress>
-  <div id="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
-  <div id="disp" aria-live="polite" style="margin-top:8px"></div>
+      <div class="status-line" aria-live="polite">Status: <span id="status">Ready</span></div>
+      <div id="error" class="error-line" role="alert" aria-live="assertive"></div>
+
+      <progress id="bar" value="0" max="100"></progress>
+      <div id="meter" class="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
+    </div>
+  </div>
 </div>
 
 <!-- Helpful content section -->
@@ -146,7 +159,7 @@ function updateBar(visits){
 <!-- footer -->
 <footer class="site-footer">
   <div class="footer-container">
-    <span>© 2025 Read‑Aloud</span> · <a href="/about.html">About</a> · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+    <span>© 2026 Read‑Aloud</span> · <a href="/about.html">About</a> · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
   </div>
 </footer>
 </body>

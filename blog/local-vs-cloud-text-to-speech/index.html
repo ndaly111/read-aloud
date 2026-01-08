@@ -1,47 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SVGML1VGPG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-SVGML1VGPG');
-</script>
-
 <meta charset="utf-8">
 <title>Local vs Cloud Text‑to‑Speech: Privacy, Voice Quality, Trust | Read‑Aloud</title>
 <link rel="canonical" href="https://read-aloud.com/blog/local-vs-cloud-text-to-speech/">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="A plain-English decision guide to local (browser-native) vs cloud text-to-speech: what happens to your text, privacy tradeoffs, safety checklist, and why Read‑Aloud doesn’t offer MP3 downloads.">
-
-<style>
-  body{margin:0;font:16px/1.75 Arial,Helvetica,sans-serif;background:#fff;color:#111}
-  header,footer{background:#004080;color:#fff;padding:12px;text-align:center}
-  header a,footer a{color:#fff;text-decoration:none;margin:0 8px}
-  header a:hover,footer a:hover{text-decoration:underline}
-  main{max-width:900px;margin:auto;padding:24px}
-  h1{margin-top:0;line-height:1.25}
-  h2{margin-top:28px}
-  h3{margin-top:18px}
-  .small{color:#444;font-size:0.95em}
-  .meta{color:#555;font-size:0.95em;margin-top:8px}
-  .tag{display:inline-block;background:#eef7ff;border:1px solid #b8d8ff;color:#003a66;
-       padding:2px 8px;border-radius:999px;font-size:12px;margin-right:6px}
-  .card{background:#f7f7f7;border:1px solid #ddd;padding:12px;border-radius:10px;margin:14px 0}
-  .toc{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin:18px 0}
-  .toc strong{display:block;margin-bottom:8px}
-  .toc ul{margin:0;padding-left:20px}
-  .callout{background:#fff7d6;border:1px solid #f0d36b;padding:12px;border-radius:10px}
-  .checklist{list-style:none;padding-left:0;margin:10px 0}
-  .checklist li{margin:8px 0}
-  .checklist li::before{content:"☐ "; color:#111}
-  hr{margin:24px 0}
-  a{color:#004080}
-  a:hover{text-decoration:underline}
-</style>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/cookie-consent.js" defer></script>
 
 <script type="application/ld+json">
 {
@@ -59,48 +25,49 @@
 </head>
 
 <body>
-<header>
-  <nav id="mainNav">
-    <a href="/index.html">Home</a>
-    <a href="/voices.html">Voices</a>
-    <a href="/help.html">Help</a>
-    <a href="/guides.html">Guides</a>
-    <a href="/blog/">Blog</a>
-    <a href="/recommendations.html">Resources</a>
-    <a href="/about.html">About</a>
-    <a href="/privacy.html">Privacy</a>
-    <a href="/terms.html">Terms</a>
-  </nav>
+<header class="site-header">
+  <div class="nav-container">
+    <a class="logo" href="/index.html">Read‑Aloud</a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/index.html">Home</a>
+      <a href="/guides.html">Guides</a>
+      <a href="/voices.html">Voices</a>
+      <a href="/help.html">Help</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="/recommendations.html">Resources</a>
+    </nav>
+  </div>
 </header>
 
 <main>
-  <span class="tag">Privacy &amp; Trust</span>
-  <span class="tag">Decision Guide</span>
+  <article class="panel content">
+    <span class="tag">Privacy &amp; Trust</span>
+    <span class="tag">Decision Guide</span>
 
-  <h1>Local vs Cloud Text‑to‑Speech: A Decision Guide for Privacy, Voice Quality, and Trust</h1>
-  <p class="meta">
-    <strong>Published:</strong> January 2026 · <strong>Reading time:</strong> ~5 minutes ·
-    <a href="/blog/">Blog</a>
-  </p>
-
-  <div class="card">
-    <p class="small" style="margin:0">
-      If you’ve ever pasted something personal into a text‑to‑speech box—an email draft, a doctor’s note, a cover letter, a set of study notes—you’ve probably paused for a second and thought:
-      <strong>“Where does this text go?”</strong>
+    <h1>Local vs Cloud Text‑to‑Speech: A Decision Guide for Privacy, Voice Quality, and Trust</h1>
+    <p class="meta">
+      <strong>Published:</strong> January 2026 · <strong>Reading time:</strong> ~5 minutes ·
+      <a href="/blog/">Blog</a>
     </p>
-  </div>
 
-  <nav class="toc" aria-label="Table of contents">
-    <strong>On this page</strong>
-    <ul>
-      <li><a href="#two-ways">The two ways text‑to‑speech usually works</a></li>
-      <li><a href="#local-by-design">Why Read‑Aloud is “local by design”</a></li>
-      <li><a href="#when-cloud">When cloud TTS is worth it (and what to ask)</a></li>
-      <li><a href="#safety-checklist">Safety checklist before you paste sensitive text</a></li>
-      <li><a href="#no-downloads">Why Read‑Aloud doesn’t offer downloadable audio</a></li>
-      <li><a href="#decision-rule">The quick decision rule</a></li>
-    </ul>
-  </nav>
+    <div class="card">
+      <p class="small">
+        If you’ve ever pasted something personal into a text‑to‑speech box—an email draft, a doctor’s note, a cover letter, a set of study notes—you’ve probably paused for a second and thought:
+        <strong>“Where does this text go?”</strong>
+      </p>
+    </div>
+
+    <nav class="box" aria-label="Table of contents">
+      <strong>On this page</strong>
+      <ul>
+        <li><a href="#two-ways">The two ways text‑to‑speech usually works</a></li>
+        <li><a href="#local-by-design">Why Read‑Aloud is “local by design”</a></li>
+        <li><a href="#when-cloud">When cloud TTS is worth it (and what to ask)</a></li>
+        <li><a href="#safety-checklist">Safety checklist before you paste sensitive text</a></li>
+        <li><a href="#no-downloads">Why Read‑Aloud doesn’t offer downloadable audio</a></li>
+        <li><a href="#decision-rule">The quick decision rule</a></li>
+      </ul>
+    </nav>
 
   <p>
     That one question matters more than most people realize, because “text‑to‑speech” can mean two very different setups.
@@ -219,30 +186,33 @@
 
   <h2 id="decision-rule">The quick decision rule</h2>
 
-  <div class="card">
-    <ul>
-      <li><strong>Choose local TTS</strong> when privacy matters, the text is sensitive, and you want something lightweight that speaks right now.</li>
-      <li><strong>Choose cloud TTS</strong> when you need an MP3, want the most natural voice possible, or you’re working with text you don’t mind sending off‑device.</li>
-    </ul>
-    <p class="small" style="margin:0">
-      If you’re not sure: use both. Cloud for public content, local for private content. It’s a small habit that prevents big regrets.
-    </p>
-  </div>
+    <div class="card">
+      <ul>
+        <li><strong>Choose local TTS</strong> when privacy matters, the text is sensitive, and you want something lightweight that speaks right now.</li>
+        <li><strong>Choose cloud TTS</strong> when you need an MP3, want the most natural voice possible, or you’re working with text you don’t mind sending off‑device.</li>
+      </ul>
+      <p class="small">
+        If you’re not sure: use both. Cloud for public content, local for private content. It’s a small habit that prevents big regrets.
+      </p>
+    </div>
 
   <hr>
 
-  <p class="small">
-    Related: <a href="/privacy.html">Privacy Policy</a> · <a href="/help.html">Help</a> ·
-    <a href="/guide-browser-compatibility.html">Browser compatibility</a> · <a href="/guides.html">Guides hub</a>
-  </p>
+    <p class="small">
+      Related: <a href="/privacy.html">Privacy Policy</a> · <a href="/help.html">Help</a> ·
+      <a href="/guide-browser-compatibility.html">Browser compatibility</a> · <a href="/guides.html">Guides hub</a>
+    </p>
 
-  <p class="small">
-    Want to suggest a topic (or report something confusing)? <a href="/contact.html">Contact us</a>.
-  </p>
+    <p class="small">
+      Want to suggest a topic (or report something confusing)? <a href="/contact.html">Contact us</a>.
+    </p>
+  </article>
 </main>
 
-<footer>
-  © 2025 Read‑Aloud · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+<footer class="site-footer">
+  <div class="footer-container">
+    <span>© 2026 Read‑Aloud</span> · <a href="/about.html">About</a> · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+  </div>
 </footer>
 </body>
 </html>
