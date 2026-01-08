@@ -21,15 +21,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: true
       - name: Build with Jekyll
+        env:
+          JEKYLL_ENV: production
         run: bundle exec jekyll build --destination _site
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
