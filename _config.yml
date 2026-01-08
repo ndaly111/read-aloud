@@ -1,0 +1,6 @@
+title: "Read Aloud"
+description: "Read Aloud website"
+url: "https://read-aloud.com"
+baseurl: ""
+markdown: kramdown
+permalink: pretty
