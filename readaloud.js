@@ -18,6 +18,8 @@ const pauseBtn = $('pause');
 const resumeBtn = $('resume');
 const stopBtn = $('stop');
 const disp = $('disp');
+const statusEl = $('status');
+const errorEl = $('error');
 
 /* ========== GLOBALS ========== */
 let voices = [];
@@ -28,6 +30,7 @@ let totalChars = 0;
 let startTime = 0;
 let isSpeaking = false;
 let boundarySeen = false;
+let isPaused = false;
 
 /* ========== INIT ========== */
 (async function init() {
@@ -38,16 +41,21 @@ let boundarySeen = false;
   // Event listeners
   rateSlider.oninput = () => (rateValue.textContent = rateSlider.value);
   startBtn.onclick = startSpeak;
-  pauseBtn.onclick = () => speechSynthesis.pause();
-  resumeBtn.onclick = () => speechSynthesis.resume();
+  pauseBtn.onclick = pauseSpeak;
+  resumeBtn.onclick = resumeSpeak;
   stopBtn.onclick = stopAll;
 
-  txt.addEventListener('input', buildDisplay);
+  txt.addEventListener('input', () => {
+    clearError();
+    buildDisplay();
+  });
   window.addEventListener('resize', autoSize);
+  window.addEventListener('keydown', handleShortcuts);
 
   await loadVoicesWithKick(); // Load voices, with iOS kick
   buildDisplay();
   autoSize();
+  updateControls();
 })();
 
 /* ========== VOICE LOADING (FIX FOR iOS) ========== */
@@ -86,9 +94,11 @@ function populateVoiceSel() {
 function startSpeak() {
   if (isSpeaking) stopAll();
   if (!txt.value.trim()) {
-    alert('Please type or paste some text first.');
+    showError('Please type or paste some text first.');
+    setStatus('Ready');
     return;
   }
+  clearError();
 
   // Web Speech API available?
   if (speechSynthesis && voices.length) {
@@ -104,6 +114,9 @@ function useWebSpeech() {
   startTime = Date.now();
   boundarySeen = false;
   isSpeaking = true;
+  isPaused = false;
+  setStatus('Speaking');
+  updateControls();
   speakNextChunk();
   requestAnimationFrame(progressLoop);
 }
@@ -176,8 +189,8 @@ function highlight(idx) {
     }
     sum += len;
   }
-  Array.from(disp.children).forEach((s) => s.classList.remove('highlight'));
-  if (target) target.classList.add('highlight');
+  Array.from(disp.children).forEach((s) => s.classList.remove('token-highlight'));
+  if (target) target.classList.add('token-highlight');
 }
 
 function formatTime(s) {
@@ -192,12 +205,18 @@ function stopAll() {
   speechSynthesis.cancel();
   queue = [];
   isSpeaking = false;
+  isPaused = false;
   resetMeter();
+  setStatus('Ready');
+  updateControls();
 }
 
 function finish() {
   isSpeaking = false;
+  isPaused = false;
   updateMeter(totalChars);
+  setStatus('Finished');
+  updateControls();
 }
 
 function resetMeter() {
@@ -214,14 +233,19 @@ function autoSize() {
 
 /* ========== FALLBACK (meSpeak) ========== */
 async function useMeSpeakFallback() {
-  alert('Using fallback voice (Web Speech not available).');
+  setStatus('Speaking (fallback)');
   if (!window.mespeakLoaded) {
-    alert('meSpeak is not yet ready. Please try again in a second.');
+    showError('meSpeak is not yet ready. Please try again in a second.');
+    setStatus('Ready');
+    updateControls();
     return;
   }
+  clearError();
   progChar = 0;
   startTime = Date.now();
   isSpeaking = true;
+  isPaused = false;
+  updateControls();
   const chunks = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK_SIZE}}(?:\\s|$)`, 'g')) || [];
   for (const chunk of chunks) {
     await new Promise((res) => mespeak.speak(chunk, { speed: +rateSlider.value * 175 }, res));
@@ -229,4 +253,75 @@ async function useMeSpeakFallback() {
     updateMeter(progChar);
   }
   finish();
+}
+
+function pauseSpeak() {
+  if (!isSpeaking || isPaused) return;
+  speechSynthesis.pause();
+  isPaused = true;
+  setStatus('Paused');
+  updateControls();
+}
+
+function resumeSpeak() {
+  if (!isSpeaking || !isPaused) return;
+  speechSynthesis.resume();
+  isPaused = false;
+  setStatus('Speaking');
+  updateControls();
+}
+
+function updateControls() {
+  startBtn.disabled = isSpeaking;
+  pauseBtn.disabled = !isSpeaking || isPaused;
+  resumeBtn.disabled = !isSpeaking || !isPaused;
+  stopBtn.disabled = !isSpeaking;
+}
+
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+function showError(message) {
+  errorEl.textContent = message;
+}
+
+function clearError() {
+  errorEl.textContent = '';
+}
+
+function handleShortcuts(event) {
+  const isMac = navigator.platform.toUpperCase().includes('MAC');
+  const metaKey = isMac ? event.metaKey : event.ctrlKey;
+  if (metaKey && event.key === 'Enter') {
+    event.preventDefault();
+    startSpeak();
+    return;
+  }
+
+  if (event.key === 'Escape') {
+    if (isSpeaking) {
+      event.preventDefault();
+      stopAll();
+    }
+    return;
+  }
+
+  if (event.code === 'Space') {
+    const target = event.target;
+    const isEditable =
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable);
+    if (isEditable) return;
+    if (!isSpeaking) return;
+    event.preventDefault();
+    if (isPaused) {
+      resumeSpeak();
+    } else {
+      pauseSpeak();
+    }
+  }
 }
