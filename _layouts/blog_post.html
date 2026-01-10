@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ page.title }} | Read-Aloud</title>
+  <link rel="canonical" href="{{ site.url }}{{ page.url }}">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="{{ page.description | default: site.description | escape }}">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/cookie-consent.js" defer></script>
+
+  {% if page.noindex %}
+  <meta name="robots" content="noindex">
+  {% endif %}
+
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"Article",
+    "headline": {{ page.title | jsonify }},
+    "description": {{ page.description | default: site.description | jsonify }},
+    "author": {"@type":"Person","name": {{ page.author | default: "Read-Aloud" | jsonify }}},
+    "publisher": {"@type":"Organization","name":"Read-Aloud","url":"{{ site.url }}/"},
+    "datePublished":"{{ page.date | date: "%Y-%m-%d" }}",
+    "mainEntityOfPage":"{{ site.url }}{{ page.url }}"
+  }
+  </script>
+</head>
+
+<body>
+<header class="site-header">
+  <div class="nav-container">
+    <a class="logo" href="/index.html">Read-Aloud</a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/index.html">Home</a>
+      <a href="/guides.html">Guides</a>
+      <a href="/voices.html">Voices</a>
+      <a href="/help.html">Help</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="/recommendations.html">Resources</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <article class="panel content">
+    {% if page.tags %}
+      {% for tag in page.tags %}
+        <span class="tag">{{ tag }}</span>
+      {% endfor %}
+    {% endif %}
+
+    <h1>{{ page.title }}</h1>
+
+    {% assign words = content | strip_html | strip_newlines | split: " " | size %}
+    {% assign minutes = words | plus: 199 | divided_by: 200 %}
+    <p class="meta">
+      <strong>Published:</strong> {{ page.date | date: "%B %Y" }}
+      {% if page.author %} · <strong>Author:</strong> {{ page.author }}{% endif %}
+      · <strong>Reading time:</strong> ~{{ minutes }} min read · <a href="/blog/">Blog</a>
+    </p>
+
+    {{ content }}
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-container">
+    <span>© 2026 Read-Aloud</span> · <a href="/about.html">About</a> · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,3 +1,7 @@
+---
+layout: null
+---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,18 +45,38 @@
   <div class="grid">
     <section class="card" aria-label="Latest posts">
       <h2>Latest posts</h2>
+      {% assign posts = site.posts | sort: "date" | reverse %}
+      {% if posts.size == 0 %}
+        <p class="small">No posts yet. Check back soon.</p>
+      {% else %}
+        {% assign pinned_url = "/blog/local-vs-cloud-text-to-speech/" %}
+        {% assign pinned = posts | where_exp: "p", "p.url == pinned_url" | first %}
+        {% if pinned == nil %}
+          <p>
+            <span class="tag">Privacy &amp; Trust</span>
+            <a href="/blog/local-vs-cloud-text-to-speech/"><strong>Local vs Cloud Text‑to‑Speech: A Decision Guide for Privacy, Voice Quality, and Trust</strong></a>
+          </p>
+          <p class="meta">Published: January 2026 · ~5 min read</p>
+          <hr>
+        {% endif %}
 
-      <p>
-        <span class="tag">Privacy &amp; Trust</span>
-        <a href="/blog/local-vs-cloud-text-to-speech/"><strong>Local vs Cloud Text‑to‑Speech: A Decision Guide for Privacy, Voice Quality, and Trust</strong></a>
-      </p>
-      <p class="meta">Published: January 2026 · ~5 min read</p>
-
-      <hr>
-
-      <p class="small">
-        Coming next: voice installation guides, troubleshooting deep dives, and real study/proofreading workflows.
-      </p>
+        {% for post in posts limit: 10 %}
+          <p>
+            {% if post.tags %}
+              <span class="tag">{{ post.tags | first }}</span>
+            {% endif %}
+            <a href="{{ post.url }}"><strong>{{ post.title }}</strong></a>
+          </p>
+          {% assign words = post.content | strip_html | strip_newlines | split: " " | size %}
+          {% assign minutes = words | plus: 199 | divided_by: 200 %}
+          <p class="meta">
+            Published: {{ post.date | date: "%B %Y" }}
+            {% if post.author %} · {{ post.author }}{% endif %}
+            · ~{{ minutes }} min read
+          </p>
+          {% unless forloop.last %}<hr>{% endunless %}
+        {% endfor %}
+      {% endif %}
     </section>
 
     <aside class="card" aria-label="Updates">

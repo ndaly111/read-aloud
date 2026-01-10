@@ -4,3 +4,12 @@ url: "https://read-aloud.com"
 baseurl: ""
 markdown: kramdown
 permalink: pretty
+
+# Blog posts (Markdown in _posts/) publish to /blog/<slug>/
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: blog_post
+      permalink: /blog/:title/
