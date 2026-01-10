@@ -6,6 +6,7 @@ author: "Max Christianson"
 slug: resume-proof-by-ear
 permalink: /blog/resume-proof-by-ear/
 categories: [blog]
+tags: [Career]
 ---
 At a certain point in your career, the resume isn’t “a document.” It’s a compression problem.
 You’re trying to squeeze years of real work—projects, decisions, tradeoffs, leadership moments—into a page that gets skimmed in under a minute. And most of the time, the resume isn’t rejected because you’re unqualified. It’s rejected because the writing doesn’t land. It’s vague, overstuffed, or oddly hard to follow.

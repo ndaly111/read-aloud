@@ -6,6 +6,7 @@ author: "Andrew Wilson"
 slug: privacy-first-listening
 permalink: /blog/privacy-first-listening/
 categories: [blog]
+tags: [Privacy, Trust]
 ---
 You’re about to do something surprisingly intimate: paste text into a box and let a voice read it back to you.
 

@@ -6,6 +6,7 @@ author: "Nick Daly"
 slug: rehearse-presentation-without-slides
 permalink: /blog/rehearse-presentation-without-slides/
 categories: [blog]
+tags: [Presentations]
 ---
 Most people rehearse the wrong thing.
 They click through slides, glance at speaker notes, nod along, and think, “Yep, I know this.” Then they get in front of an audience and suddenly they’re saying “so…” a lot, explaining the same point twice, and spending four minutes on the first two slides.

@@ -6,6 +6,7 @@ author: "Max Christianson"
 slug: ai-reports-you-can-trust
 permalink: /blog/ai-reports-you-can-trust/
 categories: [blog]
+tags: [AI, Writing]
 ---
 AI-generated reports have a dangerous quality: they often sound “professional” even when they’re wrong.
 

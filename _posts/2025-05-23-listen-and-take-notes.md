@@ -6,6 +6,7 @@ author: "Eric Tate"
 slug: listen-and-take-notes
 permalink: /blog/listen-and-take-notes/
 categories: [blog]
+tags: [Study, Productivity]
 ---
 If you read for work, you’ve probably had this experience:
 You spend 20–30 minutes on a long article or internal doc. You reach the end feeling like you “basically got it.” And then, later that day, someone asks what it said… and you realize you can’t explain it cleanly. You remember a few phrases, maybe one chart, but not the actual argument.
