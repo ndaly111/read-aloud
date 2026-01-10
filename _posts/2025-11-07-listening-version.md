@@ -6,6 +6,7 @@ author: "Max Christianson"
 slug: listening-version
 permalink: /blog/listening-version/
 categories: [blog]
+tags: [Writing]
 ---
 There’s a difference between *reading* and *listening* that most of us don’t notice until we try it.
 

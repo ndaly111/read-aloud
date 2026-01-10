@@ -6,6 +6,7 @@ author: "Eric Tate"
 slug: chunking-strategy
 permalink: /blog/chunking-strategy/
 categories: [blog]
+tags: [Study]
 ---
 There’s a moment that happens to smart, capable people reading long research: you’re three pages in, you’ve highlighted a few lines, you’re “following”… and then you realize you can’t clearly answer a basic question like, “What is this actually saying?”
 

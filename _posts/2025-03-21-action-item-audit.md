@@ -6,6 +6,7 @@ author: "Paige Woods"
 slug: action-item-audit
 permalink: /blog/action-item-audit/
 categories: [blog]
+tags: [Workflows]
 ---
 Most meeting notes fail in a very specific way: they make everyone feel like progress happened, but they don’t reliably produce action.
 You’ve seen the pattern. A meeting ends. Someone drops notes in Slack or email. There’s a bulleted “Action Items” section. Everyone reacts with a thumbs‑up. And then… two weeks later the same topic resurfaces, slightly more urgent, with the same confusion about what was decided and who was supposed to do what.

@@ -6,6 +6,7 @@ author: "Paige Woods"
 slug: one-paragraph-a-day
 permalink: /blog/one-paragraph-a-day/
 categories: [blog]
+tags: [Language Learning]
 ---
 You can know a lot of a language and still feel strangely clumsy when you speak it.
 Reading goes fine. Listening is “pretty good.” But when it’s your turn to talk, everything slows down: the rhythm is off, the stress lands in the wrong places, and you can hear yourself sounding… careful. Not wrong, exactly—just not natural.

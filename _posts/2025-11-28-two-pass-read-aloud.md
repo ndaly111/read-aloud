@@ -6,6 +6,7 @@ author: "Andrew Wilson"
 slug: two-pass-read-aloud
 permalink: /blog/two-pass-read-aloud/
 categories: [blog]
+tags: [Study]
 ---
 If you write for work, you’re not just “sending text.” You’re setting expectations, making requests, documenting decisions, and protecting your reputation. One missing word can change meaning. One clunky paragraph can make a good idea feel sloppy. And one accidental edge in tone can turn a simple message into a long thread.
 After you’ve read a draft a couple times, your brain starts “helping.” It fills gaps and smooths over rough spots because it already knows what you meant. Listening takes that shortcut away. You experience the words in real time, the way your reader will, and problems become obvious: you lose the thread, you wait too long for the point, or a sentence lands harsher than you intended.

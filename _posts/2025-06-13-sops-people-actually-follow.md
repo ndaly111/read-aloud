@@ -6,6 +6,7 @@ author: "Nick Daly"
 slug: sops-people-actually-follow
 permalink: /blog/sops-people-actually-follow/
 categories: [blog]
+tags: [Operations]
 ---
 Most SOPs don’t fail because the process is complicated.
 They fail because the document is doing the wrong job.

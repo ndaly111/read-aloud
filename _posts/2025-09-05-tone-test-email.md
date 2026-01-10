@@ -6,6 +6,7 @@ author: "Eric Tate"
 slug: tone-test-email
 permalink: /blog/tone-test-email/
 categories: [blog]
+tags: [Email]
 ---
 Most “email drama” doesn’t start with a dramatic email.
 It starts with a message that was meant to be efficient.

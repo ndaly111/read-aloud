@@ -6,6 +6,7 @@ author: "Nick Daly"
 slug: 60-second-tone-test
 permalink: /blog/60-second-tone-test/
 categories: [blog]
+tags: [Email]
 ---
 Use Read‑Aloud like this:
 1. Copy your email or message draft.

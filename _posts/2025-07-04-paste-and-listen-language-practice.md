@@ -6,6 +6,7 @@ author: "Paige Woods"
 slug: paste-and-listen-language-practice
 permalink: /blog/paste-and-listen-language-practice/
 categories: [blog]
+tags: [Language Learning]
 ---
 If you’re learning a language as an adult, you’ve probably noticed something annoying: you can understand far more than you can confidently say.
 You might read a report in your second language and feel fine… then freeze when you have to summarize it in a meeting. Or you can follow a conversation, but your own sentences come out slower than your thinking.

@@ -8,6 +8,7 @@ layout: null
 <meta charset="utf-8">
 <title>Blog &amp; Updates | Read‑Aloud</title>
 <link rel="canonical" href="https://read-aloud.com/blog/">
+<link rel="alternate" type="application/rss+xml" title="Read‑Aloud Blog RSS" href="/feed.xml">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Articles and updates written for people who use read‑aloud.com: privacy, voices, troubleshooting, study workflows, and what’s new.">
 
@@ -15,7 +16,7 @@ layout: null
   <script src="/cookie-consent.js" defer></script>
 </head>
 
-<body>
+<body data-env="{{ jekyll.environment }}">
 <header class="site-header">
   <div class="nav-container">
     <a class="logo" href="/index.html">Read‑Aloud</a>
@@ -30,74 +31,99 @@ layout: null
   </div>
 </header>
 
-<main>
-  <h1>Blog &amp; Updates</h1>
-  <p class="small">
-    Practical posts written for people who actually use <strong>read‑aloud.com</strong>.
-    Expect workflows, troubleshooting, and “how it really works” explanations — not generic filler.
-  </p>
+<main class="blog-index">
+  <section class="blog-hero">
+    <div>
+      <h1>Blog &amp; Updates</h1>
+      <p class="lead">
+        Practical posts for people who rely on read‑aloud.com. Expect real workflows, troubleshooting,
+        and clear explanations — not generic filler.
+      </p>
+      <div class="hero-actions">
+        <a class="btn" href="mailto:admin@read-aloud.com?subject=Subscribe%20to%20Read%E2%80%91Aloud%20updates">Subscribe</a>
+        <a class="btn secondary" href="/feed.xml">RSS</a>
+      </div>
+    </div>
+    <div class="hero-note">
+      <strong>New here?</strong> If your goal is “how do I use the tool for school/work,” start with the
+      <a href="/guides.html">Guides hub</a>. For product updates and deeper TTS decisions, you’re in the right place.
+    </div>
+  </section>
 
-  <div class="box">
-    <strong>New here?</strong> If your goal is “how do I use the tool for school/work,” start with the
-    <a href="/guides.html">Guides hub</a>. If you want broader TTS decision-making and product updates, you’re in the right place.
-  </div>
+  <section class="blog-controls" aria-label="Discover blog posts">
+    <div class="search-field">
+      <label class="visually-hidden" for="blog-search">Search posts</label>
+      <input id="blog-search" type="search" placeholder="Search posts" autocomplete="off">
+    </div>
+    <div class="chip-group" role="group" aria-label="Filter by topic">
+      <button class="chip-button is-active" type="button" data-filter="all" aria-pressed="true">All topics</button>
+      {% assign tag_names = site.tags | map: "first" | sort %}
+      {% for tag in tag_names %}
+        <button class="chip-button" type="button" data-filter="{{ tag | downcase }}" aria-pressed="false">{{ tag }}</button>
+      {% endfor %}
+    </div>
+  </section>
 
-  <div class="grid">
-    <section class="card" aria-label="Latest posts">
+  <section class="blog-feed" aria-label="Post feed">
+    <div class="feed-header">
       <h2>Latest posts</h2>
-      {% assign posts = site.posts | sort: "date" | reverse %}
+      <p class="small">Browse the most recent articles. Use search or filters to narrow the list.</p>
+    </div>
+    {% assign posts = site.posts | sort: "date" | reverse %}
+    {% assign page_size = 10 %}
+    {% assign total_posts = posts | size %}
+    {% assign total_pages = total_posts | plus: page_size | minus: 1 | divided_by: page_size %}
+    <p id="no-results" class="small" hidden>No posts match your search or filter.</p>
+    <div class="post-list" id="post-list">
       {% if posts.size == 0 %}
         <p class="small">No posts yet. Check back soon.</p>
       {% else %}
-        {% assign pinned_url = "/blog/local-vs-cloud-text-to-speech/" %}
-        {% assign pinned = posts | where_exp: "p", "p.url == pinned_url" | first %}
-        {% if pinned == nil %}
-          <p>
-            <span class="tag">Privacy &amp; Trust</span>
-            <a href="/blog/local-vs-cloud-text-to-speech/"><strong>Local vs Cloud Text‑to‑Speech: A Decision Guide for Privacy, Voice Quality, and Trust</strong></a>
-          </p>
-          <p class="meta">Published: January 2026 · ~5 min read</p>
-          <hr>
-        {% endif %}
-
-        {% for post in posts limit: 10 %}
-          <p>
-            {% if post.tags %}
-              <span class="tag">{{ post.tags | first }}</span>
-            {% endif %}
-            <a href="{{ post.url }}"><strong>{{ post.title }}</strong></a>
-          </p>
+        {% for post in posts %}
+          {% assign topic = post.tags | first | default: "General" %}
           {% assign words = post.content | strip_html | strip_newlines | split: " " | size %}
           {% assign minutes = words | plus: 199 | divided_by: 200 %}
-          <p class="meta">
-            Published: {{ post.date | date: "%B %Y" }}
-            {% if post.author %} · {{ post.author }}{% endif %}
-            · ~{{ minutes }} min read
-          </p>
-          {% unless forloop.last %}<hr>{% endunless %}
+          {% assign author = post.author | default: "Read‑Aloud Team" %}
+          {% assign excerpt = post.excerpt | strip_html | strip_newlines | truncatewords: 28 %}
+          <article
+            class="post-card"
+            data-category="{{ topic | downcase }}"
+            data-tags="{{ post.tags | join: "|" | downcase | escape }}"
+            data-title="{{ post.title | escape }}"
+            data-excerpt="{{ excerpt | escape }}"
+            data-slug="{{ post.data.slug | default: post.slug }}"
+            data-post-id="{{ post.data.id }}"
+            data-date="{{ post.date | date: "%Y-%m-%d" }}"
+          >
+            <div class="post-card-header">
+              <span class="tag">{{ topic }}</span>
+            </div>
+            <h3 class="post-title"><a href="{{ post.url }}">{{ post.title }}</a></h3>
+            <p class="post-excerpt">{{ excerpt }}</p>
+            <div class="post-meta meta">
+              <time datetime="{{ post.date | date: "%Y-%m-%d" }}">{{ post.date | date: "%b %-d, %Y" }}</time>
+              <span>{{ author }}</span>
+              <span class="readtime">{{ minutes }} min read</span>
+            </div>
+          </article>
         {% endfor %}
       {% endif %}
-    </section>
+    </div>
 
-    <aside class="card" aria-label="Updates">
+    <nav class="pagination" aria-label="Blog pagination" data-total-pages="{{ total_pages }}" data-page-size="{{ page_size }}">
+      <a class="btn secondary" data-pagination="prev" href="?page=1">Newer posts</a>
+      <span class="pagination-status meta" aria-live="polite"></span>
+      <a class="btn secondary" data-pagination="next" href="?page=2">Older posts</a>
+    </nav>
+  </section>
+
+  <section class="updates-teaser" aria-label="Updates">
+    <div>
       <h2>Updates</h2>
-      <p class="small">Short notes about changes to Read‑Aloud and the site.</p>
-
-      <ul>
-        <li><a href="/updates/"><strong>View all updates</strong></a></li>
-      </ul>
-
-      <hr>
-
-      <h3 style="margin-top:0">Most recent</h3>
-      <p>
-        <span class="tag">Site</span>
-        <a href="/updates/#2026-01">January 2026: Blog &amp; Updates section launched</a>
-      </p>
-    </aside>
-  </div>
-
-  <hr>
+      <p class="small">Short notes about changes to Read‑Aloud. Visit the changelog for fixes, improvements, and new guides.</p>
+      <p class="meta"><span class="tag">Site</span> <a href="/updates/#2026-01">January 2026: Blog &amp; Updates section launched</a></p>
+    </div>
+    <a class="btn secondary" href="/updates/">View all updates</a>
+  </section>
 
   <p class="small">
     Suggestions for what to write next? <a href="/contact.html">Send feedback</a>.
@@ -109,5 +135,154 @@ layout: null
     <span>© 2026 Read‑Aloud</span> · <a href="/about.html">About</a> · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
   </div>
 </footer>
+
+<script>
+  const searchInput = document.querySelector("#blog-search");
+  const filterButtons = Array.from(document.querySelectorAll(".chip-button"));
+  const postCards = Array.from(document.querySelectorAll(".post-card"));
+  const pagination = document.querySelector(".pagination");
+  const status = pagination?.querySelector(".pagination-status");
+  const noResults = document.querySelector("#no-results");
+  const totalPages = Number(pagination?.dataset.totalPages || 1);
+  const pageSize = Number(pagination?.dataset.pageSize || 10);
+
+  const getPage = () => {
+    const params = new URLSearchParams(window.location.search);
+    const page = Number(params.get("page") || "1");
+    if (!Number.isFinite(page) || page < 1) {
+      return 1;
+    }
+    return page;
+  };
+
+  const getActiveFilter = () => document.querySelector(".chip-button.is-active")?.dataset.filter || "all";
+
+  const applyFilters = () => {
+    const query = (searchInput?.value || "").trim().toLowerCase();
+    const filter = getActiveFilter();
+
+    const filtered = postCards.filter((card) => {
+      const tags = (card.dataset.tags || "")
+        .split("|")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+      const title = (card.dataset.title || "").toLowerCase();
+      const excerpt = (card.dataset.excerpt || "").toLowerCase();
+      const matchesFilter = filter === "all" || tags.includes(filter);
+      const matchesQuery = !query || title.includes(query) || excerpt.includes(query) || tags.some((tag) => tag.includes(query));
+      return matchesFilter && matchesQuery;
+    });
+
+    const totalFilteredPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const page = Math.min(getPage(), totalFilteredPages);
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+
+    postCards.forEach((card) => {
+      card.style.display = "none";
+    });
+
+    filtered.forEach((card, index) => {
+      card.style.display = index >= start && index < end ? "" : "none";
+    });
+
+    if (status) {
+      status.textContent = `Page ${page} of ${totalFilteredPages}`;
+    }
+
+    if (noResults) {
+      noResults.hidden = filtered.length !== 0;
+    }
+
+    const prevLink = pagination?.querySelector('[data-pagination="prev"]');
+    const nextLink = pagination?.querySelector('[data-pagination="next"]');
+
+    if (prevLink) {
+      const prevPage = Math.max(1, page - 1);
+      prevLink.href = `?page=${prevPage}`;
+      prevLink.setAttribute("aria-disabled", page === 1 ? "true" : "false");
+      prevLink.classList.toggle("is-disabled", page === 1);
+    }
+
+    if (nextLink) {
+      const nextPage = Math.min(totalFilteredPages, page + 1);
+      nextLink.href = `?page=${nextPage}`;
+      nextLink.setAttribute("aria-disabled", page === totalFilteredPages ? "true" : "false");
+      nextLink.classList.toggle("is-disabled", page === totalFilteredPages);
+    }
+
+    if (pagination) {
+      pagination.classList.toggle("is-hidden", totalFilteredPages <= 1);
+    }
+  };
+
+  filterButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      filterButtons.forEach((btn) => {
+        btn.classList.remove("is-active");
+        btn.setAttribute("aria-pressed", "false");
+      });
+      button.classList.add("is-active");
+      button.setAttribute("aria-pressed", "true");
+      applyFilters();
+    });
+  });
+
+  searchInput?.addEventListener("input", applyFilters);
+
+  const logDuplicatePosts = () => {
+    const env = document.body.dataset.env || "";
+    if (env === "production") {
+      return;
+    }
+
+    const slugMap = new Map();
+    const idMap = new Map();
+    const titleDateMap = new Map();
+    const titleMap = new Map();
+
+    const register = (map, key, title) => {
+      if (!key) {
+        return;
+      }
+      const list = map.get(key) || [];
+      list.push(title);
+      map.set(key, list);
+    };
+
+    postCards.forEach((card) => {
+      register(slugMap, card.dataset.slug, card.dataset.title);
+      register(idMap, card.dataset.postId, card.dataset.title);
+      register(titleDateMap, `${card.dataset.title}|${card.dataset.date}`, card.dataset.title);
+      register(titleMap, (card.dataset.title || "").toLowerCase(), card.dataset.title);
+    });
+
+    const duplicates = (map) => Array.from(map.entries()).filter(([, titles]) => titles.length > 1);
+
+    const slugDuplicates = duplicates(slugMap);
+    const idDuplicates = duplicates(idMap);
+    const titleDateDuplicates = duplicates(titleDateMap);
+    const titleDuplicates = duplicates(titleMap);
+
+    if (slugDuplicates.length || idDuplicates.length || titleDateDuplicates.length || titleDuplicates.length) {
+      console.error("Duplicate blog posts detected. Fix the source data before shipping.");
+      if (slugDuplicates.length) {
+        console.error("Duplicate slugs:", slugDuplicates);
+      }
+      if (idDuplicates.length) {
+        console.error("Duplicate ids:", idDuplicates);
+      }
+      if (titleDateDuplicates.length) {
+        console.error("Duplicate title+date:", titleDateDuplicates);
+      }
+      if (titleDuplicates.length) {
+        console.error("Duplicate titles:", titleDuplicates);
+      }
+    }
+  };
+
+  applyFilters();
+  logDuplicatePosts();
+</script>
 </body>
 </html>

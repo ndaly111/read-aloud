@@ -1,6 +1,8 @@
 ---
 layout: post
 title: "One Paragraph a Day A 7 Day Shadowing Plan for Language Learners"
+categories: [blog]
+tags: [Language Learning]
 ---
 
 # One Paragraph a Day: A 7‑Day Shadowing Plan for Language Learners (With a Self‑Scoring Rubric)  
@@ -214,7 +216,11 @@ The goal is not to become a human dictionary. It’s to practice natural speakin
   
 ## A realistic way to keep this going after seven days  
 Once the week is over, you have two good options:  
-1. **Repeat the plan with new paragraphs each week.** You’ll build range.  
+1. **Repeat the plan with new paragraphs each week.**
+You’ll build range.  
+2. **Do two days per paragraph instead of one.**
+Day 1 = rhythm/phrasing. Day 2 = clarity/intonation.
+This slows things down in a good way.  
 2. **Do two days per paragraph instead of one.** Day 1 = rhythm/phrasing. Day 2 = clarity/intonation. This slows things down in a good way.  
 And on chaotic days, keep the habit alive with the “minimum version”:  
 * listen once  
