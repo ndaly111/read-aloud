@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Guides & Tutorials | Read‑Aloud</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Guides written specifically for read-aloud.com: studying, proofreading, dyslexia/ADHD support, language learning, privacy, and troubleshooting.">
+<meta name="description" content="Guides and tutorials for Read‑Aloud text‑to‑speech: voice setup, study workflows, proofreading by ear, language practice, accessibility tips, and privacy basics.">
 <link rel="canonical" href="https://read-aloud.com/guides.html">
   <link rel="stylesheet" href="/styles.css">
   <script src="/cookie-consent.js" defer></script>
@@ -24,74 +24,122 @@
   </div>
 </header>
 
-<main>
-  <h1>Guides &amp; Tutorials</h1>
-  <p class="small"><strong>Start here.</strong> These guides are written specifically for <strong>read‑aloud.com</strong> — a browser-based text‑to‑speech tool that uses your device’s voices.</p>
+<main class="guides-page">
+  <section class="guides-hero">
+    <div>
+      <h1>Guides &amp; Tutorials</h1>
+      <p class="lead">
+        Practical guides for using Read‑Aloud for study, work, writing, and language practice.
+        Read‑Aloud runs in your browser and speaks using the text‑to‑speech voices already installed on your device.
+      </p>
+      <div class="hero-actions">
+        <a class="btn" href="/guide-how-to-use.html">How to Use Read‑Aloud</a>
+        <a class="btn secondary" href="/help.html">Help &amp; Troubleshooting</a>
+      </div>
+    </div>
 
-  <div class="specific">
-    <strong>Read‑Aloud specifics (important):</strong>
+    <div class="hero-note">
+      <strong>Important:</strong> Voice availability and quality depend on your operating system and browser.
+      If your voice list is empty or you hear silence, the fix is usually a device voice setting or audio output routing issue.
+      Use the <a href="/help.html">Help page</a> for step-by-step fixes.
+    </div>
+  </section>
+
+  <section class="box">
+    <h2>How voices work in Read‑Aloud</h2>
     <ul>
-      <li><strong>Voice lists vary by browser &amp; OS.</strong> The same computer can show different voices in Chrome vs Safari vs Firefox.</li>
-      <li><strong>If a voice sounds robotic:</strong> switch voices, or try a different browser (desktop Chrome/Edge are often the most reliable).</li>
-      <li><strong>iPhone/iPad “no sound” or “no voices”:</strong> see <a href="/help.html">Help</a> (Ring/Silent switch, Lockdown Mode, refresh, and “tap Start again”).</li>
+      <li><strong>Read‑Aloud uses your browser’s built‑in speech engine (Web Speech API) to speak with voices installed on your device.</strong></li>
+      <li><strong>Voice lists can vary by browser and OS.</strong> On macOS, Chrome/Edge may expose a different set of voices than Safari.</li>
+      <li><strong>If a voice sounds robotic</strong>, try a different voice, or try another browser.</li>
+      <li><strong>If the voice list is empty</strong>, you likely need to download or enable a system voice, then reload the page (see <a href="/help.html">Help</a>).</li>
+      <li><strong>If you hear nothing</strong>, check your media volume and Bluetooth output routing first.</li>
     </ul>
-    <p class="small">Deep dive: <a href="/guide-browser-compatibility.html">Browser compatibility &amp; voice availability matrix</a></p>
-  </div>
+    <p class="small">
+      Deep dive: <a href="/guide-browser-compatibility.html">Browser compatibility &amp; voice availability matrix</a>
+    </p>
+  </section>
 
-  <div class="card">
-    <h2 style="margin-top:0">Getting started</h2>
-    <ul>
-      <li><a href="/guide-how-to-use.html">How to Use Read‑Aloud (Step‑by‑Step)</a></li>
-      <li><a href="/guide-keyboard-shortcuts.html">Keyboard shortcuts &amp; accessibility tips</a></li>
-      <li><a href="/guide-best-voice-speed.html">Choose the best voice and speed</a></li>
-    </ul>
-  </div>
+  <section aria-label="Browse guides by goal">
+    <div class="feed-header">
+      <h2>Browse by goal</h2>
+      <p class="small">Pick the section that matches what you’re trying to do.</p>
+    </div>
 
-  <div class="card">
-    <h2 style="margin-top:0">Study &amp; focus</h2>
-    <ul>
-      <li><a href="/guide-study.html">Study With Text‑to‑Speech</a></li>
-      <li><a href="/guide-study-pomodoro.html">Pomodoro + TTS study routine</a></li>
-      <li><a href="/guide-reading-long-documents.html">Reading long documents</a></li>
-      <li><a href="/guide-listen-to-pdfs.html">Listening to PDFs</a></li>
-      <li><a href="/guide-offline-use.html">Offline and low-connection tips</a></li>
-    </ul>
-  </div>
+    <div class="grid guides-grid">
+      <section class="card guide-card">
+        <h3>Getting started</h3>
+        <p class="small">Learn the core workflow: paste text, choose a voice, adjust speed, and listen comfortably.</p>
+        <ul>
+          <li><a href="/guide-how-to-use.html">How to Use Read‑Aloud (Step-by-Step)</a></li>
+          <li><a href="/guide-best-voice-speed.html">Choose the best voice and speed</a></li>
+          <li><a href="/guide-browser-compatibility.html">Browser compatibility &amp; voice availability</a></li>
+        </ul>
+      </section>
 
-  <div class="card">
-    <h2 style="margin-top:0">Writing &amp; editing</h2>
-    <ul>
-      <li><a href="/guide-proofread.html">Proofread by Ear</a></li>
-      <li><a href="/guide-proofreading-checklist.html">Proofreading by ear checklist</a></li>
-      <li><a href="/guide-language-shadowing.html">Language shadowing drills</a></li>
-    </ul>
-  </div>
+      <section class="card guide-card">
+        <h3>Study &amp; focus</h3>
+        <p class="small">Use TTS to reduce fatigue, retain more, and finish long reads without losing the thread.</p>
+        <ul>
+          <li><a href="/guide-study.html">Study With Text‑to‑Speech</a></li>
+          <li><a href="/guide-study-pomodoro.html">Pomodoro + TTS study routine</a></li>
+          <li><a href="/guide-reading-long-documents.html">Reading long documents</a></li>
+          <li><a href="/guide-listen-to-pdfs.html">Listening to PDFs</a></li>
+          <li><a href="/guide-offline-use.html">Offline and low-connection tips</a></li>
+        </ul>
+      </section>
 
-  <div class="card" id="focus">
-    <h2 style="margin-top:0">Accessibility &amp; focus routines</h2>
-    <ul>
-      <li><a href="/guide-dyslexia-adhd.html">Dyslexia &amp; ADHD: Reading Support With TTS</a></li>
-      <li><a href="/guide-adhd-focus-routines.html">ADHD-friendly focus routines</a></li>
-      <li><a href="/guide-dyslexia-dual-reading.html">Dual reading strategies for dyslexia</a></li>
-      <li><a href="/guide-language-learning.html">Language Learning With TTS</a></li>
-    </ul>
-  </div>
+      <section class="card guide-card">
+        <h3>Writing &amp; editing</h3>
+        <p class="small">Use listening to catch awkward phrasing, repetition, missing context, and tone drift.</p>
+        <ul>
+          <li><a href="/guide-proofread.html">Proofread by Ear</a></li>
+          <li><a href="/guide-proofreading-checklist.html">Proofreading by ear checklist</a></li>
+        </ul>
+      </section>
 
-  <div class="card">
-    <h2 style="margin-top:0">Privacy &amp; reliability</h2>
-    <ul>
-      <li><a href="/guide-local-vs-cloud-tts.html">Local vs Cloud Text‑to‑Speech (Decision Guide)</a></li>
-      <li><a href="/guide-privacy.html">Privacy‑First Text‑to‑Speech</a></li>
-      <li><a href="/guide-browser-compatibility.html">Browser compatibility &amp; voice availability</a></li>
-    </ul>
-  </div>
+      <section class="card guide-card">
+        <h3>Language learning</h3>
+        <p class="small">Turn pasted text into repeatable speaking practice (shadowing, pacing, pronunciation practice).</p>
+        <ul>
+          <li><a href="/guide-language-shadowing.html">Language shadowing drills</a></li>
+          <li><a href="/guide-language-learning.html">Language Learning With TTS</a></li>
+        </ul>
+      </section>
 
-  <hr>
+      <section class="card guide-card">
+        <h3>Accessibility &amp; focus routines</h3>
+        <p class="small">Practical setups for dyslexia/ADHD support and reduced screen strain.</p>
+        <ul>
+          <li><a href="/guide-dyslexia-adhd.html">Dyslexia &amp; ADHD: Reading Support With TTS</a></li>
+          <li><a href="/guide-adhd-focus-routines.html">ADHD-friendly focus routines</a></li>
+          <li><a href="/guide-dyslexia-dual-reading.html">Dual reading strategies for dyslexia</a></li>
+        </ul>
+      </section>
+
+      <section class="card guide-card">
+        <h3>Privacy &amp; reliability</h3>
+        <p class="small">Understand what stays on-device, what can vary by browser, and how to choose safer workflows.</p>
+        <ul>
+          <li><a href="/guide-local-vs-cloud-tts.html">Local vs Cloud Text‑to‑Speech (Decision Guide)</a></li>
+          <li><a href="/blog/privacy-first-listening/">Privacy‑First Listening (what stays on your device)</a></li>
+          <li><a href="/guide-browser-compatibility.html">Browser compatibility &amp; voice availability</a></li>
+        </ul>
+      </section>
+    </div>
+  </section>
+
+  <section class="callout">
+    <h2>Need help right now?</h2>
+    <p>
+      If something isn’t working (no sound or missing voices), start with
+      <a href="/help.html">Help &amp; troubleshooting</a>.
+      If you still can’t resolve it, use the <a href="/contact.html">contact page</a>.
+    </p>
+  </section>
+
   <p class="small">
-    Next: <a href="/guide-how-to-use.html">How to Use Read‑Aloud</a> ·
-    <a href="/index.html">Open the tool</a> ·
-    <a href="/recommendations.html">Resources page</a> ·
-    <a href="/blog/">Blog &amp; Updates</a>
+    <strong>Next:</strong> <a href="/guide-how-to-use.html">How to Use Read‑Aloud</a> · <a href="/index.html">Open the tool</a> ·
+    <a href="/recommendations.html">Resources page</a> · <a href="/blog/">Blog &amp; Updates</a>
   </p>
 </main>
 
