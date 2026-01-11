@@ -230,6 +230,69 @@ p + p {
   margin-top: 8px;
 }
 
+.blog-index > * + *,
+.help-page > * + *,
+.guides-page > * + * {
+  margin-top: 0;
+}
+
+.feed-header {
+  display: grid;
+  gap: 6px;
+}
+
+.feed-header h2,
+.feed-header p {
+  margin: 0;
+}
+
+@media (min-width: 700px) {
+  .feed-header {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 8px 16px;
+  }
+
+  .feed-header p {
+    max-width: 52ch;
+    justify-self: end;
+  }
+}
+
+.guides-page {
+  display: grid;
+  gap: 24px;
+}
+
+.guides-hero {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+}
+
+.guides-hero .lead {
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
+.guides-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: stretch;
+}
+
+.guide-card h3 {
+  margin: 0;
+}
+
+.guide-card .small {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.guide-card .small + ul {
+  margin-top: 10px;
+}
+
 .faq details {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -840,6 +903,10 @@ hr {
   }
 
   .blog-hero {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .guides-hero {
     grid-template-columns: 2fr 1fr;
   }
 
