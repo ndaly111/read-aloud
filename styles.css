@@ -264,6 +264,15 @@ p + p {
   gap: 24px;
 }
 
+.resources-page {
+  display: grid;
+  gap: 24px;
+}
+
+.resources-page > * + * {
+  margin-top: 0;
+}
+
 .guides-hero {
   display: grid;
   gap: 20px;
@@ -275,9 +284,39 @@ p + p {
   color: var(--muted);
 }
 
+.resources-hero {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+}
+
+.resources-hero .lead {
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
 .guides-grid {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   align-items: stretch;
+}
+
+.resources-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  align-items: stretch;
+}
+
+.resources-guides-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: stretch;
+}
+
+.resources-page .card ul ul {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.resources-page .card ul ul li {
+  margin-top: 6px;
 }
 
 .guide-card h3 {
@@ -291,6 +330,15 @@ p + p {
 
 .guide-card .small + ul {
   margin-top: 10px;
+}
+
+.resource-card h3 {
+  margin: 0;
+}
+
+.resource-card .small {
+  margin-top: 6px;
+  color: var(--muted);
 }
 
 .faq details {
@@ -907,6 +955,10 @@ hr {
   }
 
   .guides-hero {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .resources-hero {
     grid-template-columns: 2fr 1fr;
   }
 
