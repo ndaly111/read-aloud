@@ -26,127 +26,188 @@
 
 <main>
   <h1>Privacy Policy</h1>
-  <p class="small"><strong>Last updated:</strong> December 14, 2025</p>
+  <p class="small"><strong>Last updated:</strong> January 18, 2026</p>
 
   <div class="highlight">
-    <strong>Plain‑English summary:</strong>
+    <strong>Plain-English summary:</strong>
     <ul>
-      <li><strong>Your pasted text is spoken locally in your browser.</strong> We don’t upload your pasted text to our servers.</li>
-      <li>We don’t require accounts.</li>
-      <li>Analytics and ads only load after you accept the cookie banner. You can reset that choice anytime below.</li>
+      <li><strong>Your pasted text is spoken by your browser/operating system’s speech engine.</strong> We don’t upload your pasted text to our servers.</li>
+      <li><strong>No accounts.</strong> You can use the tool without signing in.</li>
+      <li><strong>Ads + Google Analytics only load if you accept.</strong> You can reject and still use the core tool.</li>
+      <li><strong>Two homepage services run regardless of the cookie banner:</strong> a voice fallback loaded from a CDN (meSpeak via jsDelivr) and a simple visit counter request (CountAPI).</li>
     </ul>
   </div>
 
-  <h2>1) No text leaves your browser</h2>
+  <h2>1) Who we are</h2>
   <p>
-    Read‑Aloud converts text to speech using your browser/operating system’s speech engine (Web Speech API).
-    In some cases, the site may also use an offline fallback voice (meSpeak).
-  </p>
-  <p>
-    <strong>We do not send the text you paste or type to our servers.</strong> The text stays in your browser so speech can be generated on your device.
+    This Privacy Policy applies to Read-Aloud (<strong>read-aloud.com</strong>) (“Read-Aloud”, “we”, “us”).
+    If you have questions, email <strong>admin@read-aloud.com</strong> or use the <a href="/contact.html">contact form</a>.
   </p>
 
-  <h2>2) Information we collect</h2>
+  <h2>2) The core tool runs locally (we don’t upload your pasted text)</h2>
+  <p>
+    Read-Aloud converts text to speech using your browser/operating system’s speech engine (via the Web Speech API).
+    Depending on the voice you choose, speech may be generated entirely on-device or by your browser/OS vendor’s voice services.
+    Read-Aloud itself does not receive your pasted text.
+    On the homepage, we also load an optional offline fallback voice engine (meSpeak).
+  </p>
+  <p>
+    <strong>We do not transmit the text you paste or type into the tool to our servers.</strong>
+    Your text stays in the page, and speech is generated through your browser/OS speech engine.
+  </p>
+
+  <h2>3) Information we collect</h2>
+  <div class="box">
+    <p style="margin-top:0"><strong>Information you provide</strong></p>
+    <ul>
+      <li>
+        <strong>Support messages:</strong> if you email us or use the contact form, we receive the information you send (such as your name, email address, and message) so we can reply.
+      </li>
+    </ul>
+
+    <p><strong>Information collected automatically</strong></p>
+    <ul>
+      <li>
+        <strong>Basic server logs:</strong> like most websites, our hosting provider may process standard logs (requested page, date/time, and basic device/network information) for security and reliability.
+      </li>
+      <li>
+        <strong>Homepage visit counter request:</strong> the homepage sends a request to a third-party counter service (CountAPI) to increment a public visit count. As with any web request, the provider may receive standard request data (such as IP address and user agent).
+      </li>
+      <li>
+        <strong>CDN requests for voice fallback:</strong> the homepage loads meSpeak files from a third-party CDN (jsDelivr). The CDN may receive standard request data (such as IP address and user agent).
+      </li>
+    </ul>
+
+    <p style="margin-bottom:0">
+      <strong>We do not create user profiles or store your pasted text in a database.</strong>
+    </p>
+  </div>
+
+  <h2>4) Cookies, local storage, and your consent choice</h2>
+  <p>
+    Read-Aloud itself is designed to work without requiring cookies for the core text-to-speech tool.
+    However, some third-party services (like advertising and analytics) may use cookies or similar technologies if enabled.
+  </p>
+
+  <div class="box">
+    <p style="margin-top:0"><strong>How our consent banner works</strong></p>
+    <ul>
+      <li>
+        We store your choice in <strong>localStorage</strong> under the key <code>ra_cookie_consent</code> with a value of <code>accepted</code> or <code>rejected</code>.
+      </li>
+      <li>
+        If you <strong>accept</strong>, we load Google Analytics and (on pages with an ad slot) Google AdSense.
+      </li>
+      <li>
+        If you <strong>reject</strong>, we do not load Google Analytics or Google AdSense.
+      </li>
+      <li>
+        <strong>Note:</strong> the homepage visit counter (CountAPI) and the meSpeak CDN files (jsDelivr) load regardless of this choice.
+      </li>
+    </ul>
+  </div>
+
+  <h2>5) Third-party services we use</h2>
+
+  <h3>Google Analytics (only after you accept)</h3>
+  <p>
+    If you accept the cookie banner, we use Google Analytics to understand basic site usage (for example, which pages are visited most).
+    We do not intentionally send the text you paste into the tool to Google Analytics.
+  </p>
+
+  <h3>Google AdSense advertising (only after you accept, and only where an ad slot appears)</h3>
   <div class="box">
     <p style="margin-top:0">
-      Read‑Aloud is designed to collect as little data as possible. In general:
-    </p>
-    <ul>
-      <li><strong>No user accounts:</strong> we do not ask you to sign in.</li>
-      <li><strong>No stored content:</strong> we do not store your pasted text in a database.</li>
-      <li><strong>Support messages:</strong> if you email us or use the contact form, we receive the information you send (like your email address and message) so we can respond.</li>
-    </ul>
-    <p class="small" style="margin-bottom:0">
-      Like most websites, our hosting provider may process standard server logs (e.g., requested page, date/time, and basic device/network information) for security and reliability.
-    </p>
-  </div>
-
-  <h2>3) Cookies, local storage, and third‑party services</h2>
-  <p>
-    Read‑Aloud itself aims to work without requiring cookies. However, third‑party services can use cookies or similar technologies
-    when you interact with them.
-  </p>
-
-  <h3>Donations (Buy Me a Coffee)</h3>
-  <p>
-    The site links to a donation page (Buy Me a Coffee). If you choose to donate, that service will process the transaction and may collect information
-    according to its own policies.
-  </p>
-
-    <h3>Promotional links</h3>
-    <p>
-      We do not currently include paid referral links or outbound product promotions while we focus on AdSense approval.
-      If we add promotional links in the future, we will disclose them on the relevant pages and note that the third‑party site’s
-      privacy policy applies after you click.
-    </p>
-
-  <h2>4) Advertising</h2>
-  <div class="box">
-    <p style="margin-top:0">
-      Read‑Aloud uses Google AdSense to serve ads on pages where ad slots appear.
-      Ads only load after you accept the cookie banner.
+      If you accept the cookie banner, we load Google AdSense on pages that display an ad slot (currently the homepage).
+      Google and its partners may use cookies or similar identifiers to serve ads, including (where permitted) personalized ads.
     </p>
     <p>
-      Google and its partners may use cookies or local storage to serve ads, including personalized ads where permitted by your settings and region.
+      In practice, this means:
     </p>
-    <p class="small" style="margin-bottom:0">
-      You can manage ad personalization via Google’s Ads Settings:
-      <a href="https://adssettings.google.com/" target="_blank" rel="noopener">adssettings.google.com</a>
-      (Google policies:
-      <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a>).
-    </p>
-  </div>
-
-  <h2>5) Analytics</h2>
-  <p>
-    We use Google Analytics to understand basic site usage (for example, page popularity and overall traffic).
-    Analytics only load after you accept the cookie banner, and we avoid collecting sensitive personal data.
-  </p>
-  <div class="box">
-    <p style="margin-top:0"><strong>What you can expect from analytics:</strong></p>
     <ul>
-      <li>We collect aggregated usage metrics (e.g., pageviews, referrers, device type).</li>
-      <li>We do not collect your pasted text (the core tool text stays in your browser).</li>
-      <li>We only load analytics after you explicitly accept the cookie banner.</li>
+      <li>Third-party vendors (including Google) may use cookies/identifiers to show ads based on prior visits and activity.</li>
+      <li>Google’s advertising cookies allow Google and its partners to show ads based on visits to this site and/or other sites.</li>
     </ul>
     <p class="small" style="margin-bottom:0">
-      If you want us to use (or avoid) a particular analytics approach, you can email us and we’ll consider it.
+      You can manage ad personalization through Google’s Ads Settings:
+      <a href="https://adssettings.google.com/" target="_blank" rel="noopener">adssettings.google.com</a>.
+      More about Google ad technology:
+      <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a>.
     </p>
   </div>
 
-  <h2>6) Your choices</h2>
+  <h3>Contact form (Formspree)</h3>
+  <p>
+    If you use our contact form, your message is submitted to a third-party form processor (Formspree) so it can be delivered to us.
+    Form submissions may include your name, email address, and message content.
+    Formspree’s processing is governed by their own privacy policy.
+  </p>
+
+  <h3>Visit counter (CountAPI)</h3>
+  <p>
+    The homepage calls a third-party counter endpoint to increment and display a public “visits” number.
+    This call may expose standard request data (like IP address and user agent) to that provider.
+  </p>
+
+  <h3>Voice fallback files (jsDelivr + meSpeak)</h3>
+  <p>
+    The homepage loads meSpeak JavaScript and voice configuration files from jsDelivr (a third-party CDN).
+    This improves reliability and provides an optional fallback voice engine, and the CDN may receive standard request data.
+  </p>
+
+  <h3>Donations (Buy Me a Coffee link)</h3>
+  <p>
+    We link to a donation page (Buy Me a Coffee). If you click that link and choose to donate,
+    that service will process the transaction and handle your information under its own policies.
+  </p>
+
+  <h2>6) How long we keep information</h2>
+  <p>
+    We keep support emails/contact form messages only as long as needed to respond and for reasonable record-keeping.
+    Hosting/third-party providers may retain logs according to their own retention practices.
+  </p>
+
+  <h2>7) Your choices</h2>
   <ul>
-    <li><strong>Don’t paste sensitive text</strong> on shared devices or while screen‑sharing.</li>
-    <li>You can use Google’s ad personalization controls (linked above).</li>
-    <li>You can choose not to click promotional links or external links.</li>
+    <li><strong>Cookie banner choice:</strong> you can accept or reject analytics/ads.</li>
+    <li><strong>Reset consent:</strong> use the button below to clear your saved choice and show the banner again.</li>
+    <li><strong>Ad personalization:</strong> use Google’s controls at adssettings.google.com.</li>
+    <li><strong>Shared devices:</strong> avoid pasting sensitive text on shared computers or while screen-sharing.</li>
+    <li><strong>Browser controls:</strong> you can also use browser settings, content blockers, or private browsing.</li>
   </ul>
 
   <h2>Cookie preferences</h2>
   <div class="box">
     <p style="margin-top:0">
-      You can change your analytics and ads choice at any time. Selecting reset will show the consent banner again.
+      Selecting reset will remove your stored choice (<code>ra_cookie_consent</code>) and show the consent banner again.
     </p>
     <button type="button" class="btn secondary" data-cookie-reset>Reset cookie preferences</button>
   </div>
 
-  <h2>7) Contact</h2>
+  <h2>8) Children</h2>
   <p>
-    If you have privacy questions, email <strong>admin@read-aloud.com</strong> or use the
-    <a href="/contact.html">contact form</a>.
+    Read-Aloud is intended for a general audience and is not directed to children under 13.
+    If you believe a child has provided personal information via our contact form, please email us and we will address it.
   </p>
 
-  <h2>8) Changes</h2>
+  <h2>9) International visitors</h2>
   <p>
-    If we change this policy, we’ll update the “Last updated” date above. Changes take effect when posted on this page.
+    If you enable ads/analytics, those providers may process data on servers located in different countries.
+    Requirements vary by region; where consent is required for ads/analytics, you can reject via the banner.
+  </p>
+
+  <h2>10) Changes</h2>
+  <p>
+    If we update this policy, we’ll change the “Last updated” date above. Changes take effect when posted.
   </p>
 
   <hr>
   <p class="small">
-    Related: <a href="/terms.html">Terms</a> · <a href="about.html">About</a> · <a href="guides.html">Guides</a>
+    Related: <a href="/terms.html">Terms</a> · <a href="/about.html">About</a> · <a href="/guides.html">Guides</a>
   </p>
 
   <p class="small">
-    © 2026 Read‑Aloud · <a href="/contact.html">Contact</a> · <a href="/terms.html">Terms</a>
+    © 2026 Read-Aloud · <a href="/contact.html">Contact</a> · <a href="/terms.html">Terms</a>
   </p>
 </main>
 
