@@ -1,12 +1,16 @@
+# Render.com deployment configuration
+# Deploy the TTS API as a web service
+
 services:
   - type: web
-    name: read-aloud-premium
-    runtime: python
+    name: read-aloud-tts-api
+    env: python
     region: oregon
-    plan: starter
-    buildCommand: pip install -r read-aloud-premium/requirements-premium.txt
-    startCommand: uvicorn read-aloud-premium.server.premium_api:app --host 0.0.0.0 --port $PORT
-    autoDeploy: true
+    plan: free
+    buildCommand: pip install -r api/requirements.txt
+    startCommand: uvicorn api.tts_server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
     envVars:
-      - key: GOOGLE_VOICE
-        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11"
+    autoDeploy: true
