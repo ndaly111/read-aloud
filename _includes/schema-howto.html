@@ -1,0 +1,38 @@
+<!-- Schema.org HowTo - For guide pages -->
+{% if page.steps %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "{{ page.title | escape }}",
+  "description": "{{ page.description | escape }}",
+  "image": "{{ page.image | default: '/images/og-default.png' | absolute_url }}",
+  "totalTime": "{{ page.duration | default: 'PT5M' }}",
+  "estimatedCost": {
+    "@type": "MonetaryAmount",
+    "currency": "USD",
+    "value": "0"
+  },
+  "tool": [
+    {
+      "@type": "HowToTool",
+      "name": "Web browser"
+    },
+    {
+      "@type": "HowToTool",
+      "name": "Read-Aloud text-to-speech tool"
+    }
+  ],
+  "step": [
+    {% for step in page.steps %}
+    {
+      "@type": "HowToStep",
+      "name": "{{ step.name | escape }}",
+      "text": "{{ step.text | escape }}",
+      "url": "{{ page.url | absolute_url }}#step-{{ forloop.index }}"
+    }{% unless forloop.last %},{% endunless %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
