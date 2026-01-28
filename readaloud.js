@@ -254,7 +254,10 @@ if (voiceSel) {
 
 /* ========== START SPEAK ========== */
 function startSpeak() {
-  if (isSpeaking) stopAll();
+  // Prevent double-start - user must Stop first
+  if (isSpeaking) {
+    return;
+  }
   if (!txt.value.trim()) {
     showError('Please type or paste some text first.');
     setStatus('Ready');
@@ -438,7 +441,7 @@ function useBrowserSpeech(voiceIndex) {
   boundarySeen = false;
   isSpeaking = true;
   isPaused = false;
-  setStatus('Speaking');
+  setStatus('Playing...');
   updateControls();
   speakNextChunk(voiceIndex);
   requestAnimationFrame(progressLoop);
@@ -559,7 +562,7 @@ function resumeSpeak() {
   }
 
   isPaused = false;
-  setStatus('Speaking');
+  setStatus('Playing...');
   updateControls();
 }
 
