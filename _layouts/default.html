@@ -1,13 +1,115 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>
-      {% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}
-    </title>
-  </head>
-  <body>
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: 'en' }}">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+
+  {% include seo.html %}
+
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/styles.css">
+
+  <!-- Structured Data -->
+  {% if page.layout == 'default' or page.url == '/' %}
+    {% include schema-website.html %}
+  {% endif %}
+
+  {% if page.faqs %}
+    {% include schema-faq.html %}
+  {% endif %}
+
+  {% if page.schema_type == 'howto' %}
+    {% include schema-howto.html %}
+  {% endif %}
+
+  {% if page.schema_type == 'article' %}
+    {% include schema-article.html %}
+  {% endif %}
+
+  <!-- Cookie consent -->
+  <script src="/cookie-consent.js" defer></script>
+</head>
+
+<body>
+  <!-- Skip to content link for accessibility -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a class="logo" href="/" aria-label="Read-Aloud Home">Read‑Aloud</a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="/"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
+        <a href="/guides.html"{% if page.url contains 'guide' %} aria-current="page"{% endif %}>Guides</a>
+        <a href="/help.html"{% if page.url == '/help.html' %} aria-current="page"{% endif %}>Help</a>
+        <a href="/blog/"{% if page.url contains 'blog' %} aria-current="page"{% endif %}>Blog</a>
+        <a href="/recommendations.html"{% if page.url == '/recommendations.html' %} aria-current="page"{% endif %}>Resources</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Breadcrumbs for SEO -->
+  {% if page.url != '/' %}
+  <nav aria-label="Breadcrumb" class="breadcrumb">
+    <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="/"><span itemprop="name">Home</span></a>
+        <meta itemprop="position" content="1">
+      </li>
+      {% if page.url contains 'guide' %}
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="/guides.html"><span itemprop="name">Guides</span></a>
+        <meta itemprop="position" content="2">
+      </li>
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <span itemprop="name">{{ page.title }}</span>
+        <meta itemprop="position" content="3">
+      </li>
+      {% elsif page.url contains 'blog' %}
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="/blog/"><span itemprop="name">Blog</span></a>
+        <meta itemprop="position" content="2">
+      </li>
+      {% if page.title %}
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <span itemprop="name">{{ page.title }}</span>
+        <meta itemprop="position" content="3">
+      </li>
+      {% endif %}
+      {% else %}
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <span itemprop="name">{{ page.title | default: 'Page' }}</span>
+        <meta itemprop="position" content="2">
+      </li>
+      {% endif %}
+    </ol>
+  </nav>
+  {% endif %}
+
+  <!-- Main content -->
+  <main id="main-content">
     {{ content }}
-  </body>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <nav aria-label="Footer navigation">
+        <a href="/about.html">About</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/sitemap.xml">Sitemap</a>
+      </nav>
+      <p>&copy; {{ 'now' | date: '%Y' }} Read-Aloud. Free text-to-speech for everyone.</p>
+    </div>
+  </footer>
+</body>
 </html>
