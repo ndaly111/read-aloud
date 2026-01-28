@@ -6,25 +6,16 @@ const $ = (id) => document.getElementById(id);
 // Edge TTS API URL - Update this after deploying to Render
 const TTS_API_URL = 'https://read-aloud-s4ov.onrender.com';
 
-// Premium Neural Voices (Edge TTS - free, high quality)
+// Premium Neural Voices - simplified list (best voices only)
 const NEURAL_VOICES = {
   en: [
-    { id: 'en-US-AriaNeural', name: 'Aria', gender: 'Female', accent: 'US', style: 'friendly' },
-    { id: 'en-US-JennyNeural', name: 'Jenny', gender: 'Female', accent: 'US', style: 'assistant' },
-    { id: 'en-US-GuyNeural', name: 'Guy', gender: 'Male', accent: 'US', style: 'newscast' },
-    { id: 'en-US-DavisNeural', name: 'Davis', gender: 'Male', accent: 'US', style: 'calm' },
-    { id: 'en-US-SaraNeural', name: 'Sara', gender: 'Female', accent: 'US', style: 'cheerful' },
-    { id: 'en-US-ChristopherNeural', name: 'Christopher', gender: 'Male', accent: 'US', style: 'reliable' },
-    { id: 'en-GB-SoniaNeural', name: 'Sonia', gender: 'Female', accent: 'UK', style: 'professional' },
-    { id: 'en-GB-RyanNeural', name: 'Ryan', gender: 'Male', accent: 'UK', style: 'cheerful' },
-    { id: 'en-AU-NatashaNeural', name: 'Natasha', gender: 'Female', accent: 'AU', style: 'friendly' },
-    { id: 'en-AU-WilliamNeural', name: 'William', gender: 'Male', accent: 'AU', style: 'conversational' },
+    { id: 'en-US-AriaNeural', name: 'Aria (US)', gender: 'Female' },
+    { id: 'en-US-GuyNeural', name: 'Guy (US)', gender: 'Male' },
+    { id: 'en-GB-SoniaNeural', name: 'Sonia (UK)', gender: 'Female' },
   ],
   es: [
-    { id: 'es-ES-ElviraNeural', name: 'Elvira', gender: 'Female', accent: 'Spain' },
-    { id: 'es-ES-AlvaroNeural', name: 'Alvaro', gender: 'Male', accent: 'Spain' },
-    { id: 'es-MX-DaliaNeural', name: 'Dalia', gender: 'Female', accent: 'Mexico' },
-    { id: 'es-MX-JorgeNeural', name: 'Jorge', gender: 'Male', accent: 'Mexico' },
+    { id: 'es-MX-DaliaNeural', name: 'Dalia', gender: 'Female' },
+    { id: 'es-ES-AlvaroNeural', name: 'Alvaro', gender: 'Male' },
   ],
   fr: [
     { id: 'fr-FR-DeniseNeural', name: 'Denise', gender: 'Female' },
@@ -197,39 +188,35 @@ function populateVoiceSel() {
 
   if (apiAvailable && neuralVoices.length) {
     const neuralGroup = document.createElement('optgroup');
-    neuralGroup.label = '⭐ Premium Neural Voices (Natural Sound)';
+    neuralGroup.label = '⭐ Premium Voices';
 
     neuralVoices.forEach(v => {
       const opt = document.createElement('option');
       opt.value = `neural:${v.id}`;
-      opt.textContent = `${v.name} (${v.gender}${v.accent ? ', ' + v.accent : ''})`;
-      opt.title = v.style ? `Style: ${v.style}` : '';
+      opt.textContent = `${v.name} - ${v.gender}`;
       neuralGroup.appendChild(opt);
     });
 
     voiceSel.appendChild(neuralGroup);
   }
 
-  // Add browser voices - always available as fallback
+  // Add browser voices - always available as fallback (limit to 5)
   const browserGroup = document.createElement('optgroup');
-  browserGroup.label = apiAvailable ? '📱 Browser Voices (Works Offline)' : '📱 Browser Voices';
+  browserGroup.label = apiAvailable ? '📱 Browser (Offline)' : '📱 Browser Voices';
 
   const defaultOpt = document.createElement('option');
   defaultOpt.value = 'browser:-1';
-  defaultOpt.textContent = 'Default Browser Voice';
+  defaultOpt.textContent = 'Default Voice';
   browserGroup.appendChild(defaultOpt);
 
-  // Filter and sort browser voices by language
-  const langVoices = browserVoices.filter(v => v.lang.startsWith(lang));
+  // Filter browser voices by language and limit to 5
+  const langVoices = browserVoices.filter(v => v.lang.startsWith(lang)).slice(0, 5);
 
-  // If no voices for selected language, show all voices
-  const voicesToShow = langVoices.length > 0 ? langVoices : browserVoices;
-
-  voicesToShow.forEach((v) => {
+  langVoices.forEach((v) => {
     const opt = document.createElement('option');
     const realIndex = browserVoices.indexOf(v);
     opt.value = `browser:${realIndex}`;
-    opt.textContent = `${v.name} (${v.lang})`;
+    opt.textContent = v.name.replace(/Microsoft |Google /, '');  // Shorten names
     browserGroup.appendChild(opt);
   });
 
@@ -310,6 +297,7 @@ async function useNeuralSpeech(voiceId) {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
+        console.log('Fetching TTS for chunk', i + 1, 'voice:', voiceId);
         const response = await fetch(`${TTS_API_URL}/api/tts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -323,13 +311,16 @@ async function useNeuralSpeech(voiceId) {
         });
 
         clearTimeout(timeout);
+        console.log('TTS response status:', response.status);
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
+          console.error('TTS API error:', error);
           throw new Error(error.detail || `API error: ${response.status}`);
         }
 
         const audioBlob = await response.blob();
+        console.log('Got audio blob, size:', audioBlob.size);
         await playAudioBlob(audioBlob, chunks[i].length);
 
         progChar += chunks[i].length;
@@ -378,6 +369,11 @@ async function useNeuralSpeech(voiceId) {
 
 function playAudioBlob(blob, chunkLength) {
   return new Promise((resolve, reject) => {
+    console.log('Playing audio blob, size:', blob.size);
+    if (blob.size < 100) {
+      reject(new Error('Audio blob too small - API may have failed'));
+      return;
+    }
     const url = URL.createObjectURL(blob);
     currentAudio = new Audio(url);
 
