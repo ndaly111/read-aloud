@@ -1,15 +1,72 @@
-title: "Read Aloud"
-description: "Read Aloud website"
+# Site Settings
+title: "Read-Aloud"
+description: "Free online text-to-speech tool. Paste any text and listen instantly with adjustable voice and speed. Privacy-first, works offline, perfect for studying, proofreading, and accessibility."
 url: "https://read-aloud.com"
 baseurl: ""
+author: "Read-Aloud"
+
+# SEO Settings
+lang: "en"
+locale: "en_US"
+logo: "/images/logo.png"
+social:
+  name: Read-Aloud
+  links: []
+
+# Build Settings
 markdown: kramdown
 permalink: pretty
+sass:
+  style: compressed
 
-# Blog posts (Markdown in _posts/) publish to /blog/<slug>/
+# Plugins
+plugins:
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-feed
+
+# Exclude from build
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md
+  - "*.py"
+  - "*.json"
+  - render.yaml
+
+# Collections
+collections:
+  guides:
+    output: true
+    permalink: /:name/
+
+# Default front matter
 defaults:
+  # All pages
+  - scope:
+      path: ""
+    values:
+      layout: default
+      image: /images/og-default.png
+
+  # Blog posts
   - scope:
       path: ""
       type: posts
     values:
       layout: blog_post
       permalink: /blog/:title/
+      schema_type: article
+
+  # Guide pages
+  - scope:
+      path: "guide-*.html"
+    values:
+      layout: default
+      schema_type: howto
+
+# Feed settings
+feed:
+  path: feed.xml
