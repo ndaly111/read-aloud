@@ -273,7 +273,7 @@ function startSpeak() {
 
 /* ========== NEURAL TTS (Edge TTS API) ========== */
 async function useNeuralSpeech(voiceId) {
-  setStatus('Generating audio...');
+  setStatus('Connecting to voice server...');
   isSpeaking = true;
   isPaused = false;
   updateControls();
@@ -291,7 +291,7 @@ async function useNeuralSpeech(voiceId) {
     for (let i = 0; i < chunks.length; i++) {
       if (!isSpeaking) break; // Stopped
 
-      setStatus(`Speaking (${i + 1}/${chunks.length})...`);
+      setStatus(`Rendering audio (${i + 1}/${chunks.length})...`);
 
       try {
         const controller = new AbortController();
@@ -400,6 +400,7 @@ function playAudioBlob(blob, chunkLength) {
     };
 
     currentAudio.playbackRate = 1; // Rate is handled by API
+    currentAudio.oncanplaythrough = () => setStatus('Playing...');
     currentAudio.play().catch(reject);
   });
 }
