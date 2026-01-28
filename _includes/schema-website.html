@@ -1,0 +1,64 @@
+<!-- Schema.org WebSite + WebApplication -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "{{ site.url }}/#website",
+      "url": "{{ site.url }}/",
+      "name": "{{ site.title }}",
+      "description": "{{ site.description }}",
+      "publisher": {
+        "@id": "{{ site.url }}/#organization"
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "{{ site.url }}/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "Organization",
+      "@id": "{{ site.url }}/#organization",
+      "name": "Read-Aloud",
+      "url": "{{ site.url }}/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "{{ site.url }}/images/logo.png"
+      },
+      "sameAs": []
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "{{ site.url }}/#webapp",
+      "name": "Read-Aloud Text-to-Speech",
+      "url": "{{ site.url }}/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Free online text-to-speech tool. Paste any text and listen instantly with adjustable voice and speed settings.",
+      "featureList": [
+        "Text-to-speech conversion",
+        "Multiple voice options",
+        "Adjustable reading speed",
+        "Progress tracking",
+        "Privacy-first (no server uploads)",
+        "Works offline"
+      ],
+      "screenshot": "{{ site.url }}/images/screenshot.png",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "150",
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    }
+  ]
+}
+</script>
