@@ -1,177 +1,176 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Main Pages -->
   <url>
     <loc>https://read-aloud.com/</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-01-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/help.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>https://read-aloud.com/guides.html</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-01-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/about.html</loc>
-    <lastmod>2026-01-03</lastmod>
+    <loc>https://read-aloud.com/help.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://read-aloud.com/blog/</loc>
+    <lastmod>2026-01-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+
+  <!-- Guide Pages (High-value SEO content) -->
   <url>
-    <loc>https://read-aloud.com/privacy.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://read-aloud.com/guide-dyslexia-adhd.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/terms.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/contact.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/recommendations.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://read-aloud.com/guide-dyslexia-dual-reading.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://read-aloud.com/guide-how-to-use.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/guide-study.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/guide-proofread.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://read-aloud.com/guide-language-learning.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/guide-dyslexia-adhd.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/guide-privacy.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/guide-local-vs-cloud-tts.html</loc>
-    <lastmod>2026-01-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/guide-browser-compatibility.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/guide-best-voice-speed.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://read-aloud.com/guide-reading-long-documents.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://read-aloud.com/guide-language-shadowing.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://read-aloud.com/guide-listen-to-pdfs.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/guide-study-pomodoro.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://read-aloud.com/guide-proofread.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://read-aloud.com/guide-proofreading-checklist.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://read-aloud.com/guide-study.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://read-aloud.com/guide-study-pomodoro.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://read-aloud.com/guide-adhd-focus-routines.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://read-aloud.com/guide-best-voice-speed.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/guide-dyslexia-dual-reading.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://read-aloud.com/guide-keyboard-shortcuts.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/guide-language-shadowing.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://read-aloud.com/guide-browser-compatibility.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://read-aloud.com/guide-local-vs-cloud-tts.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://read-aloud.com/guide-offline-use.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/guide-keyboard-shortcuts.html</loc>
-    <lastmod>2026-01-03</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://read-aloud.com/guide-privacy.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/blog/</loc>
-    <lastmod>2026-01-07</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://read-aloud.com/guide-reading-long-documents.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Other Pages -->
+  <url>
+    <loc>https://read-aloud.com/about.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/blog/local-vs-cloud-text-to-speech/</loc>
-    <lastmod>2026-01-07</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://read-aloud.com/privacy.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://read-aloud.com/terms.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://read-aloud.com/contact.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://read-aloud.com/recommendations.html</loc>
+    <lastmod>2026-01-28</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://read-aloud.com/updates/</loc>
-    <lastmod>2026-01-07</lastmod>
+    <loc>https://read-aloud.com/updates.html</loc>
+    <lastmod>2026-01-28</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
   </url>
 </urlset>
