@@ -4,7 +4,7 @@ const LANGS = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'I
 const $ = (id) => document.getElementById(id);
 
 // Edge TTS API URL - Update this after deploying to Render
-const TTS_API_URL = 'https://read-aloud-tts-api.onrender.com';
+const TTS_API_URL = 'https://read-aloud-s4ov.onrender.com';
 
 // Premium Neural Voices (Edge TTS - free, high quality)
 const NEURAL_VOICES = {
