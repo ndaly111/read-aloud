@@ -38,8 +38,11 @@ app = FastAPI(
 ALLOWED_ORIGINS = [
     "https://read-aloud.com",
     "https://www.read-aloud.com",
+    "https://ndaly111.github.io",  # GitHub Pages
     "http://localhost:4000",  # Jekyll dev server
     "http://127.0.0.1:4000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 app.add_middleware(
