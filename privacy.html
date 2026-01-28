@@ -5,7 +5,7 @@
 <title>Privacy Policy | Read‑Aloud</title>
 <link rel="canonical" href="https://read-aloud.com/privacy.html">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Privacy policy for Read‑Aloud (read-aloud.com). Read‑Aloud is a privacy-first text-to-speech tool that speaks text locally in your browser.">
+<meta name="description" content="Privacy policy for Read‑Aloud (read-aloud.com). Learn how browser voices process text locally and how premium neural voices use our TTS server.">
   <link rel="stylesheet" href="/styles.css">
   <script src="/cookie-consent.js" defer></script>
 </head>
@@ -26,12 +26,13 @@
 
 <main>
   <h1>Privacy Policy</h1>
-  <p class="small"><strong>Last updated:</strong> January 18, 2026</p>
+  <p class="small"><strong>Last updated:</strong> January 28, 2026</p>
 
   <div class="highlight">
     <strong>Plain-English summary:</strong>
     <ul>
-      <li><strong>Your pasted text is spoken by your browser/operating system’s speech engine.</strong> We don’t upload your pasted text to our servers.</li>
+      <li><strong>Browser voices process text locally.</strong> When you use standard browser voices, your text stays on your device.</li>
+      <li><strong>Neural voices send text to our server.</strong> If you choose a premium neural voice, your text is sent to our TTS server and then to Microsoft Edge TTS to generate high-quality audio. Text is not stored.</li>
       <li><strong>No accounts.</strong> You can use the tool without signing in.</li>
       <li><strong>Ads + Google Analytics only load if you accept.</strong> You can reject and still use the core tool.</li>
       <li><strong>Two homepage services run regardless of the cookie banner:</strong> a voice fallback loaded from a CDN (meSpeak via jsDelivr) and a simple visit counter request (CountAPI).</li>
@@ -44,16 +45,29 @@
     If you have questions, email <strong>admin@read-aloud.com</strong> or use the <a href="/contact.html">contact form</a>.
   </p>
 
-  <h2>2) The core tool runs locally (we don’t upload your pasted text)</h2>
+  <h2>2) How text-to-speech works</h2>
   <p>
-    Read-Aloud converts text to speech using your browser/operating system’s speech engine (via the Web Speech API).
-    Depending on the voice you choose, speech may be generated entirely on-device or by your browser/OS vendor’s voice services.
-    Read-Aloud itself does not receive your pasted text.
-    On the homepage, we also load an optional offline fallback voice engine (meSpeak).
+    Read-Aloud offers two types of voices with different privacy characteristics:
   </p>
+
+  <div class="box">
+    <p style="margin-top:0"><strong>Browser voices (local processing)</strong></p>
+    <p>
+      When you select a standard browser voice, text is converted to speech using your browser/operating system's speech engine (via the Web Speech API).
+      Depending on the voice, speech may be generated entirely on-device or by your browser/OS vendor's voice services.
+      <strong>Your text is not sent to Read-Aloud servers when using browser voices.</strong>
+    </p>
+
+    <p><strong>Neural voices (server processing)</strong></p>
+    <p style="margin-bottom:0">
+      When you select a premium neural voice (marked with accent labels like "US", "UK", "AU"), your text is sent to our TTS server hosted on Render.com, which then forwards it to Microsoft Edge TTS to generate high-quality audio.
+      <strong>Text is processed in real-time and is not stored on our server or logged.</strong>
+      The audio is streamed back to your browser and played.
+    </p>
+  </div>
+
   <p>
-    <strong>We do not transmit the text you paste or type into the tool to our servers.</strong>
-    Your text stays in the page, and speech is generated through your browser/OS speech engine.
+    On the homepage, we also load an optional offline fallback voice engine (meSpeak).
   </p>
 
   <h2>3) Information we collect</h2>
@@ -136,11 +150,21 @@
     </p>
   </div>
 
+  <h3>Neural voice service (Microsoft Edge TTS via Render.com)</h3>
+  <p>
+    If you select a premium neural voice, your text is sent to our TTS server (hosted on Render.com) which forwards it to Microsoft Edge TTS to generate audio.
+  </p>
+  <ul>
+    <li><strong>Text is not stored:</strong> Our server processes text in real-time to generate audio and does not log or retain your text.</li>
+    <li><strong>Microsoft processing:</strong> Microsoft Edge TTS receives your text to generate speech. Microsoft's data practices apply to this processing.</li>
+    <li><strong>You can avoid this:</strong> Select a standard browser voice instead of a neural voice to keep text processing local.</li>
+  </ul>
+
   <h3>Contact form (Formspree)</h3>
   <p>
     If you use our contact form, your message is submitted to a third-party form processor (Formspree) so it can be delivered to us.
     Form submissions may include your name, email address, and message content.
-    Formspree’s processing is governed by their own privacy policy.
+    Formspree's processing is governed by their own privacy policy.
   </p>
 
   <h3>Visit counter (CountAPI)</h3>
