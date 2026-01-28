@@ -123,20 +123,45 @@ let apiAvailable = false;
 
 /* ========== API CHECK ========== */
 async function checkApiAvailability() {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const response = await fetch(`${TTS_API_URL}/`, {
-      method: 'GET',
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    return response.ok;
-  } catch {
-    console.warn('Edge TTS API not available, using browser voices');
-    return false;
+  // Try up to 2 times with increasing timeout
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000 * attempt);
+      const response = await fetch(`${TTS_API_URL}/`, {
+        method: 'GET',
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (response.ok) {
+        console.log('✓ Premium neural voices available');
+        return true;
+      }
+    } catch (e) {
+      console.warn(`API check attempt ${attempt} failed:`, e.message);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+    }
+  }
+  console.warn('Premium voices unavailable - using browser voices only');
+  return false;
+}
+
+// Re-check API availability periodically (in case it comes back online)
+async function recheckApi() {
+  if (!apiAvailable) {
+    const nowAvailable = await checkApiAvailability();
+    if (nowAvailable && !apiAvailable) {
+      apiAvailable = true;
+      populateVoiceSel();
+      console.log('Premium voices now available!');
+    }
   }
 }
+
+// Check every 5 minutes if API was initially unavailable
+setInterval(() => {
+  if (!apiAvailable) recheckApi();
+}, 5 * 60 * 1000);
 
 /* ========== VOICE LOADING ========== */
 async function loadBrowserVoices() {
@@ -172,7 +197,7 @@ function populateVoiceSel() {
 
   if (apiAvailable && neuralVoices.length) {
     const neuralGroup = document.createElement('optgroup');
-    neuralGroup.label = '⭐ Premium Neural Voices';
+    neuralGroup.label = '⭐ Premium Neural Voices (Natural Sound)';
 
     neuralVoices.forEach(v => {
       const opt = document.createElement('option');
@@ -185,31 +210,59 @@ function populateVoiceSel() {
     voiceSel.appendChild(neuralGroup);
   }
 
-  // Add browser voices
+  // Add browser voices - always available as fallback
   const browserGroup = document.createElement('optgroup');
-  browserGroup.label = apiAvailable ? '📱 Browser Voices (Offline)' : '📱 Browser Voices';
+  browserGroup.label = apiAvailable ? '📱 Browser Voices (Works Offline)' : '📱 Browser Voices';
 
   const defaultOpt = document.createElement('option');
   defaultOpt.value = 'browser:-1';
   defaultOpt.textContent = 'Default Browser Voice';
   browserGroup.appendChild(defaultOpt);
 
-  browserVoices
-    .filter(v => v.lang.startsWith(lang))
-    .forEach((v, i) => {
-      const opt = document.createElement('option');
-      const realIndex = browserVoices.indexOf(v);
-      opt.value = `browser:${realIndex}`;
-      opt.textContent = `${v.name} (${v.lang})`;
-      browserGroup.appendChild(opt);
-    });
+  // Filter and sort browser voices by language
+  const langVoices = browserVoices.filter(v => v.lang.startsWith(lang));
+
+  // If no voices for selected language, show all voices
+  const voicesToShow = langVoices.length > 0 ? langVoices : browserVoices;
+
+  voicesToShow.forEach((v) => {
+    const opt = document.createElement('option');
+    const realIndex = browserVoices.indexOf(v);
+    opt.value = `browser:${realIndex}`;
+    opt.textContent = `${v.name} (${v.lang})`;
+    browserGroup.appendChild(opt);
+  });
 
   voiceSel.appendChild(browserGroup);
 
-  // Select first neural voice by default if available
+  // Select first neural voice by default if available, otherwise first browser voice
   if (apiAvailable && neuralVoices.length) {
     voiceSel.value = `neural:${neuralVoices[0].id}`;
+  } else {
+    voiceSel.value = 'browser:-1';
   }
+
+  // Update status to show voice type
+  updateVoiceStatus();
+}
+
+function updateVoiceStatus() {
+  const [voiceType] = voiceSel.value.split(':');
+  const indicator = document.getElementById('voice-type-indicator');
+  if (indicator) {
+    if (voiceType === 'neural') {
+      indicator.textContent = '⭐ Premium';
+      indicator.className = 'voice-indicator voice-indicator--premium';
+    } else {
+      indicator.textContent = '📱 Browser';
+      indicator.className = 'voice-indicator voice-indicator--browser';
+    }
+  }
+}
+
+// Update indicator when voice changes
+if (voiceSel) {
+  voiceSel.addEventListener('change', updateVoiceStatus);
 }
 
 /* ========== START SPEAK ========== */
@@ -244,39 +297,81 @@ async function useNeuralSpeech(voiceId) {
   startTime = Date.now();
   totalChars = txt.value.length;
 
+  let consecutiveErrors = 0;
+  const MAX_ERRORS = 2;
+
   try {
     for (let i = 0; i < chunks.length; i++) {
       if (!isSpeaking) break; // Stopped
 
       setStatus(`Speaking (${i + 1}/${chunks.length})...`);
 
-      const response = await fetch(`${TTS_API_URL}/api/tts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: chunks[i],
-          voice: voiceId,
-          rate: rateToApiFormat(+rateSlider.value),
-          pitch: '+0Hz'
-        })
-      });
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || `API error: ${response.status}`);
+        const response = await fetch(`${TTS_API_URL}/api/tts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: chunks[i],
+            voice: voiceId,
+            rate: rateToApiFormat(+rateSlider.value),
+            pitch: '+0Hz'
+          }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || `API error: ${response.status}`);
+        }
+
+        const audioBlob = await response.blob();
+        await playAudioBlob(audioBlob, chunks[i].length);
+
+        progChar += chunks[i].length;
+        consecutiveErrors = 0; // Reset on success
+
+      } catch (chunkError) {
+        consecutiveErrors++;
+        console.warn(`Chunk ${i + 1} failed:`, chunkError.message);
+
+        if (consecutiveErrors >= MAX_ERRORS) {
+          throw new Error(`Multiple failures - switching to browser voice`);
+        }
+
+        // Skip this chunk and continue with next
+        progChar += chunks[i].length;
+        showError(`Chunk skipped, continuing...`);
+        await new Promise(r => setTimeout(r, 500));
+        clearError();
       }
-
-      const audioBlob = await response.blob();
-      await playAudioBlob(audioBlob, chunks[i].length);
-
-      progChar += chunks[i].length;
     }
 
     if (isSpeaking) finish();
+
   } catch (error) {
     console.error('Neural TTS error:', error);
-    showError(`Neural TTS failed: ${error.message}. Trying browser voice...`);
-    // Fallback to browser
+
+    // Clean up any partial state
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+
+    // Fallback to browser voice
+    setStatus('Switching to browser voice...');
+    showError('Premium voice unavailable. Using browser voice instead.');
+
+    // Small delay so user sees the message
+    await new Promise(r => setTimeout(r, 1000));
+    clearError();
+
+    // Reset and use browser speech
+    progChar = 0;
     useBrowserSpeech('-1');
   }
 }
