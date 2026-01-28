@@ -1,0 +1,28 @@
+<!-- Schema.org Article - For blog posts -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "{{ page.title | escape }}",
+  "description": "{{ page.description | default: page.excerpt | strip_html | truncate: 200 | escape }}",
+  "image": "{{ page.image | default: '/images/og-default.png' | absolute_url }}",
+  "author": {
+    "@type": "Organization",
+    "name": "Read-Aloud"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Read-Aloud",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "{{ site.url }}/images/logo.png"
+    }
+  },
+  "datePublished": "{{ page.date | date_to_xmlschema }}",
+  "dateModified": "{{ page.last_modified_at | default: page.date | date_to_xmlschema }}",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ page.url | absolute_url }}"
+  }
+}
+</script>
