@@ -14,8 +14,11 @@ You write quickly between meetings. You’re trying to be direct. You hit send. 
 The frustrating part is that your original email probably looked fine on screen. You weren’t trying to be sharp. You were trying to be clear.
 Here’s the issue: **when you read your own draft, you hear your intent.**
 When someone else reads it, they hear your words. Those are not the same thing.
-A simple fix is to run a “tone test” before you send: copy your message, paste it into Read‑Aloud, press Start, and listen once straight through. It takes 30–60 seconds. It catches problems your eyes gloss over—because audio doesn’t let you skim your own meaning into the gaps.
-This isn’t about making every email warm and fluffy. It’s about writing messages that land the way you think they do.
+A simple fix is to run a "tone test" before you send: copy your message, paste it into Read‑Aloud, press Start, and listen once straight through. It takes 30–60 seconds. It catches problems your eyes gloss over—because audio doesn't let you skim your own meaning into the gaps.
+
+**Personal story:** Last year, I was coordinating a product launch and sent what I thought was a straightforward "here's the timeline" email to the design team. I reread it twice before hitting send—it looked fine. Thirty minutes later, I got a reply from the lead designer that started with "I understand we're behind, but..." and I realized my email had sounded like an accusation instead of a status update. The phrase "we need the mockups by Friday or we'll miss the launch window" had come across as a threat, not a fact. Now I run every cross-team email through Read-Aloud first. If it sounds tense when a robot voice reads it, it'll sound worse when a stressed colleague reads it on their phone. This habit has saved me from at least a dozen awkward follow-up conversations.
+
+This isn't about making every email warm and fluffy. It's about writing messages that land the way you think they do.
 
 ## Why listening works when re-reading fails
 When you re-read your own writing, your brain is an accomplice.

@@ -9,8 +9,11 @@ categories: [blog]
 tags: [Study]
 ---
 If you write for work, you’re not just “sending text.” You’re setting expectations, making requests, documenting decisions, and protecting your reputation. One missing word can change meaning. One clunky paragraph can make a good idea feel sloppy. And one accidental edge in tone can turn a simple message into a long thread.
-After you’ve read a draft a couple times, your brain starts “helping.” It fills gaps and smooths over rough spots because it already knows what you meant. Listening takes that shortcut away. You experience the words in real time, the way your reader will, and problems become obvious: you lose the thread, you wait too long for the point, or a sentence lands harsher than you intended.
-Here’s a simple way to use Read‑Aloud (read‑aloud.com) like an editor would: two passes, two goals.
+After you've read a draft a couple times, your brain starts "helping." It fills gaps and smooths over rough spots because it already knows what you meant. Listening takes that shortcut away. You experience the words in real time, the way your reader will, and problems become obvious: you lose the thread, you wait too long for the point, or a sentence lands harsher than you intended.
+
+**Personal story:** I learned this lesson when I was writing a technical proposal for a new client. I'd proofread it three times with my eyes—it looked polished. But I decided to run it through Read-Aloud as a final check before sending. In the first paragraph, I heard myself say "leverage synergies to optimize outcomes" and physically cringed. That phrase had looked professional on screen, but hearing it spoken made me realize it was empty jargon. I rewrote it to: "We'll combine your existing customer data with our analytics platform to identify which features drive the most revenue." The client later told me that clarity was why they chose us over two competitors. Now I never send anything important without listening to it first—it's saved me from countless moments of unintentional corporate-speak.
+
+Here's a simple way to use Read‑Aloud (read‑aloud.com) like an editor would: two passes, two goals.
 ## Set up a clean listening draft
 * Paste only what you’re proofreading into Read‑Aloud. If it’s long, paste one section at a time.
 * Pick a clear voice and give yourself five uninterrupted minutes.

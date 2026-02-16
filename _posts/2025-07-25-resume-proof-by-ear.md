@@ -11,7 +11,10 @@ tags: [Career]
 At a certain point in your career, the resume isn’t “a document.” It’s a compression problem.
 You’re trying to squeeze years of real work—projects, decisions, tradeoffs, leadership moments—into a page that gets skimmed in under a minute. And most of the time, the resume isn’t rejected because you’re unqualified. It’s rejected because the writing doesn’t land. It’s vague, overstuffed, or oddly hard to follow.
 Here’s the part that’s frustrating: you can stare at your resume for an hour and not see the problems, because your brain knows what you meant.
-Listening changes that. When your words are spoken out loud, you can’t pretend a bullet is clear. You either understand it immediately—or you don’t. And if *you* don’t understand it instantly, a recruiter won’t either.
+Listening changes that. When your words are spoken out loud, you can't pretend a bullet is clear. You either understand it immediately—or you don't. And if *you* don't understand it instantly, a recruiter won't either.
+
+**Personal story:** I discovered this the hard way when I was updating my resume for a director-level role. I had spent two hours perfecting a bullet point about "driving strategic alignment across cross-functional stakeholders." It looked sharp on the page. But when I pasted it into Read-Aloud and heard it spoken back to me, I realized it said absolutely nothing. A recruiter scanning 50 resumes wouldn't have gotten past that line. I rewrote it to: "Led weekly sync with Engineering, Sales, and Support to prioritize the top 3 customer issues each quarter—resulted in 40% faster resolution time." Specific, clear, and it actually told a story. That resume got me 3 interviews in the first week.
+
 This is where a simple paste-and-listen tool like Read‑Aloud earns its keep. No uploads. No fancy formatting. Just: copy, paste, press Start, and use your ears like a quality filter.
 
 ## Why “proof by ear” works better than proofreading with your eyes
