@@ -1,7 +1,7 @@
 ---
 title: "Write an Executive Summary That Survives Forwarding"
 description: "Clear, calibrated, and useful—without hype"
-date: "2026-01-15 09:00:00 -0500"
+date: "2026-01-11 09:00:00 -0500"
 author: "Nick Daly"
 slug: "executive-summary-that-survives-forwarding"
 topic: "Writing"

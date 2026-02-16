@@ -1,7 +1,7 @@
 ---
 title: "Customer Support Replies That De‑Escalate"
 description: "Turn a frustrated ticket into a calm, clear answer that doesn’t create more tickets"
-date: "2026-01-13 09:00:00 -0500"
+date: "2025-12-07 09:00:00 -0500"
 author: "Nick Daly"
 slug: "customer-support-replies-that-deescalate"
 topic: "Email"

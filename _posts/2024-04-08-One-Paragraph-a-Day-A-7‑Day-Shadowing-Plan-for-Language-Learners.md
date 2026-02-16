@@ -1,6 +1,7 @@
 ---
 layout: post
 title: "One Paragraph a Day A 7 Day Shadowing Plan for Language Learners"
+author: "Nick Daly"
 categories: [blog]
 tags: [Language Learning]
 ---

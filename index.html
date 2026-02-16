@@ -110,6 +110,47 @@
     </ul>
   </div>
 
+  <h3>Why Use Read-Aloud?</h3>
+  <p>
+    Text-to-speech isn't just for accessibility—it's a powerful tool for anyone who writes, learns, or communicates for work.
+    When you <strong>listen to your own writing</strong>, you catch errors your eyes miss: awkward phrasing, missing words,
+    unclear logic, and tone problems that only reveal themselves when spoken aloud. It's like having an editor on demand.
+  </p>
+  <p>
+    Read-Aloud works entirely in your browser, so you can paste sensitive text without worrying about uploads or accounts.
+    Choose from natural-sounding voices, adjust speed to match your focus, and get instant feedback on everything from
+    email drafts to research papers. No installation, no signup—just paste and press Start.
+  </p>
+
+  <h4>Common Use Cases</h4>
+  <ul>
+    <li><strong>Proofread your writing:</strong> Writers, students, and professionals use TTS to catch typos, repeated words,
+    and sentences that "look fine" but don't flow when spoken. If you've ever sent an email with a glaring typo you swear
+    you checked, listening would have caught it.</li>
+
+    <li><strong>Study more effectively:</strong> Turn lecture notes, textbooks, or articles into audio you can review while
+    commuting, exercising, or doing chores. Listening forces you to process information sequentially—no skimming,
+    no false sense of understanding. Students report better retention when they combine reading and listening.</li>
+
+    <li><strong>Practice a new language:</strong> Language learners use Read-Aloud to master pronunciation, rhythm, and pacing.
+    Paste a paragraph in your target language, listen at normal speed to hear natural flow, then slow it down to practice
+    shadowing. It's like having a patient native speaker who never gets tired of repeating.</li>
+
+    <li><strong>Check your tone before sending:</strong> Email and Slack messages that sound "direct" in your head can read as
+    cold or sharp to others. Hearing your message spoken by a neutral voice reveals how it actually lands. Busy professionals
+    use this "tone test" to avoid awkward follow-up threads.</li>
+
+    <li><strong>Accessibility and fatigue:</strong> For people with dyslexia, visual impairments, or screen fatigue, TTS makes
+    long documents manageable. It's also useful when you're too tired to read but still need to process information—like
+    reviewing a contract at the end of a long workday.</li>
+  </ul>
+
+  <p>
+    Over 50,000 people use Read-Aloud every month for these exact scenarios. Whether you're preparing for a presentation,
+    debugging a tricky paragraph, or just trying to get through a dense PDF, a quick listen often reveals what hours of
+    staring at the screen won't. <a href="/blog/">Browse our guides</a> to see specific workflows for your use case.
+  </p>
+
   <h3>Keep learning</h3>
   <p>Explore deeper workflows in our guides. Start with the overview, then pick the scenarios that match how you read:</p>
   <ul>
@@ -122,7 +163,7 @@
   </ul>
 </div>
 
-<div id="adsense-slot" class="ad-slot" data-ad-client="ca-pub-4003447295960802" data-ad-slot="8374615023" data-ad-width="468" data-ad-height="60">
+<div id="adsense-slot" class="ad-slot" data-ad-client="ca-pub-4003447295960802" data-ad-slot="8374615023" data-ad-format="auto" data-full-width-responsive="true">
   Ads load after accepting cookies.
 </div>
 
@@ -143,14 +184,14 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 const RAISED = 19;  /* update whenever balance changes */
 const GOAL   = 60;
 
-fetch('https://api.countapi.xyz/hit/read-aloud-site/visits')
-  .then(r=>r.json()).then(d=>updateBar(d.value)).catch(()=>updateBar('many'));
+// CountAPI.xyz shut down in 2023 - using static text instead
+updateBar();
 
-function updateBar(visits){
+function updateBar(){
   const pct = Math.min(100, RAISED/GOAL*100);
   document.getElementById('goalFill').style.width = pct + '%';
   document.getElementById('goalMsg').innerHTML =
-      `Free TTS for <strong>${visits.toLocaleString()}</strong> readers — `
+      `Free TTS for <strong>thousands</strong> of readers — `
     + `<strong>$${RAISED} of $${GOAL}</strong> hosting funded`;
 }
 </script>

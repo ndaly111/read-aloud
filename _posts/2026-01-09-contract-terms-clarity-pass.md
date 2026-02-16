@@ -1,7 +1,7 @@
 ---
 title: "The Contract / Terms Clarity Pass"
 description: "Listen for the clauses that create surprise bills and surprise obligations"
-date: "2026-01-09 09:00:00 -0500"
+date: "2025-09-28 09:00:00 -0500"
 author: "Nick Daly"
 slug: "contract-terms-clarity-pass"
 topic: "Workflows"

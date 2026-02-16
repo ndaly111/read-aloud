@@ -1,7 +1,7 @@
 ---
 title: "Great next step"
 description: "The 30‑Second Teach‑Back"
-date: "2026-01-12 09:00:00 -0500"
+date: "2025-11-23 09:00:00 -0500"
 author: "Nick Daly"
 slug: "30-second-teach-back"
 topic: "Workflows"
@@ -15,11 +15,10 @@ You read a long article, a strategy memo, a technical brief, a vendor analysis�
 Then, later, someone asks a simple question: “So what’s the point?”
 And you can’t answer cleanly.  
 You remember phrases. You remember the vibe. You might even remember a chart. But you can’t produce a crisp explanation that would help someone make a decision.  
-That gap is not a sign you’re bad at reading. It’s a sign you were relying on recognition instead of retention.  
-Recognition is easy: “Yes, I’ve seen ideas like this before.”
-Retention is harder: “Here’s what it means, why it matters, and what we should do.”  
-Recognition is easy: “Yes, I’ve seen ideas like this before.”
-Retention is harder: “Here’s what it means, why it matters, and what we should do.”  
+That gap is not a sign you're bad at reading. It's a sign you were relying on recognition instead of retention.
+
+Recognition is easy: "Yes, I've seen ideas like this before."
+Retention is harder: "Here's what it means, why it matters, and what we should do."  
 The fastest way I know to close that gap is the **teach‑back**: after you read or listen to something, you explain it in your own words—briefly, like you’re telling a colleague in a hallway.  
 But most people stop too early. They write a summary that still sounds like the original text: vague, abstract, and full of borrowed phrasing.  
 This is where text‑to‑speech becomes unexpectedly useful. You can listen to your own teach‑back the same way someone else would hear it. The holes show up immediately.  
@@ -45,20 +44,13 @@ A teach‑back is:
 * what you’d do next  
 It’s an explanation you could give without the original document in front of you.  
   
-## The 30‑Second Teach‑Back template (steal this)  
-Keep it to four sentences. That limit is part of the value.  
-1. **The point is:** ___  
-2. **The point is:** ___  
-3. **The point is:** ___  
-4. **It matters because:** ___  
-5. **It matters because:** ___  
-6. **It matters because:** ___  
-7. **The key tradeoff / constraint is:** ___  
-8. **The key tradeoff / constraint is:** ___  
-9. **The key tradeoff / constraint is:** ___  
-10. **Next step:** ___  
-11. **Next step:** ___  
-12. **Next step:** ___  
+## The 30‑Second Teach‑Back template (steal this)
+Keep it to four sentences. That limit is part of the value.
+
+1. **The point is:** ___
+2. **It matters because:** ___
+3. **The key tradeoff / constraint is:** ___
+4. **Next step:** ___  
 That’s it. Four sentences. If you can do that honestly, you understand the thing.  
 If you can’t, you’ve found the gap before it embarrasses you.  
   

@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Rehearse a Presentation Without Slides: Speaker Notes That Don’t Ramble"
-date: 2026-01-09
+date: "2025-10-12 09:00:00 -0500"
 author: "Nick Daly"
 slug: rehearse-presentation-without-slides
 permalink: /blog/rehearse-presentation-without-slides/

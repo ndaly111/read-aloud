@@ -1,7 +1,7 @@
 ---
 title: "Postmortem by Ear"
 description: "Make the timeline coherent, make the fixes real, and stop repeating the same incident with new wording"
-date: "2026-01-11 09:00:00 -0500"
+date: "2025-11-09 09:00:00 -0500"
 author: "Nick Daly"
 slug: "postmortem-by-ear"
 topic: "Operations"

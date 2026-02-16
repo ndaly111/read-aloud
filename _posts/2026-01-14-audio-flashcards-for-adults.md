@@ -1,7 +1,7 @@
 ---
 title: "Audio Flashcards for Adults"
 description: "Turn your notes into recall prompts you can listen to (so you can actually use what you learn)"
-date: "2026-01-14 09:00:00 -0500"
+date: "2025-12-21 09:00:00 -0500"
 author: "Nick Daly"
 slug: "audio-flashcards-for-adults"
 topic: "Study"
@@ -38,88 +38,27 @@ If the moment is a meeting, write prompts that sound like meeting questions:
 * “What’s the risk if we delay?”  
 That’s how you create prompts that pay dividends.  
   
-## The “Adult Flashcard” formats that actually work  
-Most of your prompts should be one of these five types:  
+## The "Adult Flashcard" formats that actually work
+Most of your prompts should be one of these five types:
+
 1. **Definition (but practical):**
-“What is X, in one sentence that a new hire would understand?”  
-1. **Definition (but practical):**
-“What is X, in one sentence that a new hire would understand?”  
-1. **Definition (but practical):**
-“What is X, in one sentence that a new hire would understand?”  
-1. **Definition (but practical):**
-“What is X, in one sentence that a new hire would understand?”  
-1. **Difference (confusable pair):**
-“What’s the difference between A and B?”
-This prevents the classic “I kind of know both but mix them up.”  
-1. **Difference (confusable pair):**
-“What’s the difference between A and B?”
-This prevents the classic “I kind of know both but mix them up.”  
-1. **Difference (confusable pair):**
-“What’s the difference between A and B?”
-This prevents the classic “I kind of know both but mix them up.”  
-1. **Difference (confusable pair):**
-“What’s the difference between A and B?”
-This prevents the classic “I kind of know both but mix them up.”  
-1. **Difference (confusable pair):**
-“What’s the difference between A and B?”
-This prevents the classic “I kind of know both but mix them up.”  
-1. **Difference (confusable pair):**
-“What’s the difference between A and B?”
-This prevents the classic “I kind of know both but mix them up.”  
-1. **Why / so what:**
-“Why does this matter?”
-This prevents shallow knowledge.  
-1. **Why / so what:**
-“Why does this matter?”
-This prevents shallow knowledge.  
-1. **Why / so what:**
-“Why does this matter?”
-This prevents shallow knowledge.  
-1. **Why / so what:**
-“Why does this matter?”
-This prevents shallow knowledge.  
-1. **Why / so what:**
-“Why does this matter?”
-This prevents shallow knowledge.  
-1. **Why / so what:**
-“Why does this matter?”
-This prevents shallow knowledge.  
-1. **Decision & rationale:**
-“What did we decide, and what was the reason?”
-This is meeting gold.  
-1. **Decision & rationale:**
-“What did we decide, and what was the reason?”
-This is meeting gold.  
-1. **Decision & rationale:**
-“What did we decide, and what was the reason?”
-This is meeting gold.  
-1. **Decision & rationale:**
-“What did we decide, and what was the reason?”
-This is meeting gold.  
-1. **Decision & rationale:**
-“What did we decide, and what was the reason?”
-This is meeting gold.  
-1. **Decision & rationale:**
-“What did we decide, and what was the reason?”
-This is meeting gold.  
-1. **Trigger & response:**
-“If we see X, what do we do?”
-Perfect for incident response, support, operations, leadership moments.  
-1. **Trigger & response:**
-“If we see X, what do we do?”
-Perfect for incident response, support, operations, leadership moments.  
-1. **Trigger & response:**
-“If we see X, what do we do?”
-Perfect for incident response, support, operations, leadership moments.  
-1. **Trigger & response:**
-“If we see X, what do we do?”
-Perfect for incident response, support, operations, leadership moments.  
-1. **Trigger & response:**
-“If we see X, what do we do?”
-Perfect for incident response, support, operations, leadership moments.  
-1. **Trigger & response:**
-“If we see X, what do we do?”
-Perfect for incident response, support, operations, leadership moments.  
+   "What is X, in one sentence that a new hire would understand?"
+
+2. **Difference (confusable pair):**
+   "What's the difference between A and B?"
+   This prevents the classic "I kind of know both but mix them up."
+
+3. **Why / so what:**
+   "Why does this matter?"
+   This prevents shallow knowledge.
+
+4. **Decision & rationale:**
+   "What did we decide, and what was the reason?"
+   This is meeting gold.
+
+5. **Trigger & response:**
+   "If we see X, what do we do?"
+   Perfect for incident response, support, operations, leadership moments.  
 If you build prompts in those shapes, you end up with knowledge you can use, not just recognize.  
   
 ## How to create an “audio flashcard deck” in 10 minutes  

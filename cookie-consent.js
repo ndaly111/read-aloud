@@ -4,6 +4,19 @@
   const REJECTED = 'rejected';
   const GA_ID = 'G-SVGML1VGPG';
 
+  // Initialize Google Consent Mode v2 with default denied state
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){window.dataLayer.push(arguments);}
+  window.gtag = window.gtag || gtag;
+
+  // Set default consent state (before user interaction)
+  gtag('consent', 'default', {
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'analytics_storage': 'denied'
+  });
+
   const loadScript = (src, attrs = {}) => {
     const script = document.createElement('script');
     script.async = true;
@@ -17,13 +30,20 @@
     return script;
   };
 
+  const updateConsentMode = (accepted) => {
+    // Update Google Consent Mode based on user choice
+    gtag('consent', 'update', {
+      'ad_storage': accepted ? 'granted' : 'denied',
+      'ad_user_data': accepted ? 'granted' : 'denied',
+      'ad_personalization': accepted ? 'granted' : 'denied',
+      'analytics_storage': accepted ? 'granted' : 'denied'
+    });
+  };
+
   const initAnalytics = () => {
     if (window.__raAnalyticsLoaded) return;
     window.__raAnalyticsLoaded = true;
     loadScript(`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`);
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){window.dataLayer.push(arguments);}
-    window.gtag = window.gtag || gtag;
     window.gtag('js', new Date());
     window.gtag('config', GA_ID);
   };
@@ -43,19 +63,23 @@
     slot.textContent = '';
     const ins = document.createElement('ins');
     ins.className = 'adsbygoogle';
-    ins.style.display = 'inline-block';
-    if (slot.dataset.adWidth && slot.dataset.adHeight) {
-      ins.style.width = `${slot.dataset.adWidth}px`;
-      ins.style.height = `${slot.dataset.adHeight}px`;
-    }
+    ins.style.display = 'block';
     ins.dataset.adClient = adClient;
     ins.dataset.adSlot = adSlot;
+    ins.dataset.adFormat = slot.dataset.adFormat || 'auto';
+    ins.dataset.fullWidthResponsive = slot.dataset.fullWidthResponsive || 'true';
     slot.appendChild(ins);
     (window.adsbygoogle = window.adsbygoogle || []).push({});
   };
 
   const applyConsent = (value) => {
-    if (value === ACCEPTED) {
+    const accepted = (value === ACCEPTED);
+
+    // Update Google Consent Mode signals
+    updateConsentMode(accepted);
+
+    // Load analytics and ads if accepted
+    if (accepted) {
       initAnalytics();
       initAdsense();
     }
