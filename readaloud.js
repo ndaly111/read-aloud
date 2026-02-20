@@ -256,16 +256,15 @@ if (voiceSel) {
 
 /* ========== START SPEAK ========== */
 function startSpeak() {
-  // Prevent double-start - user must Stop first
-  if (isSpeaking) {
-    return;
-  }
+  if (isSpeaking) return;
   if (!txt.value.trim()) {
     showError('Please type or paste some text first.');
     setStatus('Ready');
     return;
   }
   clearError();
+  isSpeaking = true;
+  startBtn.disabled = true;
 
   const [voiceType, voiceId] = voiceSel.value.split(':');
 
