@@ -78,6 +78,7 @@ let boundarySeen = false;
 let isPaused = false;
 let useNeuralTTS = true; // Prefer neural voices
 let apiAvailable = false;
+let downloadBlobs = []; // Collect MP3 chunks for download
 
 /* ========== INIT ========== */
 (async function init() {
@@ -92,6 +93,7 @@ let apiAvailable = false;
   pauseBtn.onclick = pauseSpeak;
   resumeBtn.onclick = resumeSpeak;
   stopBtn.onclick = stopAll;
+  $('download').onclick = downloadMp3;
 
   txt.addEventListener('input', () => {
     clearError();
@@ -279,6 +281,8 @@ async function useNeuralSpeech(voiceId) {
   setStatus('Connecting to voice server...');
   isSpeaking = true;
   isPaused = false;
+  downloadBlobs = [];
+  $('download').disabled = true;
   updateControls();
 
   // Chunk text for long documents
@@ -324,6 +328,7 @@ async function useNeuralSpeech(voiceId) {
 
         const audioBlob = await response.blob();
         console.log('Got audio blob, size:', audioBlob.size);
+        downloadBlobs.push(audioBlob);
         await playAudioBlob(audioBlob, chunks[i].length);
 
         progChar += chunks[i].length;
@@ -580,6 +585,8 @@ function stopAll() {
   queue = [];
   isSpeaking = false;
   isPaused = false;
+  downloadBlobs = [];
+  $('download').disabled = true;
   resetMeter();
   setStatus('Ready');
   updateControls();
@@ -592,6 +599,20 @@ function finish() {
   updateMeter(totalChars);
   setStatus('Finished');
   updateControls();
+  if (downloadBlobs.length) {
+    $('download').disabled = false;
+  }
+}
+
+function downloadMp3() {
+  if (!downloadBlobs.length) return;
+  const combined = new Blob(downloadBlobs, { type: 'audio/mpeg' });
+  const url = URL.createObjectURL(combined);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'read-aloud.mp3';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 function resetMeter() {
