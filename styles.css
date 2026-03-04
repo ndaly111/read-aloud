@@ -655,6 +655,13 @@ textarea#txt {
   resize: vertical;
 }
 
+#disp {
+  max-height: 30vh;
+  overflow-y: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 progress {
   width: 100%;
   height: 12px;

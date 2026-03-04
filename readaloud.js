@@ -79,6 +79,7 @@ let isPaused = false;
 let useNeuralTTS = true; // Prefer neural voices
 let apiAvailable = false;
 let downloadBlobs = []; // Collect MP3 chunks for download
+let keepAliveTimer = null; // Chrome speech synthesis keep-alive
 
 /* ========== INIT ========== */
 (async function init() {
@@ -447,8 +448,28 @@ function useBrowserSpeech(voiceIndex) {
   isPaused = false;
   setStatus('Playing...');
   updateControls();
+  startKeepAlive();
   speakNextChunk(voiceIndex);
   requestAnimationFrame(progressLoop);
+}
+
+// Chrome kills speechSynthesis after ~15s of continuous speech.
+// Periodically pause/resume to keep it alive.
+function startKeepAlive() {
+  stopKeepAlive();
+  keepAliveTimer = setInterval(() => {
+    if (isSpeaking && !isPaused && speechSynthesis.speaking) {
+      speechSynthesis.pause();
+      speechSynthesis.resume();
+    }
+  }, 10000);
+}
+
+function stopKeepAlive() {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
 }
 
 function speakNextChunk(voiceIndex) {
@@ -580,6 +601,7 @@ function stopAll() {
 
   // Stop browser speech
   speechSynthesis.cancel();
+  stopKeepAlive();
 
   queue = [];
   isSpeaking = false;
@@ -595,6 +617,7 @@ function finish() {
   isSpeaking = false;
   isPaused = false;
   currentAudio = null;
+  stopKeepAlive();
   updateMeter(totalChars);
   setStatus('Finished');
   updateControls();
@@ -623,7 +646,8 @@ function resetMeter() {
 
 function autoSize() {
   txt.style.height = 'auto';
-  txt.style.height = txt.scrollHeight + 'px';
+  const maxH = window.innerHeight * 0.45; // match CSS max-height: 45vh
+  txt.style.height = Math.min(txt.scrollHeight, maxH) + 'px';
 }
 
 /* ========== UI HELPERS ========== */
