@@ -408,7 +408,7 @@ function playAudioBlob(blob, chunkLength) {
     };
 
     currentAudio.playbackRate = 1; // Rate is handled by API
-    currentAudio.oncanplaythrough = () => setStatus('Playing...');
+    currentAudio.oncanplaythrough = () => setStatus('Playing (premium voice)...');
     currentAudio.play().catch(reject);
   });
 }
@@ -442,11 +442,12 @@ function rateToApiFormat(rate) {
 function useBrowserSpeech(voiceIndex) {
   queue = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK_SIZE}}(?:\\s|$)`, 'g')) || [];
   progChar = 0;
+  totalChars = txt.value.length;
   startTime = Date.now();
   boundarySeen = false;
   isSpeaking = true;
   isPaused = false;
-  setStatus('Playing...');
+  setStatus('Playing (browser voice)...');
   updateControls();
   startKeepAlive();
   speakNextChunk(voiceIndex);
@@ -498,9 +499,20 @@ function speakNextChunk(voiceIndex) {
     console.error('Speech error:', e);
     if (e.error !== 'canceled') {
       showError(`Speech error: ${e.error}`);
+      // Continue to next chunk instead of silently stopping
+      progChar = chunkStart + chunk.length;
+      speakNextChunk(voiceIndex);
     }
   };
   speechSynthesis.speak(utter);
+
+  // Detect silent failure: if speech hasn't started after 3 seconds
+  setTimeout(() => {
+    if (isSpeaking && !boundarySeen && !speechSynthesis.speaking && !currentAudio) {
+      showError('Browser speech not responding. Try selecting a different voice or refreshing the page.');
+      stopAll();
+    }
+  }, 3000);
 }
 
 /* ========== PROGRESS + DISPLAY ========== */
