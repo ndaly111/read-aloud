@@ -428,6 +428,16 @@ function playAudioBlob(blob, chunkLength) {
       reject(new Error('Audio playback failed'));
     };
 
+    // If the browser suspends the audio (tab hidden, network blip, etc.),
+    // retry playing the already-rendered blob rather than failing.
+    const retryPlay = () => {
+      if (done || isPaused) return;
+      console.warn('Audio stalled, retrying play...');
+      audio.play().catch(() => {}); // silent — onerror will handle a real failure
+    };
+    audio.onstalled = retryPlay;
+    audio.onwaiting = retryPlay;
+
     audio.playbackRate = 1; // Rate is handled by API
     audio.oncanplaythrough = () => setStatus('Playing...');
     audio.play().catch((err) => {
