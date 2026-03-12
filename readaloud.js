@@ -106,16 +106,26 @@ let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll()
   window.addEventListener('resize', autoSize);
   window.addEventListener('keydown', handleShortcuts);
 
-  // Check API availability and load voices
+  // Load browser voices, then show premium voices optimistically while
+  // the API check runs in the background. Render free tier can take 30-60s
+  // to cold-start, so we don't block the UI waiting for it.
   setStatus('Loading voices...');
-  apiAvailable = await checkApiAvailability();
   await loadBrowserVoices();
+  apiAvailable = true; // optimistic — removed if background check fails
   populateVoiceSel();
 
   buildDisplay();
   autoSize();
   updateControls();
   setStatus('Ready');
+
+  // Background check — hide premium voices only if API is confirmed down
+  checkApiAvailability().then(available => {
+    if (!available) {
+      apiAvailable = false;
+      populateVoiceSel();
+    }
+  });
 })();
 
 /* ========== API CHECK ========== */
@@ -124,7 +134,7 @@ async function checkApiAvailability() {
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000 * attempt);
+      const timeout = setTimeout(() => controller.abort(), 15000 * attempt);
       const response = await fetch(`${TTS_API_URL}/`, {
         method: 'GET',
         signal: controller.signal
@@ -143,21 +153,14 @@ async function checkApiAvailability() {
   return false;
 }
 
-// Re-check API availability periodically (in case it comes back online)
-async function recheckApi() {
-  if (!apiAvailable) {
-    const nowAvailable = await checkApiAvailability();
-    if (nowAvailable && !apiAvailable) {
-      apiAvailable = true;
-      populateVoiceSel();
-      console.log('Premium voices now available!');
-    }
+// Re-check API availability every 5 minutes to catch outages and recoveries
+setInterval(async () => {
+  const available = await checkApiAvailability();
+  if (available !== apiAvailable) {
+    apiAvailable = available;
+    populateVoiceSel();
+    console.log(available ? 'Premium voices now available!' : 'Premium voices went offline.');
   }
-}
-
-// Check every 5 minutes if API was initially unavailable
-setInterval(() => {
-  if (!apiAvailable) recheckApi();
 }, 5 * 60 * 1000);
 
 /* ========== VOICE LOADING ========== */
