@@ -80,6 +80,9 @@ let useNeuralTTS = true; // Prefer neural voices
 let apiAvailable = false;
 let downloadBlobs = []; // Collect MP3 chunks for download
 let keepAliveTimer = null; // Chrome speech synthesis keep-alive
+let currentVoiceIndex = '-1'; // Saved so keep-alive can restart stalled browser TTS
+let currentChunk = ''; // Current browser TTS chunk, saved so stall recovery can re-speak it
+let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll() unblock it
 
 /* ========== INIT ========== */
 (async function init() {
@@ -383,33 +386,58 @@ function playAudioBlob(blob, chunkLength) {
       return;
     }
     const url = URL.createObjectURL(blob);
-    currentAudio = new Audio(url);
+    const audio = new Audio(url);
+    currentAudio = audio;
 
     const chunkStart = progChar;
+    let done = false;
 
-    currentAudio.ontimeupdate = () => {
-      if (currentAudio.duration) {
-        const chunkProgress = currentAudio.currentTime / currentAudio.duration;
+    // Expose resolve so stopAll() can unblock this promise immediately
+    audioResolve = () => {
+      if (done) return;
+      done = true;
+      audioResolve = null;
+      URL.revokeObjectURL(url);
+      if (currentAudio === audio) currentAudio = null;
+      resolve();
+    };
+
+    audio.ontimeupdate = () => {
+      if (audio.duration) {
+        const chunkProgress = audio.currentTime / audio.duration;
         const currentChar = chunkStart + Math.floor(chunkProgress * chunkLength);
         updateMeter(currentChar);
       }
     };
 
-    currentAudio.onended = () => {
+    audio.onended = () => {
+      if (done) return;
+      done = true;
+      audioResolve = null;
       URL.revokeObjectURL(url);
-      currentAudio = null;
+      if (currentAudio === audio) currentAudio = null;
       resolve();
     };
 
-    currentAudio.onerror = (e) => {
+    audio.onerror = () => {
+      if (done) return;
+      done = true;
+      audioResolve = null;
       URL.revokeObjectURL(url);
-      currentAudio = null;
+      if (currentAudio === audio) currentAudio = null;
       reject(new Error('Audio playback failed'));
     };
 
-    currentAudio.playbackRate = 1; // Rate is handled by API
-    currentAudio.oncanplaythrough = () => setStatus('Playing...');
-    currentAudio.play().catch(reject);
+    audio.playbackRate = 1; // Rate is handled by API
+    audio.oncanplaythrough = () => setStatus('Playing...');
+    audio.play().catch((err) => {
+      if (done) return;
+      done = true;
+      audioResolve = null;
+      URL.revokeObjectURL(url);
+      if (currentAudio === audio) currentAudio = null;
+      reject(err);
+    });
   });
 }
 
@@ -440,6 +468,7 @@ function rateToApiFormat(rate) {
 
 /* ========== BROWSER TTS (Web Speech API) ========== */
 function useBrowserSpeech(voiceIndex) {
+  currentVoiceIndex = voiceIndex;
   queue = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK_SIZE}}(?:\\s|$)`, 'g')) || [];
   progChar = 0;
   startTime = Date.now();
@@ -454,15 +483,33 @@ function useBrowserSpeech(voiceIndex) {
 }
 
 // Chrome kills speechSynthesis after ~15s of continuous speech.
-// Periodically pause/resume to keep it alive.
+// Periodically pause/resume to keep it alive, and detect silent deaths.
 function startKeepAlive() {
   stopKeepAlive();
   keepAliveTimer = setInterval(() => {
-    if (isSpeaking && !isPaused && speechSynthesis.speaking) {
+    if (!isSpeaking || isPaused) return;
+
+    if (speechSynthesis.speaking) {
+      // Standard Chrome keep-alive: pause/resume resets the 15s timer
       speechSynthesis.pause();
       speechSynthesis.resume();
+    } else if (!speechSynthesis.pending) {
+      // Chrome silently killed speech — nothing is speaking or queued.
+      // Put the current (interrupted) chunk back at the front and re-speak.
+      if (currentChunk) {
+        console.warn('Speech synthesis stalled, re-speaking current chunk...');
+        queue.unshift(currentChunk);
+        currentChunk = '';
+        speakNextChunk(currentVoiceIndex);
+      } else if (queue.length > 0) {
+        console.warn('Speech synthesis stalled, resuming queue...');
+        speakNextChunk(currentVoiceIndex);
+      } else {
+        // Queue empty but finish() was never called — call it now.
+        finish();
+      }
     }
-  }, 10000);
+  }, 5000);
 }
 
 function stopKeepAlive() {
@@ -477,7 +524,8 @@ function speakNextChunk(voiceIndex) {
     finish();
     return;
   }
-  const chunk = queue.shift();
+  currentChunk = queue.shift();
+  const chunk = currentChunk;
   utter = new SpeechSynthesisUtterance(chunk);
   utter.rate = +rateSlider.value;
 
@@ -592,11 +640,15 @@ function resumeSpeak() {
 }
 
 function stopAll() {
-  // Stop neural audio
+  // Stop neural audio and unblock any pending playAudioBlob promise
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
     currentAudio = null;
+  }
+  if (audioResolve) {
+    audioResolve(); // unblocks useNeuralSpeech loop so it can check !isSpeaking
+    audioResolve = null;
   }
 
   // Stop browser speech
@@ -604,6 +656,7 @@ function stopAll() {
   stopKeepAlive();
 
   queue = [];
+  currentChunk = '';
   isSpeaking = false;
   isPaused = false;
   downloadBlobs = [];
