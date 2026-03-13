@@ -488,10 +488,47 @@ function playAudioBlob(blob, chunkLength) {
 
 function chunkText(text, maxLength) {
   const chunks = [];
-  const sentences = text.match(/[^.!?]+[.!?]+[\s]*/g) || [text];
+  const sentences = text.match(/[^.!?]+[.!?]+[\s]*/g) || [];
+
+  // Capture trailing text that doesn't end in .!? (the regex silently drops it)
+  const matchedLen = sentences.reduce((sum, s) => sum + s.length, 0);
+  if (matchedLen < text.length) {
+    const remainder = text.slice(matchedLen);
+    if (remainder.trim()) sentences.push(remainder);
+  }
+
+  // Fallback: if no sentences found at all, hard-split at word boundaries
+  if (!sentences.length) {
+    let remaining = text;
+    while (remaining.length > maxLength) {
+      let splitIdx = remaining.lastIndexOf(' ', maxLength);
+      if (splitIdx <= 0) splitIdx = maxLength;
+      chunks.push(remaining.slice(0, splitIdx).trim());
+      remaining = remaining.slice(splitIdx).trim();
+    }
+    if (remaining.trim()) chunks.push(remaining.trim());
+    return chunks;
+  }
 
   let currentChunk = '';
   for (const sentence of sentences) {
+    // If a single sentence exceeds maxLength, split it at word boundaries
+    if (sentence.length > maxLength) {
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+        currentChunk = '';
+      }
+      let remaining = sentence;
+      while (remaining.length > maxLength) {
+        let splitIdx = remaining.lastIndexOf(' ', maxLength);
+        if (splitIdx <= 0) splitIdx = maxLength;
+        chunks.push(remaining.slice(0, splitIdx).trim());
+        remaining = remaining.slice(splitIdx).trim();
+      }
+      if (remaining.trim()) currentChunk = remaining;
+      continue;
+    }
+
     if ((currentChunk + sentence).length > maxLength && currentChunk) {
       chunks.push(currentChunk.trim());
       currentChunk = sentence;
@@ -503,7 +540,7 @@ function chunkText(text, maxLength) {
     chunks.push(currentChunk.trim());
   }
 
-  return chunks.length ? chunks : [text];
+  return chunks;
 }
 
 function rateToApiFormat(rate) {
