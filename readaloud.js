@@ -338,6 +338,8 @@ async function useNeuralSpeech(voiceId) {
   const MAX_ERRORS = 3;
   let consecutiveErrors = 0;
 
+  console.log(`Neural TTS: ${chunks.length} chunks, sizes: [${chunks.map(c => c.length)}], voice: ${voiceId}`);
+
   // Kick off the first fetch immediately so audio starts as fast as possible.
   // Each subsequent fetch starts as soon as the previous chunk begins playing,
   // so the next blob is ready (or nearly ready) when the current one finishes.
@@ -350,16 +352,17 @@ async function useNeuralSpeech(voiceId) {
       // Await the pre-fetched blob for this chunk
       let audioBlob;
       try {
+        setStatus(`Loading chunk ${i + 1}/${chunks.length}...`);
         audioBlob = await nextFetch;
+        console.log(`Chunk ${i + 1} fetched: ${audioBlob.size} bytes`);
       } catch (fetchError) {
-        console.warn(`Chunk ${i + 1} failed after retries:`, fetchError.message);
+        console.error(`Chunk ${i + 1} fetch failed:`, fetchError.message);
         consecutiveErrors++;
         if (consecutiveErrors >= MAX_ERRORS) {
-          throw new Error('Multiple failures - switching to browser voice');
+          throw new Error(`Fetch failed: ${fetchError.message}`);
         }
         progChar += chunks[i].length;
-        showError(`Chunk ${i + 1} skipped, continuing...`);
-        // Pre-fetch next chunk even on failure so we don't stall
+        showError(`Chunk ${i + 1} skipped (${fetchError.message})`);
         if (i + 1 < chunks.length) {
           nextFetch = fetchChunkWithRetry(chunks[i + 1], voiceId, i + 1);
         }
@@ -380,12 +383,12 @@ async function useNeuralSpeech(voiceId) {
         await playAudioBlob(audioBlob, chunks[i].length);
         consecutiveErrors = 0;
       } catch (playError) {
-        console.warn(`Chunk ${i + 1} playback failed:`, playError.message);
+        console.error(`Chunk ${i + 1} playback failed:`, playError.message);
         consecutiveErrors++;
         if (consecutiveErrors >= MAX_ERRORS) {
-          throw new Error('Multiple playback failures - switching to browser voice');
+          throw new Error(`Playback failed: ${playError.message}`);
         }
-        showError(`Chunk ${i + 1} skipped, continuing...`);
+        showError(`Chunk ${i + 1}: ${playError.message}`);
         await new Promise(r => setTimeout(r, 500));
         clearError();
       }
@@ -404,8 +407,8 @@ async function useNeuralSpeech(voiceId) {
     }
 
     setStatus('Switching to browser voice...');
-    showError('Premium voice unavailable. Using browser voice instead.');
-    await new Promise(r => setTimeout(r, 1000));
+    showError(`Premium voice error: ${error.message}. Using browser voice.`);
+    await new Promise(r => setTimeout(r, 2000));
     clearError();
 
     progChar = 0;
@@ -415,9 +418,9 @@ async function useNeuralSpeech(voiceId) {
 
 function playAudioBlob(blob, chunkLength) {
   return new Promise((resolve, reject) => {
-    console.log('Playing audio blob, size:', blob.size);
+    console.log('playAudioBlob: size:', blob.size, 'type:', blob.type);
     if (blob.size < 100) {
-      reject(new Error('Audio blob too small - API may have failed'));
+      reject(new Error('Audio blob too small (' + blob.size + ' bytes)'));
       return;
     }
     const url = URL.createObjectURL(blob);
@@ -427,13 +430,29 @@ function playAudioBlob(blob, chunkLength) {
     const chunkStart = progChar;
     let done = false;
 
+    function cleanup() {
+      clearTimeout(safetyTimer);
+      URL.revokeObjectURL(url);
+      if (currentAudio === audio) currentAudio = null;
+    }
+
+    // Safety timeout: if onended never fires (browser bug), resolve after
+    // estimated duration + generous buffer so the queue doesn't hang forever.
+    const safetyTimer = setTimeout(() => {
+      if (done) return;
+      console.warn('playAudioBlob: safety timeout — onended never fired, resolving');
+      done = true;
+      audioResolve = null;
+      cleanup();
+      resolve();
+    }, 5 * 60 * 1000); // 5 minutes max per chunk
+
     // Expose resolve so stopAll() can unblock this promise immediately
     audioResolve = () => {
       if (done) return;
       done = true;
       audioResolve = null;
-      URL.revokeObjectURL(url);
-      if (currentAudio === audio) currentAudio = null;
+      cleanup();
       resolve();
     };
 
@@ -449,8 +468,7 @@ function playAudioBlob(blob, chunkLength) {
       if (done) return;
       done = true;
       audioResolve = null;
-      URL.revokeObjectURL(url);
-      if (currentAudio === audio) currentAudio = null;
+      cleanup();
       resolve();
     };
 
@@ -458,9 +476,11 @@ function playAudioBlob(blob, chunkLength) {
       if (done) return;
       done = true;
       audioResolve = null;
-      URL.revokeObjectURL(url);
-      if (currentAudio === audio) currentAudio = null;
-      reject(new Error('Audio playback failed'));
+      const code = audio.error ? audio.error.code : 'unknown';
+      const msg = audio.error ? audio.error.message : '';
+      console.error('playAudioBlob error: code=' + code, msg);
+      cleanup();
+      reject(new Error('Audio error (code ' + code + '): ' + (msg || 'playback failed')));
     };
 
     // If the browser suspends the audio (tab hidden, network blip, etc.),
@@ -474,14 +494,15 @@ function playAudioBlob(blob, chunkLength) {
     audio.onwaiting = retryPlay;
 
     audio.playbackRate = 1; // Rate is handled by API
-    audio.oncanplaythrough = () => setStatus('Playing...');
+    audio.oncanplaythrough = () => {
+      console.log('playAudioBlob: canplaythrough, duration:', audio.duration);
+    };
     audio.play().catch((err) => {
       if (done) return;
       done = true;
       audioResolve = null;
-      URL.revokeObjectURL(url);
-      if (currentAudio === audio) currentAudio = null;
-      reject(err);
+      cleanup();
+      reject(new Error('play() rejected: ' + err.message));
     });
   });
 }
