@@ -375,10 +375,22 @@ async function useNeuralSpeech(voiceId) {
 
       downloadBlobs.push(audioBlob);
       setStatus(chunks.length > 1 ? `Playing (${i + 1}/${chunks.length})...` : 'Playing...');
-      await playAudioBlob(audioBlob, chunks[i].length);
+
+      try {
+        await playAudioBlob(audioBlob, chunks[i].length);
+        consecutiveErrors = 0;
+      } catch (playError) {
+        console.warn(`Chunk ${i + 1} playback failed:`, playError.message);
+        consecutiveErrors++;
+        if (consecutiveErrors >= MAX_ERRORS) {
+          throw new Error('Multiple playback failures - switching to browser voice');
+        }
+        showError(`Chunk ${i + 1} skipped, continuing...`);
+        await new Promise(r => setTimeout(r, 500));
+        clearError();
+      }
 
       progChar += chunks[i].length;
-      consecutiveErrors = 0;
     }
 
     if (isSpeaking) finish();
