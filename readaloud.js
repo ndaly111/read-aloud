@@ -283,91 +283,102 @@ function startSpeak() {
 }
 
 /* ========== NEURAL TTS (Edge TTS API) ========== */
+
+// Fetch a single chunk with retry/backoff. Returns an audio Blob or throws.
+async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
+  const MAX_RETRIES = 2;
+  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+    if (attempt > 1) {
+      await new Promise(r => setTimeout(r, 1000 * attempt)); // 2s, 3s backoff
+    }
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      console.log('Fetching TTS chunk', chunkIndex + 1, 'attempt', attempt);
+      const response = await fetch(`${TTS_API_URL}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          voice: voiceId,
+          rate: rateToApiFormat(+rateSlider.value),
+          pitch: '+0Hz'
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || `API error: ${response.status}`);
+      }
+      const blob = await response.blob();
+      if (blob.size < 100) throw new Error('Audio blob too small');
+      console.log('Got audio blob for chunk', chunkIndex + 1, 'size:', blob.size);
+      return blob;
+    } catch (e) {
+      console.warn(`Chunk ${chunkIndex + 1} attempt ${attempt} failed:`, e.message);
+      if (attempt === MAX_RETRIES + 1) throw e;
+    }
+  }
+}
+
 async function useNeuralSpeech(voiceId) {
-  setStatus('Connecting to voice server...');
+  setStatus('Loading audio...');
   isSpeaking = true;
   isPaused = false;
   downloadBlobs = [];
   $('download').disabled = true;
   updateControls();
 
-  // Chunk text for long documents
   const chunks = chunkText(txt.value, 4500); // Edge TTS limit ~5000
   progChar = 0;
   startTime = Date.now();
   totalChars = txt.value.length;
 
-  let consecutiveErrors = 0;
   const MAX_ERRORS = 3;
-  const MAX_RETRIES = 2;
+  let consecutiveErrors = 0;
+
+  // Kick off the first fetch immediately so audio starts as fast as possible.
+  // Each subsequent fetch starts as soon as the previous chunk begins playing,
+  // so the next blob is ready (or nearly ready) when the current one finishes.
+  let nextFetch = fetchChunkWithRetry(chunks[0], voiceId, 0);
 
   try {
     for (let i = 0; i < chunks.length; i++) {
-      if (!isSpeaking) break; // Stopped
+      if (!isSpeaking) break;
 
-      setStatus(`Rendering audio (${i + 1}/${chunks.length})...`);
-
-      let chunkSucceeded = false;
-      for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
-        if (!isSpeaking) break;
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
-          if (attempt > 1) {
-            setStatus(`Retrying chunk ${i + 1} (attempt ${attempt})...`);
-            await new Promise(r => setTimeout(r, 1000 * attempt)); // backoff
-          }
-
-          console.log('Fetching TTS for chunk', i + 1, 'voice:', voiceId, 'attempt:', attempt);
-          const response = await fetch(`${TTS_API_URL}/api/tts`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: chunks[i],
-              voice: voiceId,
-              rate: rateToApiFormat(+rateSlider.value),
-              pitch: '+0Hz'
-            }),
-            signal: controller.signal
-          });
-
-          clearTimeout(timeout);
-          console.log('TTS response status:', response.status);
-
-          if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            console.error('TTS API error:', error);
-            throw new Error(error.detail || `API error: ${response.status}`);
-          }
-
-          const audioBlob = await response.blob();
-          console.log('Got audio blob, size:', audioBlob.size);
-          downloadBlobs.push(audioBlob);
-          await playAudioBlob(audioBlob, chunks[i].length);
-
-          progChar += chunks[i].length;
-          consecutiveErrors = 0; // Reset on success
-          chunkSucceeded = true;
-          setStatus(`Rendering audio (${i + 1}/${chunks.length})...`);
-          break; // chunk done
-
-        } catch (retryError) {
-          console.warn(`Chunk ${i + 1} attempt ${attempt} failed:`, retryError.message);
-          if (attempt === MAX_RETRIES + 1) {
-            // All retries exhausted for this chunk
-            consecutiveErrors++;
-            if (consecutiveErrors >= MAX_ERRORS) {
-              throw new Error(`Multiple failures - switching to browser voice`);
-            }
-            // Skip this chunk and continue with next
-            progChar += chunks[i].length;
-            showError(`Chunk ${i + 1} skipped, continuing...`);
-            await new Promise(r => setTimeout(r, 500));
-            clearError();
-          }
+      // Await the pre-fetched blob for this chunk
+      let audioBlob;
+      try {
+        audioBlob = await nextFetch;
+      } catch (fetchError) {
+        console.warn(`Chunk ${i + 1} failed after retries:`, fetchError.message);
+        consecutiveErrors++;
+        if (consecutiveErrors >= MAX_ERRORS) {
+          throw new Error('Multiple failures - switching to browser voice');
         }
+        progChar += chunks[i].length;
+        showError(`Chunk ${i + 1} skipped, continuing...`);
+        // Pre-fetch next chunk even on failure so we don't stall
+        if (i + 1 < chunks.length) {
+          nextFetch = fetchChunkWithRetry(chunks[i + 1], voiceId, i + 1);
+        }
+        await new Promise(r => setTimeout(r, 500));
+        clearError();
+        continue;
       }
+
+      // Start fetching the next chunk while this one plays
+      if (i + 1 < chunks.length) {
+        nextFetch = fetchChunkWithRetry(chunks[i + 1], voiceId, i + 1);
+      }
+
+      downloadBlobs.push(audioBlob);
+      setStatus(chunks.length > 1 ? `Playing (${i + 1}/${chunks.length})...` : 'Playing...');
+      await playAudioBlob(audioBlob, chunks[i].length);
+
+      progChar += chunks[i].length;
+      consecutiveErrors = 0;
     }
 
     if (isSpeaking) finish();
@@ -375,21 +386,16 @@ async function useNeuralSpeech(voiceId) {
   } catch (error) {
     console.error('Neural TTS error:', error);
 
-    // Clean up any partial state
     if (currentAudio) {
       currentAudio.pause();
       currentAudio = null;
     }
 
-    // Fallback to browser voice
     setStatus('Switching to browser voice...');
     showError('Premium voice unavailable. Using browser voice instead.');
-
-    // Small delay so user sees the message
     await new Promise(r => setTimeout(r, 1000));
     clearError();
 
-    // Reset and use browser speech
     progChar = 0;
     useBrowserSpeech('-1');
   }
