@@ -34,135 +34,193 @@
   <div class="fill" id="goalFill"></div>
   <span id="goalMsg" class="msg"></span>
   <a href="https://coff.ee/readaloud" target="_blank" rel="noopener"
-     class="coffeeBtn" aria-label="Buy me a coffee">☕ Buy me a coffee</a>
+     class="coffeeBtn" aria-label="Buy me a coffee">Buy me a coffee</a>
 </div>
 
 <main>
-<!-- main panel -->
-<div class="panel">
-  <div class="tool-grid">
-    <div>
-      <textarea id="txt" placeholder="Paste or type text here…"></textarea>
-      <div id="disp" aria-live="polite" style="margin-top:8px"></div>
+
+<!-- masthead + instrument, side by side -->
+<section class="masthead" aria-labelledby="hero-title">
+  <div class="masthead-grid">
+    <div class="masthead-text">
+      <p class="hero-eyebrow">
+        <span>Issue 01</span><span class="sep">·</span>
+        <span>Free, no account</span><span class="sep">·</span>
+        <span>Works offline</span>
+      </p>
+
+      <h1 id="hero-title" class="hero-title">The page,<br><em>read aloud.</em></h1>
+
+      <p class="hero-lede">
+        Paste any text — an email you're proofing, a chapter you'd rather hear, lecture notes, a long thread — and let it read itself back. Browser voices stay on your device and work offline. Premium voices stream through Microsoft Edge TTS for a more natural sound. No sign‑up. No paywall.
+      </p>
+
+      <p class="hero-tags">
+        <span>40+ voices</span><span class="sep">·</span>
+        <span>0.5× — 2×</span><span class="sep">·</span>
+        <span>MP3 download</span><span class="sep">·</span>
+        <span>Free, forever</span>
+      </p>
     </div>
 
-    <div class="controls">
-      <div class="control-row">
-        <label>Language <select id="lang"></select></label>
-        <label>Voice
-          <select id="voice"><option value="-1">Default</option></select>
-        </label>
-      </div>
+    <div class="masthead-tool">
+      <section class="panel panel--instrument" aria-label="Read-aloud instrument">
+        <header class="panel-header">
+          <p class="panel-eyebrow">The Instrument</p>
+          <p class="panel-spec">Edge TTS · Web Speech</p>
+        </header>
 
-      <label>Speed <span id="rv">1</span>x
-        <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
-      </label>
+        <div class="tool-grid">
+          <div class="tool-input">
+            <h3 class="section-label"><span class="section-num">01</span> Composition</h3>
+            <textarea id="txt" placeholder="Paste or type text here…"></textarea>
+            <div id="disp" aria-live="polite"></div>
+          </div>
 
-      <div class="button-row" role="group" aria-label="Playback controls">
-        <button id="start" class="btn">Start</button>
-        <button id="pause" class="btn btn--secondary">Pause</button>
-        <button id="resume" class="btn btn--secondary">Resume</button>
-        <button id="stop" class="btn btn--danger">Stop</button>
-        <button id="download" class="btn btn--secondary" disabled title="Play with a premium voice first to enable download">Download MP3</button>
-      </div>
+          <div class="controls">
+            <div class="controls-block">
+              <h3 class="section-label"><span class="section-num">02</span> Voicing</h3>
+              <div class="control-row">
+                <label>Language <select id="lang"></select></label>
+                <label>Voice
+                  <select id="voice"><option value="-1">Default</option></select>
+                </label>
+              </div>
+            </div>
 
-      <div class="status-line" aria-live="polite">Status: <span id="status">Ready</span></div>
-      <div id="error" class="error-line" role="alert" aria-live="assertive"></div>
+            <div class="controls-block">
+              <h3 class="section-label"><span class="section-num">03</span> Tempo</h3>
+              <label class="tempo-label">
+                <span class="tempo-value"><span id="rv">1</span>×</span>
+                <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" aria-label="Speed">
+              </label>
+            </div>
 
-      <progress id="bar" value="0" max="100"></progress>
-      <div id="meter" class="meter"><strong>0 %</strong> — <span id="ela">00:00:00</span> | <span id="rem">00:00:00</span></div>
+            <div class="controls-block">
+              <h3 class="section-label"><span class="section-num">04</span> Transport</h3>
+              <div class="button-row" role="group" aria-label="Playback controls">
+                <button id="start" class="btn">Start</button>
+                <button id="pause" class="btn btn--secondary">Pause</button>
+                <button id="resume" class="btn btn--secondary">Resume</button>
+                <button id="stop" class="btn btn--danger">Stop</button>
+                <button id="download" class="btn btn--secondary" disabled title="Play with a premium voice first to enable download">MP3</button>
+              </div>
+            </div>
+
+            <div class="status-line" aria-live="polite">Status <span id="status">Ready</span></div>
+            <div id="error" class="error-line" role="alert" aria-live="assertive"></div>
+
+            <progress id="bar" value="0" max="100"></progress>
+            <div id="meter" class="meter"><strong>0 %</strong> · <span id="ela">00:00:00</span> · <span id="rem">00:00:00</span></div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
-</div>
+</section>
 
-<!-- Helpful content section -->
-<div class="panel content">
-  <h2>How to use this tool</h2>
-  <p>Copy any text, paste it into the box above, pick a voice and speed, then press <strong>Start</strong>. Premium neural voices sound natural and human-like. Browser voices work offline and never send your text anywhere. You can pause or resume at any time, and the progress bar shows your progress.</p>
-  <p>For longer reading, break the material into sections. Paste one section, listen, take notes, and move to the next. This keeps the app responsive and helps you remember more of what you hear. If you are on iPhone or iPad and hear nothing, flip the Ring/Silent switch, refresh the page, and tap <strong>Start</strong> again. More fixes live in the <a href="/help.html">Help guide</a>.</p>
+<!-- ornament: typeset waveform -->
+<svg class="ornament" viewBox="0 0 360 24" aria-hidden="true" focusable="false">
+  <g fill="currentColor">
+    <rect x="2"   y="10" width="2" height="4"/>
+    <rect x="8"   y="8"  width="2" height="8"/>
+    <rect x="14"  y="6"  width="2" height="12"/>
+    <rect x="20"  y="3"  width="2" height="18"/>
+    <rect x="26"  y="7"  width="2" height="10"/>
+    <rect x="32"  y="9"  width="2" height="6"/>
+    <rect x="38"  y="5"  width="2" height="14"/>
+    <rect x="44"  y="2"  width="2" height="20"/>
+    <rect x="50"  y="6"  width="2" height="12"/>
+    <rect x="56"  y="11" width="2" height="2"/>
+    <rect x="62"  y="9"  width="2" height="6"/>
+    <rect x="68"  y="4"  width="2" height="16"/>
+    <rect x="74"  y="7"  width="2" height="10"/>
+    <rect x="80"  y="11" width="2" height="2"/>
+    <rect x="86"  y="8"  width="2" height="8"/>
+    <rect x="92"  y="3"  width="2" height="18"/>
+    <rect x="98"  y="6"  width="2" height="12"/>
+    <rect x="104" y="10" width="2" height="4"/>
+    <rect x="110" y="7"  width="2" height="10"/>
+    <rect x="116" y="2"  width="2" height="20"/>
+    <rect x="122" y="5"  width="2" height="14"/>
+    <rect x="128" y="9"  width="2" height="6"/>
+    <rect x="134" y="11" width="2" height="2"/>
+    <rect x="140" y="4"  width="2" height="16"/>
+    <rect x="146" y="6"  width="2" height="12"/>
+    <rect x="152" y="9"  width="2" height="6"/>
+    <rect x="158" y="11" width="2" height="2"/>
+    <rect x="164" y="7"  width="2" height="10"/>
+    <rect x="170" y="3"  width="2" height="18"/>
+    <rect x="176" y="0"  width="2" height="24"/>
+    <rect x="182" y="3"  width="2" height="18"/>
+    <rect x="188" y="7"  width="2" height="10"/>
+    <rect x="194" y="11" width="2" height="2"/>
+    <rect x="200" y="9"  width="2" height="6"/>
+    <rect x="206" y="6"  width="2" height="12"/>
+    <rect x="212" y="4"  width="2" height="16"/>
+    <rect x="218" y="11" width="2" height="2"/>
+    <rect x="224" y="9"  width="2" height="6"/>
+    <rect x="230" y="5"  width="2" height="14"/>
+    <rect x="236" y="2"  width="2" height="20"/>
+    <rect x="242" y="6"  width="2" height="12"/>
+    <rect x="248" y="10" width="2" height="4"/>
+    <rect x="254" y="7"  width="2" height="10"/>
+    <rect x="260" y="3"  width="2" height="18"/>
+    <rect x="266" y="8"  width="2" height="8"/>
+    <rect x="272" y="11" width="2" height="2"/>
+    <rect x="278" y="9"  width="2" height="6"/>
+    <rect x="284" y="4"  width="2" height="16"/>
+    <rect x="290" y="6"  width="2" height="12"/>
+    <rect x="296" y="11" width="2" height="2"/>
+    <rect x="302" y="7"  width="2" height="10"/>
+    <rect x="308" y="3"  width="2" height="18"/>
+    <rect x="314" y="6"  width="2" height="12"/>
+    <rect x="320" y="9"  width="2" height="6"/>
+    <rect x="326" y="11" width="2" height="2"/>
+    <rect x="332" y="8"  width="2" height="8"/>
+    <rect x="338" y="6"  width="2" height="12"/>
+    <rect x="344" y="10" width="2" height="4"/>
+    <rect x="350" y="11" width="2" height="2"/>
+    <rect x="356" y="11" width="2" height="2"/>
+  </g>
+</svg>
 
-  <h3>Who this is for</h3>
-  <ul>
-    <li><strong>Students and researchers</strong> who want to review articles and lecture notes while resting their eyes or walking between classes.</li>
-    <li><strong>People with dyslexia or ADHD</strong> who find listening easier than visually scanning long paragraphs. The app stays simple so you can focus on the words.</li>
-    <li><strong>Language learners</strong> who want to hear pronunciation and pacing from the voices built into their browser and operating system.</li>
-    <li><strong>Editors and proofreaders</strong> who catch awkward phrasing by ear. Listening at 0.9× often surfaces missing words or repeated phrases.</li>
-    <li><strong>Anyone who prefers hands‑free reading</strong> while cooking, commuting, or stretching.</li>
-  </ul>
+<!-- back-matter: audience / shortcuts / further reading -->
+<section class="back-matter" aria-label="About and reference">
+  <div class="bm-grid">
+    <div class="bm-col">
+      <h3 class="bm-label">Audience</h3>
+      <ul class="bm-list">
+        <li><strong>Students</strong> — review notes by ear</li>
+        <li><strong>Editors &amp; writers</strong> — hear what your eyes miss</li>
+        <li><strong>Dyslexia &amp; ADHD</strong> — listen instead of scan</li>
+        <li><strong>Language learners</strong> — pronunciation and pacing</li>
+        <li><strong>Hands‑free</strong> — commuting, cooking, stretching</li>
+      </ul>
+    </div>
 
-  <h3>Features that help you listen better</h3>
-  <ul>
-    <li><strong>Premium neural voices:</strong> natural-sounding voices powered by Microsoft Edge TTS. Text is processed in real-time and not stored.</li>
-    <li><strong>Browser voices:</strong> work offline and keep your text completely private on your device.</li>
-    <li><strong>Speed control:</strong> slide between 0.5× and 2×. Slow down for dense material, speed up for quick skims.</li>
-    <li><strong>Keyboard shortcuts:</strong> press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (or <kbd>⌘</kbd> + <kbd>Enter</kbd> on Mac) to start, <kbd>Space</kbd> to pause/resume, and <kbd>Esc</kbd> to stop.</li>
-    <li><strong>Progress indicator:</strong> track elapsed and remaining time so you can plan breaks.</li>
-  </ul>
+    <div class="bm-col">
+      <h3 class="bm-label">Keyboard</h3>
+      <ul class="bm-list bm-keys">
+        <li><span class="keys"><kbd>Ctrl</kbd><kbd>↵</kbd></span><span class="action">Start (<kbd>⌘</kbd><kbd>↵</kbd> on Mac)</span></li>
+        <li><span class="keys"><kbd>Space</kbd></span><span class="action">Pause / resume</span></li>
+        <li><span class="keys"><kbd>Esc</kbd></span><span class="action">Stop</span></li>
+      </ul>
+      <p class="bm-note">On iOS, flip the Ring/Silent switch if no audio plays. More fixes in the <a href="/help.html">Help guide</a>.</p>
+    </div>
 
-  <h3>Tips for best results</h3>
-  <div class="callout">
-    <ul>
-      <li><strong>Chunk long documents:</strong> copy one heading or section at a time for smoother playback.</li>
-      <li><strong>Pick a calm environment:</strong> pair a comfortable headset and reduce background noise for easier focus.</li>
-      <li><strong>Experiment with voices:</strong> if one sounds robotic, switch to another language/region option in your browser.</li>
-      <li><strong>Use repetition:</strong> replay tricky sections at 0.8×, then do a fast 1.3× skim to reinforce.</li>
-      <li><strong>On iOS:</strong> ensure the device is not muted by the hardware switch; see <a href="/help.html">Help</a> for the quick checklist.</li>
-      <li><strong>Pair with timers:</strong> try 25‑minute listening blocks followed by a 5‑minute stretch to stay fresh.</li>
-    </ul>
+    <div class="bm-col">
+      <h3 class="bm-label">Further reading</h3>
+      <ul class="bm-list">
+        <li><a href="/guide-how-to-use.html">How to use this tool</a></li>
+        <li><a href="/guide-proofread.html">Proofread by ear</a></li>
+        <li><a href="/guide-study.html">Study workflows</a></li>
+        <li><a href="/guide-language-learning.html">Language learning</a></li>
+        <li><a href="/guides.html">All guides</a></li>
+      </ul>
+    </div>
   </div>
-
-  <h3>Why Use Read-Aloud?</h3>
-  <p>
-    Text-to-speech isn't just for accessibility—it's a powerful tool for anyone who writes, learns, or communicates for work.
-    When you <strong>listen to your own writing</strong>, you catch errors your eyes miss: awkward phrasing, missing words,
-    unclear logic, and tone problems that only reveal themselves when spoken aloud. It's like having an editor on demand.
-  </p>
-  <p>
-    Read-Aloud works entirely in your browser, so you can paste sensitive text without worrying about uploads or accounts.
-    Choose from natural-sounding voices, adjust speed to match your focus, and get instant feedback on everything from
-    email drafts to research papers. No installation, no signup—just paste and press Start.
-  </p>
-
-  <h4>Common Use Cases</h4>
-  <ul>
-    <li><strong>Proofread your writing:</strong> Writers, students, and professionals use TTS to catch typos, repeated words,
-    and sentences that "look fine" but don't flow when spoken. If you've ever sent an email with a glaring typo you swear
-    you checked, listening would have caught it.</li>
-
-    <li><strong>Study more effectively:</strong> Turn lecture notes, textbooks, or articles into audio you can review while
-    commuting, exercising, or doing chores. Listening forces you to process information sequentially—no skimming,
-    no false sense of understanding. Students report better retention when they combine reading and listening.</li>
-
-    <li><strong>Practice a new language:</strong> Language learners use Read-Aloud to master pronunciation, rhythm, and pacing.
-    Paste a paragraph in your target language, listen at normal speed to hear natural flow, then slow it down to practice
-    shadowing. It's like having a patient native speaker who never gets tired of repeating.</li>
-
-    <li><strong>Check your tone before sending:</strong> Email and Slack messages that sound "direct" in your head can read as
-    cold or sharp to others. Hearing your message spoken by a neutral voice reveals how it actually lands. Busy professionals
-    use this "tone test" to avoid awkward follow-up threads.</li>
-
-    <li><strong>Accessibility and fatigue:</strong> For people with dyslexia, visual impairments, or screen fatigue, TTS makes
-    long documents manageable. It's also useful when you're too tired to read but still need to process information—like
-    reviewing a contract at the end of a long workday.</li>
-  </ul>
-
-  <p>
-    Over 50,000 people use Read-Aloud every month for these exact scenarios. Whether you're preparing for a presentation,
-    debugging a tricky paragraph, or just trying to get through a dense PDF, a quick listen often reveals what hours of
-    staring at the screen won't. <a href="/blog/">Browse our guides</a> to see specific workflows for your use case.
-  </p>
-
-  <h3>Keep learning</h3>
-  <p>Explore deeper workflows in our guides. Start with the overview, then pick the scenarios that match how you read:</p>
-  <ul>
-    <li><a href="/guides.html">Guides hub</a> for everything in one place.</li>
-    <li><a href="/guide-how-to-use.html">Step-by-step walkthrough</a> to master the controls.</li>
-    <li><a href="/guide-study.html">Study with text-to-speech</a> for note-taking and test prep.</li>
-    <li><a href="/guide-proofread.html">Proofread by ear</a> to catch errors you miss on screen.</li>
-    <li><a href="/guide-language-learning.html">Language learning tips</a> for pronunciation and pacing practice.</li>
-    <li><a href="/guides.html#focus">Focus routines and accessibility tips</a> for distraction-free listening.</li>
-  </ul>
-</div>
+</section>
 
 <div id="adsense-slot" class="ad-slot" data-ad-client="ca-pub-4003447295960802" data-ad-slot="8374615023" data-ad-format="auto" data-full-width-responsive="true">
   Ads load after accepting cookies.
