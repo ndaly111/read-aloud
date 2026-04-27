@@ -18,8 +18,11 @@ Returns: audio/mpeg stream
 """
 
 import asyncio
+import hashlib
 import io
 import os
+from collections import OrderedDict
+from threading import Lock
 from typing import Optional
 
 import edge_tts
@@ -53,6 +56,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+ALLOWED_ORIGIN_PREFIXES = tuple(ALLOWED_ORIGINS)
+
+
+def _origin_allowed(request: Request) -> bool:
+    """Allow only browser callers from a known site (Origin or Referer)."""
+    origin = request.headers.get("origin", "")
+    referer = request.headers.get("referer", "")
+    if origin and origin.startswith(ALLOWED_ORIGIN_PREFIXES):
+        return True
+    if referer and referer.startswith(ALLOWED_ORIGIN_PREFIXES):
+        return True
+    return False
+
+
+def _client_ip(request: Request) -> str:
+    """Real client IP behind Render's proxy: first hop in X-Forwarded-For."""
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 # Rate limiting (simple in-memory, use Redis in production)
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -60,14 +85,24 @@ from datetime import datetime, timedelta
 request_counts = defaultdict(list)
 RATE_LIMIT = 50  # requests per minute
 RATE_WINDOW = 60  # seconds
+_sweep_counter = 0
+SWEEP_EVERY = 1000
 
 
 def check_rate_limit(ip: str) -> bool:
-    """Simple rate limiting by IP."""
+    """Simple rate limiting by IP, with amortized sweep of stale buckets."""
+    global _sweep_counter
     now = datetime.now()
     cutoff = now - timedelta(seconds=RATE_WINDOW)
 
-    # Clean old requests
+    _sweep_counter += 1
+    if _sweep_counter >= SWEEP_EVERY:
+        _sweep_counter = 0
+        for k in list(request_counts.keys()):
+            request_counts[k] = [t for t in request_counts[k] if t > cutoff]
+            if not request_counts[k]:
+                del request_counts[k]
+
     request_counts[ip] = [t for t in request_counts[ip] if t > cutoff]
 
     if len(request_counts[ip]) >= RATE_LIMIT:
@@ -75,6 +110,39 @@ def check_rate_limit(ip: str) -> bool:
 
     request_counts[ip].append(now)
     return True
+
+
+class _AudioCache:
+    """Thread-safe LRU bytes cache, capped by entry count and total size."""
+
+    def __init__(self, max_entries: int = 100, max_bytes: int = 64 * 1024 * 1024):
+        self._d: "OrderedDict[str, bytes]" = OrderedDict()
+        self._size = 0
+        self._max_entries = max_entries
+        self._max_bytes = max_bytes
+        self._lock = Lock()
+
+    def get(self, key: str) -> Optional[bytes]:
+        with self._lock:
+            if key in self._d:
+                self._d.move_to_end(key)
+                return self._d[key]
+            return None
+
+    def put(self, key: str, value: bytes) -> None:
+        with self._lock:
+            if key in self._d:
+                self._size -= len(self._d[key])
+                del self._d[key]
+            self._d[key] = value
+            self._size += len(value)
+            while (len(self._d) > self._max_entries
+                   or self._size > self._max_bytes) and self._d:
+                _, evicted = self._d.popitem(last=False)
+                self._size -= len(evicted)
+
+
+audio_cache = _AudioCache()
 
 
 # Available voices (curated list of best neural voices)
@@ -181,9 +249,10 @@ async def text_to_speech(request: Request, body: TTSRequest):
 
     Returns an audio/mpeg stream that can be played directly.
     """
-    # Rate limiting
-    client_ip = request.client.host if request.client else "unknown"
-    if not check_rate_limit(client_ip):
+    if not _origin_allowed(request):
+        raise HTTPException(status_code=403, detail="origin not allowed")
+
+    if not check_rate_limit(_client_ip(request)):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait a moment.")
 
     # Validate voice
@@ -197,6 +266,21 @@ async def text_to_speech(request: Request, body: TTSRequest):
     if not (body.rate.endswith("%") and body.rate[:-1].lstrip("+-").isdigit()):
         raise HTTPException(status_code=400, detail="Invalid rate format. Use +20% or -10%")
 
+    cache_key = hashlib.sha256(
+        f"{body.text}|{body.voice}|{body.rate}|{body.pitch}".encode("utf-8")
+    ).hexdigest()
+    cached = audio_cache.get(cache_key)
+    if cached is not None:
+        return StreamingResponse(
+            io.BytesIO(cached),
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "inline",
+                "Cache-Control": "public, max-age=3600",
+                "X-Cache": "hit",
+            },
+        )
+
     # Generate audio
     try:
         communicate = edge_tts.Communicate(
@@ -206,21 +290,22 @@ async def text_to_speech(request: Request, body: TTSRequest):
             pitch=body.pitch
         )
 
-        # Stream the audio
         audio_stream = io.BytesIO()
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 audio_stream.write(chunk["data"])
 
-        audio_stream.seek(0)
+        audio_bytes = audio_stream.getvalue()
+        audio_cache.put(cache_key, audio_bytes)
 
         return StreamingResponse(
-            audio_stream,
+            io.BytesIO(audio_bytes),
             media_type="audio/mpeg",
             headers={
                 "Content-Disposition": "inline",
-                "Cache-Control": "public, max-age=3600"
-            }
+                "Cache-Control": "public, max-age=3600",
+                "X-Cache": "miss",
+            },
         )
 
     except Exception as e:
