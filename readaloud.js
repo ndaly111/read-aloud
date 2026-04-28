@@ -3,8 +3,16 @@ const CHUNK_SIZE = 900; // Character slice size
 const LANGS = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean' };
 const $ = (id) => document.getElementById(id);
 
-// Edge TTS API URL - self-hosted via Cloudflare Tunnel from mini PC
-const TTS_API_URL = 'https://tts.read-aloud.com';
+// Edge TTS API endpoints, in priority order.
+// Primary: self-hosted via Cloudflare Tunnel from mini PC (no cold start, larger cache).
+// Fallback: Render free tier (cold-starts but always reachable).
+// activeTtsUrl tracks which one is currently working; flips automatically on failure
+// and on the next 5-minute health probe when the primary recovers.
+const TTS_ENDPOINTS = [
+  'https://tts.read-aloud.com',
+  'https://read-aloud-s4ov.onrender.com',
+];
+let activeTtsUrl = TTS_ENDPOINTS[0];
 
 // Premium Neural Voices - simplified list (best voices only)
 const NEURAL_VOICES = {
@@ -129,27 +137,33 @@ let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll()
 })();
 
 /* ========== API CHECK ========== */
+// Probes endpoints in priority order; sets activeTtsUrl to the first reachable one.
 async function checkApiAvailability() {
-  // Try up to 2 times with increasing timeout
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000 * attempt);
-      const response = await fetch(`${TTS_API_URL}/`, {
-        method: 'GET',
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (response.ok) {
-        console.log('✓ Premium neural voices available');
-        return true;
+  for (const url of TTS_ENDPOINTS) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000 * attempt);
+        const response = await fetch(`${url}/`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (response.ok) {
+          if (activeTtsUrl !== url) {
+            console.log(`Active TTS endpoint: ${url}`);
+          }
+          activeTtsUrl = url;
+          console.log('✓ Premium neural voices available');
+          return true;
+        }
+      } catch (e) {
+        console.warn(`API check ${url} attempt ${attempt} failed:`, e.message);
+        if (attempt < 2) await new Promise(r => setTimeout(r, 500));
       }
-    } catch (e) {
-      console.warn(`API check attempt ${attempt} failed:`, e.message);
-      if (attempt < 2) await new Promise(r => setTimeout(r, 500));
     }
   }
-  console.warn('Premium voices unavailable - using browser voices only');
+  console.warn('All TTS endpoints unreachable - using browser voices only');
   return false;
 }
 
@@ -284,42 +298,50 @@ function startSpeak() {
 
 /* ========== NEURAL TTS (Edge TTS API) ========== */
 
-// Fetch a single chunk with retry/backoff. Returns an audio Blob or throws.
+// Fetch a single chunk with retry/backoff. Tries activeTtsUrl twice, then any other
+// configured endpoint twice. Updates activeTtsUrl when fallback succeeds so the next
+// chunk goes straight to the working URL. Returns an audio Blob or throws.
 async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
-  const MAX_RETRIES = 2;
-  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
-    if (attempt > 1) {
-      await new Promise(r => setTimeout(r, 1000 * attempt)); // 2s, 3s backoff
-    }
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
-      console.log('Fetching TTS chunk', chunkIndex + 1, 'attempt', attempt);
-      const response = await fetch(`${TTS_API_URL}/api/tts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          voice: voiceId,
-          rate: rateToApiFormat(+rateSlider.value),
-          pitch: '+0Hz'
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || `API error: ${response.status}`);
+  const urlOrder = [activeTtsUrl, ...TTS_ENDPOINTS.filter(u => u !== activeTtsUrl)];
+  let lastErr;
+  for (const url of urlOrder) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      if (attempt > 1) await new Promise(r => setTimeout(r, 1000 * attempt));
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        console.log(`Fetching TTS chunk ${chunkIndex + 1} via ${url} (attempt ${attempt})`);
+        const response = await fetch(`${url}/api/tts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            voice: voiceId,
+            rate: rateToApiFormat(+rateSlider.value),
+            pitch: '+0Hz'
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || `API error: ${response.status}`);
+        }
+        const blob = await response.blob();
+        if (blob.size < 100) throw new Error('Audio blob too small');
+        if (activeTtsUrl !== url) {
+          console.log(`Switched active TTS endpoint to ${url}`);
+          activeTtsUrl = url;
+        }
+        console.log(`Got audio blob for chunk ${chunkIndex + 1}, size: ${blob.size}`);
+        return blob;
+      } catch (e) {
+        lastErr = e;
+        console.warn(`Chunk ${chunkIndex + 1} via ${url} attempt ${attempt} failed:`, e.message);
       }
-      const blob = await response.blob();
-      if (blob.size < 100) throw new Error('Audio blob too small');
-      console.log('Got audio blob for chunk', chunkIndex + 1, 'size:', blob.size);
-      return blob;
-    } catch (e) {
-      console.warn(`Chunk ${chunkIndex + 1} attempt ${attempt} failed:`, e.message);
-      if (attempt === MAX_RETRIES + 1) throw e;
     }
   }
+  throw lastErr || new Error(`All TTS endpoints failed for chunk ${chunkIndex + 1}`);
 }
 
 async function useNeuralSpeech(voiceId) {
