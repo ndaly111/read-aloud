@@ -25,25 +25,28 @@
 </header>
 
 <main>
-  <h1>Contact Us</h1>
+  <header class="page-head">
+    <p class="eyebrow"><span>Read‑Aloud</span><span class="sep">·</span><span>Contact</span></p>
+    <h1>Send <em>a note.</em></h1>
+    <p class="lead">
+      Feedback, feature requests, or bug reports — all welcome. Use the form below or email <a href="mailto:admin@read-aloud.com">admin@read-aloud.com</a>. Replies usually within a few days.
+    </p>
+  </header>
 
-  <p>Have feedback, feature requests or bug reports?  
-     Send a message with the form below or email
-     <a href="mailto:admin@read-aloud.com">admin@read-aloud.com</a>.</p>
+  <article class="content">
+    <form action="https://formspree.io/f/xpqjrpvp" method="POST">
+      <label for="name">Name</label>
+      <input required id="name" name="name" type="text">
 
-  <!-- Formspree contact form -->
-  <form action="https://formspree.io/f/xpqjrpvp" method="POST">
-    <label for="name">Name</label>
-    <input required id="name" name="name" type="text">
+      <label for="email">Email</label>
+      <input required id="email" name="_replyto" type="email">
 
-    <label for="email">Email</label>
-    <input required id="email" name="_replyto" type="email">
+      <label for="msg">Message</label>
+      <textarea required id="msg" name="message" rows="6"></textarea>
 
-    <label for="msg">Message</label>
-    <textarea required id="msg" name="message" rows="6"></textarea>
-
-    <button type="submit">Send Message</button>
-  </form>
+      <button type="submit">Send message</button>
+    </form>
+  </article>
 </main>
 
 <footer class="site-footer">

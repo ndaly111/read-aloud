@@ -42,24 +42,26 @@
 </header>
 
 <main>
-  <article class="panel content">
-    {% if page.tags %}
-      {% for tag in page.tags %}
-        <span class="tag">{{ tag }}</span>
-      {% endfor %}
-    {% endif %}
-
+  <header class="page-head">
+    <p class="eyebrow">
+      <span>Read‑Aloud</span><span class="sep">·</span><span>Blog</span>
+      {% if page.tags %}<span class="sep">·</span>{% for tag in page.tags %}<strong>{{ tag }}</strong>{% unless forloop.last %} · {% endunless %}{% endfor %}{% endif %}
+    </p>
     <h1>{{ page.title }}</h1>
-
     {% assign words = content | strip_html | strip_newlines | split: " " | size %}
     {% assign minutes = words | plus: 199 | divided_by: 200 %}
-    <p class="meta">
-      <strong>Published:</strong> {{ page.date | date: "%B %Y" }}
-      {% if page.author %} · <strong>Author:</strong> {{ page.author }}{% endif %}
-      · <strong>Reading time:</strong> ~{{ minutes }} min read · <a href="/blog/">Blog</a>
+    <p class="last-updated">
+      <strong>Published</strong> {{ page.date | date: "%B %Y" }}
+      {% if page.author %} · <strong>Author</strong> {{ page.author }}{% endif %}
+      · <strong>{{ minutes }} min read</strong>
+      · <a href="/blog/">All posts</a>
     </p>
+  </header>
 
-    {{ content }}
+  <article class="content post-body">
+    <div class="post-body">
+      {{ content }}
+    </div>
   </article>
 </main>
 

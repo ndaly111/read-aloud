@@ -850,6 +850,91 @@ input[type="range"]::-moz-range-thumb {
 .coffeeBtn:hover { color: var(--vermilion-dark); border-color: var(--vermilion-dark); text-decoration: none; }
 
 /* ============================================================
+   Page masthead — generic editorial header for non-home pages
+   ============================================================ */
+.page-head {
+  padding: 28px 0 28px;
+  border-bottom: 1px solid var(--ink);
+  margin-bottom: 32px;
+}
+.page-head .eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  margin: 0 0 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.page-head .eyebrow .sep { color: var(--rule); }
+.page-head .eyebrow strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+.page-head h1 {
+  margin: 0 0 14px;
+  font-size: clamp(2.2rem, 3vw + 1rem, 3.6rem);
+  line-height: 1.05;
+  font-weight: 500;
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+}
+.page-head h1 em {
+  font-style: italic;
+  color: var(--vermilion);
+  font-variation-settings: "opsz" 144, "SOFT" 80;
+}
+.page-head .lead {
+  font-family: var(--font-body);
+  font-size: 1.08rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  font-style: normal;
+  max-width: 62ch;
+  margin: 0;
+}
+.page-head .last-updated {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  margin: 14px 0 0;
+}
+.page-head .last-updated strong { color: var(--ink); font-weight: 700; }
+
+/* Page-head with side-note (used on guides/blog landing) */
+.page-head--with-note {
+  display: grid;
+  gap: 24px;
+}
+@media (min-width: 900px) {
+  .page-head--with-note {
+    grid-template-columns: 1.6fr 1fr;
+    gap: 36px;
+    align-items: start;
+  }
+}
+.page-head--with-note .head-note {
+  background: var(--paper-bright);
+  border: 1px solid var(--ink);
+  box-shadow: var(--shadow-soft);
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  font-size: 0.96rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.page-head--with-note .head-note strong {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--ink);
+  font-weight: 500;
+  font-variation-settings: "opsz" 36, "SOFT" 50;
+}
+
+/* ============================================================
    Back-matter — three-column colophon below the tool
    ============================================================ */
 .back-matter {
