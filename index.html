@@ -11,7 +11,6 @@
 <!-- ——— Retro CSS ——— -->
   <link rel="stylesheet" href="/styles.css">
   <script src="/cookie-consent.js" defer></script>
-  <script src="/feedback.js" defer></script>
 </head>
 
 <body>
@@ -223,6 +222,29 @@
   </div>
 </section>
 
+<!-- feedback / questions — magazine "letters to the editor" -->
+<section class="feedback-prompt" aria-labelledby="feedback-heading">
+  <p class="bm-label">Feedback &amp; questions</p>
+  <h2 id="feedback-heading" class="feedback-heading">Bug, missing voice, idea? <em>Tell us.</em></h2>
+  <p class="feedback-lede">We read every note. Optional email if you want a reply.</p>
+  <form class="feedback-form" id="feedback-form" novalidate>
+    <label class="feedback-field feedback-field--message">
+      <span>Message</span>
+      <textarea name="message" required rows="4" placeholder="What's on your mind?"></textarea>
+    </label>
+    <label class="feedback-field">
+      <span>Email <em>(optional)</em></span>
+      <input type="email" name="_replyto" autocomplete="email" placeholder="you@example.com">
+    </label>
+    <input type="hidden" name="_subject" value="Feedback from read-aloud.com">
+    <input type="hidden" name="_page" value="/index.html">
+    <div class="feedback-actions">
+      <button type="submit" class="btn">Send feedback</button>
+      <p class="feedback-status" role="status" aria-live="polite"></p>
+    </div>
+  </form>
+</section>
+
 <div id="adsense-slot" class="ad-slot" data-ad-client="ca-pub-4003447295960802" data-ad-slot="8374615023" data-ad-format="auto" data-full-width-responsive="true">
   Ads load after accepting cookies.
 </div>
@@ -254,6 +276,48 @@ function updateBar(){
       `Free TTS for <strong>thousands</strong> of readers — `
     + `<strong>$${RAISED} of $${GOAL}</strong> hosting funded`;
 }
+</script>
+
+<!-- feedback form submit -->
+<script>
+(() => {
+  const form = document.getElementById('feedback-form');
+  if (!form) return;
+  const status = form.querySelector('.feedback-status');
+  const submit = form.querySelector('button[type="submit"]');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = form.querySelector('textarea').value.trim();
+    if (!msg) {
+      status.textContent = 'Add a message first.';
+      status.className = 'feedback-status feedback-error';
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = 'Sending…';
+    status.textContent = '';
+    status.className = 'feedback-status';
+    try {
+      const resp = await fetch('https://formspree.io/f/xpqjrpvp', {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!resp.ok) throw new Error('Formspree returned ' + resp.status);
+      status.textContent = 'Thanks — got it.';
+      status.className = 'feedback-status feedback-ok';
+      form.reset();
+      submit.textContent = 'Sent';
+      setTimeout(() => { submit.disabled = false; submit.textContent = 'Send feedback'; }, 2000);
+    } catch (err) {
+      console.warn('feedback submit failed', err);
+      status.textContent = "Couldn't send. Email admin@read-aloud.com.";
+      status.className = 'feedback-status feedback-error';
+      submit.disabled = false;
+      submit.textContent = 'Try again';
+    }
+  });
+})();
 </script>
 
 <!-- footer -->
