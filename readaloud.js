@@ -3,8 +3,8 @@ const CHUNK_SIZE = 900; // Character slice size
 const LANGS = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean' };
 const $ = (id) => document.getElementById(id);
 
-// Edge TTS API URL - Update this after deploying to Render
-const TTS_API_URL = 'https://read-aloud-s4ov.onrender.com';
+// Edge TTS API URL - self-hosted via Cloudflare Tunnel from mini PC
+const TTS_API_URL = 'https://tts.read-aloud.com';
 
 // Premium Neural Voices - simplified list (best voices only)
 const NEURAL_VOICES = {
