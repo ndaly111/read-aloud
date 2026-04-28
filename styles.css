@@ -1367,6 +1367,169 @@ form button { justify-self: start; }
 }
 
 /* ============================================================
+   Floating Feedback button + dialog
+   ============================================================ */
+.ra-fb-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 90;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  background: var(--paper-bright);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.07s ease, box-shadow 0.07s ease, background 0.15s ease;
+}
+.ra-fb-btn::before {
+  content: "✎";
+  margin-right: 8px;
+  color: var(--vermilion);
+  font-size: 0.95rem;
+}
+.ra-fb-btn:hover {
+  background: var(--paper-deep);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 0 var(--ink);
+}
+
+.ra-fb-dialog {
+  width: min(92vw, 520px);
+  padding: 0;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper-bright);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+.ra-fb-dialog::backdrop {
+  background: rgba(26, 28, 34, 0.55);
+  backdrop-filter: blur(4px);
+}
+.ra-fb-form {
+  padding: 28px 28px 24px;
+  position: relative;
+  display: grid;
+  gap: 16px;
+}
+.ra-fb-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  font-size: 1.6rem;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--ink-faded);
+  cursor: pointer;
+}
+.ra-fb-close:hover {
+  color: var(--vermilion);
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.ra-fb-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  margin: 0;
+}
+.ra-fb-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variation-settings: "opsz" 100, "SOFT" 30;
+  font-size: 1.7rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+.ra-fb-title em {
+  font-style: italic;
+  color: var(--vermilion);
+  font-variation-settings: "opsz" 100, "SOFT" 80;
+}
+.ra-fb-lede {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: none;
+}
+.ra-fb-field { display: grid; gap: 6px; margin: 0; }
+.ra-fb-field > span {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  font-weight: 700;
+}
+.ra-fb-field > span em {
+  font-family: var(--font-body);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--ink-faded);
+}
+.ra-fb-field textarea,
+.ra-fb-field input {
+  background: #ffffff;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--ink);
+}
+.ra-fb-field textarea:focus,
+.ra-fb-field input:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+.ra-fb-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.ra-fb-status {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  margin: 0;
+  min-height: 1.2em;
+  color: var(--ink-faded);
+}
+.ra-fb-status.ra-fb-ok    { color: var(--ochre); }
+.ra-fb-status.ra-fb-error { color: var(--vermilion-dark); }
+
+@media (max-width: 600px) {
+  .ra-fb-btn { right: 12px; bottom: 12px; padding: 8px 14px; font-size: 0.7rem; }
+  .ra-fb-form { padding: 24px 20px 20px; }
+  .ra-fb-title { font-size: 1.4rem; }
+}
+@media print { .ra-fb-btn { display: none; } }
+
+/* ============================================================
    Cookie banner
    ============================================================ */
 .cookie-banner {
