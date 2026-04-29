@@ -472,7 +472,7 @@ async def admin_stats(request: Request, token: Optional[str] = None):
 <html lang="en"><head>
 <meta charset="utf-8"><title>Read-Aloud · Usage</title>
 <meta name="robots" content="noindex">
-<meta http-equiv="refresh" content="60">
+<meta http-equiv="refresh" content="300">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Source+Serif+4:wght@400;600&family=Space+Mono:wght@400;700&display=swap');
