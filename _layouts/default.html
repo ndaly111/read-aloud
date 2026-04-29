@@ -49,7 +49,6 @@
         <a href="/"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
         <a href="/guides.html"{% if page.url contains 'guide' %} aria-current="page"{% endif %}>Guides</a>
         <a href="/help.html"{% if page.url == '/help.html' %} aria-current="page"{% endif %}>Help</a>
-        <a href="/blog/"{% if page.url contains 'blog' %} aria-current="page"{% endif %}>Blog</a>
         <a href="/recommendations.html"{% if page.url == '/recommendations.html' %} aria-current="page"{% endif %}>Resources</a>
       </nav>
     </div>
@@ -72,17 +71,6 @@
         <span itemprop="name">{{ page.title }}</span>
         <meta itemprop="position" content="3">
       </li>
-      {% elsif page.url contains 'blog' %}
-      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-        <a itemprop="item" href="/blog/"><span itemprop="name">Blog</span></a>
-        <meta itemprop="position" content="2">
-      </li>
-      {% if page.title %}
-      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-        <span itemprop="name">{{ page.title }}</span>
-        <meta itemprop="position" content="3">
-      </li>
-      {% endif %}
       {% else %}
       <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
         <span itemprop="name">{{ page.title | default: 'Page' }}</span>

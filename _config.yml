@@ -35,6 +35,8 @@ exclude:
   - "*.py"
   - "*.json"
   - render.yaml
+  - "*.md"          # internal notes never ship to /
+  - _archive
 
 # Collections
 collections:
@@ -50,15 +52,6 @@ defaults:
     values:
       layout: default
       image: /images/og-default.png
-
-  # Blog posts
-  - scope:
-      path: ""
-      type: posts
-    values:
-      layout: blog_post
-      permalink: /blog/:title/
-      schema_type: article
 
   # Guide pages
   - scope:

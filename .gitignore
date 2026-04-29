@@ -56,3 +56,9 @@ vendor/
 *.py
 *.json
 _drafts/
+
+# Internal notes / audit docs — keep them local only.
+# README.md is fine; the rule blocks ALL_CAPS_NAMES.md at the repo root.
+/[A-Z][A-Z_]*.md
+!/README.md
+_archive/
