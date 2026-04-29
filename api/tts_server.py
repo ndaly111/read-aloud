@@ -21,7 +21,10 @@ import asyncio
 import hashlib
 import io
 import os
+import sqlite3
+import time
 from collections import OrderedDict
+from datetime import datetime, timezone
 from threading import Lock
 from typing import Optional
 
@@ -30,6 +33,61 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+
+# ----------------------------------------------------------------------
+# Optional local usage telemetry
+# Activated only when TTS_USAGE_DB env var points at a writeable SQLite path.
+# Used on the mini PC; left unset on Render fallback so its ephemeral disk
+# stays clean. No PII captured (no IPs, no text content, no user identifiers).
+# ----------------------------------------------------------------------
+USAGE_DB_PATH = os.environ.get("TTS_USAGE_DB")
+_usage_lock = Lock()
+
+if USAGE_DB_PATH:
+    try:
+        _conn = sqlite3.connect(USAGE_DB_PATH, timeout=5)
+        _conn.execute("PRAGMA journal_mode=WAL")
+        _conn.execute(
+            "CREATE TABLE IF NOT EXISTS tts_requests ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "ts TEXT NOT NULL, "
+            "voice TEXT NOT NULL, "
+            "char_count INTEGER NOT NULL, "
+            "cache_hit INTEGER NOT NULL, "
+            "duration_ms INTEGER NOT NULL)"
+        )
+        _conn.execute("CREATE INDEX IF NOT EXISTS idx_tts_requests_ts ON tts_requests(ts)")
+        _conn.commit()
+        _conn.close()
+    except Exception as _e:
+        # if init fails, telemetry simply stays disabled — don't block startup
+        print(f"[tts] usage telemetry disabled — init error: {_e}")
+        USAGE_DB_PATH = None
+
+
+def _usage_log(voice: str, char_count: int, cache_hit: bool, duration_ms: int) -> None:
+    if not USAGE_DB_PATH:
+        return
+    try:
+        with _usage_lock:
+            conn = sqlite3.connect(USAGE_DB_PATH, timeout=2)
+            conn.execute("PRAGMA busy_timeout=2000")
+            conn.execute(
+                "INSERT INTO tts_requests (ts, voice, char_count, cache_hit, duration_ms) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    voice,
+                    char_count,
+                    int(bool(cache_hit)),
+                    int(duration_ms),
+                ),
+            )
+            conn.commit()
+            conn.close()
+    except Exception as e:
+        # never let telemetry failure surface to the user
+        print(f"[tts] usage_log error: {e}")
 
 app = FastAPI(
     title="Read-Aloud TTS API",
@@ -266,11 +324,15 @@ async def text_to_speech(request: Request, body: TTSRequest):
     if not (body.rate.endswith("%") and body.rate[:-1].lstrip("+-").isdigit()):
         raise HTTPException(status_code=400, detail="Invalid rate format. Use +20% or -10%")
 
+    _t0 = time.time()
+    char_count = len(body.text)
+
     cache_key = hashlib.sha256(
         f"{body.text}|{body.voice}|{body.rate}|{body.pitch}".encode("utf-8")
     ).hexdigest()
     cached = audio_cache.get(cache_key)
     if cached is not None:
+        _usage_log(body.voice, char_count, True, int((time.time() - _t0) * 1000))
         return StreamingResponse(
             io.BytesIO(cached),
             media_type="audio/mpeg",
@@ -297,6 +359,7 @@ async def text_to_speech(request: Request, body: TTSRequest):
 
         audio_bytes = audio_stream.getvalue()
         audio_cache.put(cache_key, audio_bytes)
+        _usage_log(body.voice, char_count, False, int((time.time() - _t0) * 1000))
 
         return StreamingResponse(
             io.BytesIO(audio_bytes),
@@ -323,6 +386,166 @@ async def text_to_speech_get(
     """GET endpoint for simple TTS (useful for <audio> src)."""
     body = TTSRequest(text=text, voice=voice, rate=rate, pitch=pitch)
     return await text_to_speech(request, body)
+
+
+# ----------------------------------------------------------------------
+# Local-only usage dashboard
+# Disabled unless both TTS_USAGE_DB and TTS_ADMIN_TOKEN env vars are set.
+# Returns a server-rendered HTML page; no JS, no chart library.
+# ----------------------------------------------------------------------
+ADMIN_TOKEN = os.environ.get("TTS_ADMIN_TOKEN")
+
+
+@app.get("/admin/stats")
+async def admin_stats(request: Request, token: Optional[str] = None):
+    if not USAGE_DB_PATH or not ADMIN_TOKEN:
+        raise HTTPException(status_code=404, detail="Not found")
+    supplied = token or request.headers.get("x-admin-token", "")
+    # constant-time comparison
+    import hmac
+    if not hmac.compare_digest(supplied, ADMIN_TOKEN):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = sqlite3.connect(USAGE_DB_PATH, timeout=2)
+    conn.row_factory = sqlite3.Row
+
+    def q(sql, *args):
+        return [dict(r) for r in conn.execute(sql, args).fetchall()]
+
+    today = q(
+        "SELECT COUNT(*) AS reqs, COALESCE(SUM(char_count),0) AS chars, "
+        "COALESCE(SUM(cache_hit),0) AS hits, COALESCE(AVG(duration_ms),0) AS avg_ms "
+        "FROM tts_requests WHERE ts >= datetime('now','-24 hours')"
+    )[0]
+    all_time = q(
+        "SELECT COUNT(*) AS reqs, COALESCE(SUM(char_count),0) AS chars, "
+        "MIN(ts) AS first_seen FROM tts_requests"
+    )[0]
+    daily = q(
+        "SELECT date(ts) AS d, COUNT(*) AS n, SUM(char_count) AS chars "
+        "FROM tts_requests WHERE ts >= datetime('now','-14 days') "
+        "GROUP BY date(ts) ORDER BY d"
+    )
+    voices = q(
+        "SELECT voice, COUNT(*) AS n, SUM(char_count) AS chars "
+        "FROM tts_requests WHERE ts >= datetime('now','-7 days') "
+        "GROUP BY voice ORDER BY n DESC LIMIT 12"
+    )
+    buckets = q(
+        "SELECT CASE "
+        "  WHEN char_count < 100 THEN '<100' "
+        "  WHEN char_count < 500 THEN '100-500' "
+        "  WHEN char_count < 2000 THEN '500-2k' "
+        "  WHEN char_count < 5000 THEN '2k-5k' "
+        "  ELSE '5k+' END AS bucket, COUNT(*) AS n "
+        "FROM tts_requests WHERE ts >= datetime('now','-7 days') "
+        "GROUP BY bucket ORDER BY MIN(char_count)"
+    )
+    hourly = q(
+        "SELECT strftime('%H', ts) AS h, COUNT(*) AS n "
+        "FROM tts_requests WHERE ts >= datetime('now','-24 hours') "
+        "GROUP BY h ORDER BY h"
+    )
+    conn.close()
+
+    hit_pct = (today["hits"] / today["reqs"] * 100) if today["reqs"] else 0
+    max_daily = max((d["n"] for d in daily), default=1) or 1
+    max_hourly = max((h["n"] for h in hourly), default=1) or 1
+    max_voice = max((v["n"] for v in voices), default=1) or 1
+    max_bucket = max((b["n"] for b in buckets), default=1) or 1
+
+    def bar_row(label, n, total, max_n, extra=""):
+        pct = (n / max_n * 100) if max_n else 0
+        return (
+            f'<tr><td class="lbl">{label}</td>'
+            f'<td class="num">{n:,}</td>'
+            f'<td class="bar"><span style="width:{pct:.1f}%"></span></td>'
+            f'<td class="num">{extra}</td></tr>'
+        )
+
+    daily_rows = "".join(bar_row(d["d"], d["n"], None, max_daily, f"{d['chars']:,} ch") for d in daily) or '<tr><td colspan="4" class="muted">No data yet.</td></tr>'
+    voice_rows = "".join(bar_row(v["voice"], v["n"], None, max_voice, f"{v['chars']:,} ch") for v in voices) or '<tr><td colspan="4" class="muted">No data yet.</td></tr>'
+    bucket_rows = "".join(bar_row(b["bucket"], b["n"], None, max_bucket) for b in buckets) or '<tr><td colspan="3" class="muted">No data yet.</td></tr>'
+    hour_rows = "".join(bar_row(h["h"] + ":00", h["n"], None, max_hourly) for h in hourly) or '<tr><td colspan="3" class="muted">No data yet.</td></tr>'
+
+    html = f"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><title>Read-Aloud · Usage</title>
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="60">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Source+Serif+4:wght@400;600&family=Space+Mono:wght@400;700&display=swap');
+:root {{
+  --paper:#f3ecdd;--surface:#faf4e6;--ink:#1a1c22;--ink-soft:#3f3f3a;
+  --ink-faded:#6f6857;--rule:#b8aa8a;--rule-soft:#d6c8a8;--vermilion:#c8341e;
+  --shadow:4px 4px 0 0 var(--ink);
+}}
+body {{font-family:"Source Serif 4",Georgia,serif;background:var(--paper);color:var(--ink);
+  margin:0;padding:32px 24px;max-width:980px;margin-left:auto;margin-right:auto;}}
+h1 {{font-family:"Fraunces",serif;font-weight:500;font-size:2.2rem;
+  letter-spacing:-.02em;margin:0 0 4px;font-variation-settings:"opsz" 144;}}
+h1 em {{font-style:italic;color:var(--vermilion);}}
+h2 {{font-family:"Fraunces",serif;font-weight:500;font-size:1.2rem;
+  margin:32px 0 8px;border-bottom:1px solid var(--ink);padding-bottom:6px;}}
+.eyebrow {{font-family:"Space Mono",monospace;font-size:.7rem;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faded);
+  margin:0 0 24px;}}
+.cards {{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:16px;margin:16px 0 24px;}}
+.card {{background:var(--surface);border:1px solid var(--ink);box-shadow:var(--shadow);
+  padding:16px;}}
+.card .lbl {{font-family:"Space Mono",monospace;font-size:.68rem;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faded);
+  margin:0 0 6px;}}
+.card .val {{font-family:"Fraunces",serif;font-weight:500;font-size:1.8rem;
+  letter-spacing:-.02em;line-height:1;font-variation-settings:"opsz" 100;}}
+.card .sub {{font-family:"Space Mono",monospace;font-size:.7rem;
+  letter-spacing:.05em;color:var(--ink-faded);margin-top:4px;}}
+table {{width:100%;border-collapse:collapse;font-family:"Source Serif 4",serif;
+  font-size:.95rem;}}
+table td {{padding:6px 10px;border-bottom:1px dotted var(--rule-soft);}}
+.lbl {{font-family:"Space Mono",monospace;font-size:.78rem;letter-spacing:.04em;
+  white-space:nowrap;width:140px;}}
+.num {{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-faded);
+  font-family:"Space Mono",monospace;font-size:.78rem;white-space:nowrap;}}
+.bar {{width:60%;}}
+.bar span {{display:block;height:14px;background:var(--vermilion);
+  box-shadow:1px 1px 0 0 var(--ink);}}
+.muted {{color:var(--ink-faded);font-style:italic;}}
+.foot {{font-family:"Space Mono",monospace;font-size:.7rem;letter-spacing:.06em;
+  color:var(--ink-faded);margin-top:32px;padding-top:14px;
+  border-top:1px solid var(--ink);}}
+</style></head>
+<body>
+<p class="eyebrow">Read-Aloud · Usage telemetry · auto-refresh 60s</p>
+<h1>Who's using the <em>instrument.</em></h1>
+
+<div class="cards">
+  <div class="card"><p class="lbl">Last 24 hrs</p><p class="val">{today['reqs']:,}</p><p class="sub">requests</p></div>
+  <div class="card"><p class="lbl">Characters</p><p class="val">{today['chars']:,}</p><p class="sub">read aloud</p></div>
+  <div class="card"><p class="lbl">Cache hit</p><p class="val">{hit_pct:.0f}%</p><p class="sub">{today['hits']:,} of {today['reqs']:,}</p></div>
+  <div class="card"><p class="lbl">Avg latency</p><p class="val">{int(today['avg_ms']):,}<span style="font-size:.5em">ms</span></p><p class="sub">end to end</p></div>
+</div>
+
+<h2>Daily, last 14 days</h2>
+<table><tbody>{daily_rows}</tbody></table>
+
+<h2>Hourly, last 24 hrs</h2>
+<table><tbody>{hour_rows}</tbody></table>
+
+<h2>Top voices, last 7 days</h2>
+<table><tbody>{voice_rows}</tbody></table>
+
+<h2>Text length distribution, last 7 days</h2>
+<table><tbody>{bucket_rows}</tbody></table>
+
+<p class="foot">All-time: {all_time['reqs']:,} requests, {all_time['chars']:,} characters
+since {all_time['first_seen'] or 'never'}. Local mini-PC telemetry; no IPs, no text content.</p>
+</body></html>"""
+
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=html)
 
 
 if __name__ == "__main__":
