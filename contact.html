@@ -44,6 +44,9 @@
       <label for="msg">Message</label>
       <textarea required id="msg" name="message" rows="6"></textarea>
 
+      <!-- honeypot: humans don't fill this; bots do. Formspree drops the submission. -->
+      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true">
+
       <button type="submit">Send message</button>
     </form>
   </article>

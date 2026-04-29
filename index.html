@@ -238,6 +238,8 @@
     </label>
     <input type="hidden" name="_subject" value="Feedback from read-aloud.com">
     <input type="hidden" name="_page" value="/index.html">
+    <!-- honeypot: humans don't fill this; bots do. Formspree drops the submission. -->
+    <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true">
     <div class="feedback-actions">
       <button type="submit" class="btn">Send feedback</button>
       <p class="feedback-status" role="status" aria-live="polite"></p>
