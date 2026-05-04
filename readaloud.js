@@ -352,7 +352,7 @@ async function useNeuralSpeech(voiceId) {
   $('download').disabled = true;
   updateControls();
 
-  const chunks = chunkText(txt.value, 4500); // Edge TTS limit ~5000
+  const chunks = chunkText(txt.value, 1500); // ~3s TTFB vs ~9s at 4500; pipelined
   progChar = 0;
   startTime = Date.now();
   totalChars = txt.value.length;
