@@ -96,7 +96,15 @@
             </div>
 
             <div class="controls-block">
-              <h3 class="section-label"><span class="section-num">04</span> Transport</h3>
+              <h3 class="section-label"><span class="section-num">04</span> Volume</h3>
+              <label class="tempo-label">
+                <span class="tempo-value"><span id="vv">100</span>%</span>
+                <input type="range" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+              </label>
+            </div>
+
+            <div class="controls-block">
+              <h3 class="section-label"><span class="section-num">05</span> Transport</h3>
               <div class="button-row" role="group" aria-label="Playback controls">
                 <button id="start" class="btn">Start</button>
                 <button id="pause" class="btn btn--secondary">Pause</button>

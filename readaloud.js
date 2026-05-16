@@ -61,6 +61,8 @@ const langSel = $('lang');
 const voiceSel = $('voice');
 const rateSlider = $('rate');
 const rateValue = $('rv');
+const volSlider = $('vol');
+const volValue = $('vv');
 const progressBar = $('bar');
 const elapsedLabel = $('ela');
 const remainingLabel = $('rem');
@@ -101,6 +103,11 @@ let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll()
   // Event listeners
   langSel.onchange = () => populateVoiceSel();
   rateSlider.oninput = () => (rateValue.textContent = rateSlider.value);
+  volSlider.oninput = () => {
+    volValue.textContent = Math.round(+volSlider.value * 100);
+    if (currentAudio) currentAudio.volume = +volSlider.value;
+    if (utter) utter.volume = +volSlider.value;
+  };
   startBtn.onclick = startSpeak;
   pauseBtn.onclick = pauseSpeak;
   resumeBtn.onclick = resumeSpeak;
@@ -447,6 +454,7 @@ function playAudioBlob(blob, chunkLength) {
     }
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    audio.volume = +volSlider.value;
     currentAudio = audio;
 
     const chunkStart = progChar;
@@ -653,6 +661,7 @@ function speakNextChunk(voiceIndex) {
   const chunk = currentChunk;
   utter = new SpeechSynthesisUtterance(chunk);
   utter.rate = +rateSlider.value;
+  utter.volume = +volSlider.value;
 
   if (voiceIndex !== '-1' && browserVoices[+voiceIndex]) {
     utter.voice = browserVoices[+voiceIndex];
