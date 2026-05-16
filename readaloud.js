@@ -92,7 +92,9 @@ let downloadBlobs = []; // Collect MP3 chunks for download
 let keepAliveTimer = null; // Chrome speech synthesis keep-alive
 let currentVoiceIndex = '-1'; // Saved so keep-alive can restart stalled browser TTS
 let currentChunk = ''; // Current browser TTS chunk, saved so stall recovery can re-speak it
+let currentChunkStart = 0; // Absolute char offset where current browser TTS chunk began
 let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll() unblock it
+let volChangeTimer = null; // Debounce for live volume changes that re-trigger browser TTS
 
 /* ========== INIT ========== */
 (async function init() {
@@ -105,8 +107,16 @@ let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll()
   rateSlider.oninput = () => (rateValue.textContent = rateSlider.value);
   volSlider.oninput = () => {
     volValue.textContent = Math.round(+volSlider.value * 100);
+    // Neural TTS: HTMLAudioElement.volume is live-mutable.
     if (currentAudio) currentAudio.volume = +volSlider.value;
-    if (utter) utter.volume = +volSlider.value;
+    // Browser TTS: utterance.volume is locked once speak() is called, so the only
+    // way to apply a new volume mid-playback is to cancel and re-speak the
+    // remainder. Debounce so dragging the slider doesn't churn restarts.
+    if (isSpeaking && !isPaused && !currentAudio &&
+        (speechSynthesis.speaking || speechSynthesis.pending)) {
+      clearTimeout(volChangeTimer);
+      volChangeTimer = setTimeout(restartBrowserSpeech, 150);
+    }
   };
   startBtn.onclick = startSpeak;
   pauseBtn.onclick = pauseSpeak;
@@ -652,6 +662,20 @@ function stopKeepAlive() {
   }
 }
 
+// Cancel the in-flight utterance, push the unspoken remainder of the current
+// chunk back to the front of the queue, and resume from there. Used by the
+// volume slider since utterance.volume is locked once speak() runs.
+function restartBrowserSpeech() {
+  if (!isSpeaking || isPaused || currentAudio) return;
+  const charInChunk = Math.max(0, progChar - currentChunkStart);
+  const remainder = currentChunk ? currentChunk.slice(charInChunk) : '';
+  if (remainder.length > 0) queue.unshift(remainder);
+  currentChunk = '';
+  if (utter) utter.onend = null; // prevent the cancel from chaining into speakNextChunk twice
+  speechSynthesis.cancel();
+  setTimeout(() => speakNextChunk(currentVoiceIndex), 60);
+}
+
 function speakNextChunk(voiceIndex) {
   if (!queue.length) {
     finish();
@@ -668,6 +692,7 @@ function speakNextChunk(voiceIndex) {
   }
 
   const chunkStart = progChar;
+  currentChunkStart = chunkStart;
   utter.onboundary = (e) => {
     progChar = chunkStart + e.charIndex;
     boundarySeen = true;
