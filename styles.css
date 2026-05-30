@@ -728,6 +728,14 @@ progress::-moz-progress-bar {
   letter-spacing: 0;
   color: var(--vermilion);
 }
+.word-count {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  color: var(--ink-faded);
+}
 
 .tempo-label {
   display: grid;

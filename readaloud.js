@@ -74,6 +74,14 @@ const stopBtn = $('stop');
 const disp = $('disp');
 const statusEl = $('status');
 const errorEl = $('error');
+const wordCount = $('wordcount');
+
+function updateWordCount() {
+  if (!wordCount || !txt) return;
+  const trimmed = txt.value.trim();
+  const n = trimmed ? trimmed.split(/\s+/).length : 0;
+  wordCount.textContent = n === 1 ? '1 word' : n + ' words';
+}
 
 /* ========== GLOBALS ========== */
 let browserVoices = [];
@@ -127,7 +135,9 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
   txt.addEventListener('input', () => {
     clearError();
     buildDisplay();
+    updateWordCount();
   });
+  updateWordCount();
   window.addEventListener('resize', autoSize);
   window.addEventListener('keydown', handleShortcuts);
 
