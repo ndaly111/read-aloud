@@ -340,12 +340,10 @@ function populateVoiceSel() {
 
 function updateVoiceStatus() {
   const [voiceType] = voiceSel.value.split(':');
-  // Show the "Hear a sample" button only when a Studio voice is selected.
+  // The "Hear a sample" button is available whenever Studio voices exist — it
+  // previews the selected Studio voice, or a default one if the pick isn't Studio.
   const pv = $('previewBtn');
-  if (pv) {
-    pv.hidden = voiceType !== 'studio';
-    if (voiceType !== 'studio') stopPreview();
-  }
+  if (pv) pv.hidden = !studioVoices.length;
   const indicator = document.getElementById('voice-type-indicator');
   if (indicator) {
     if (voiceType === 'neural') {
@@ -1124,8 +1122,10 @@ function togglePreview() {
 
 async function playSample() {
   const val = voiceSel.value;
-  if (!val.startsWith('studio:')) return;
-  const vid = val.slice('studio:'.length);
+  const vid = val.startsWith('studio:')
+    ? val.slice('studio:'.length)
+    : (studioVoices[0] && studioVoices[0].id);
+  if (!vid) return;
   const btn = $('previewBtn');
   stopPreview();
   if (btn) { btn.disabled = true; btn.textContent = '… loading'; }
