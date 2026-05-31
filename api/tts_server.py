@@ -30,6 +30,7 @@ from typing import Optional
 
 import edge_tts
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -464,6 +465,15 @@ async def admin_stats(request: Request, token: Optional[str] = None):
     )
     conn.close()
 
+    # Live financials section, embedded from the billing module (admin-only page).
+    finance_html = ""
+    _b = globals().get("_billing")
+    if _b is not None:
+        try:
+            finance_html = await run_in_threadpool(_b.finance_section_or_empty)
+        except Exception as _fe:
+            finance_html = f"<p class='muted'>Finance section error: {_fe}</p>"
+
     hit_pct = (today["hits"] / today["reqs"] * 100) if today["reqs"] else 0
     max_daily = max((d["n"] for d in daily), default=1) or 1
     max_hourly = max((h["n"] for h in hourly), default=1) or 1
@@ -543,6 +553,8 @@ table td {{padding:6px 10px;border-bottom:1px dotted var(--rule-soft);}}
   <div class="card"><p class="lbl">Cache hit</p><p class="val">{hit_pct:.0f}%</p><p class="sub">{today['hits']:,} of {today['reqs']:,}</p></div>
   <div class="card"><p class="lbl">Avg latency</p><p class="val">{int(today['avg_ms']):,}<span style="font-size:.5em">ms</span></p><p class="sub">end to end</p></div>
 </div>
+
+{finance_html}
 
 <h2>Daily, last 14 days</h2>
 <table><tbody>{daily_rows}</tbody></table>

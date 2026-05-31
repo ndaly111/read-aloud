@@ -42,6 +42,12 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 
+# ElevenLabs monthly plan fees (cents), by tier name, for the cost side of the P&L.
+ELEVENLABS_PLAN_FEES = {
+    "free": 0, "starter": 500, "creator": 2200, "independent_publisher": 2200,
+    "pro": 9900, "growing_business": 33000, "scale": 33000, "business": 132000,
+}
+
 STRIPE_SECRET = os.environ.get("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
 LICENSE_DB = os.environ.get("LICENSE_DB")
@@ -885,6 +891,219 @@ async def premium_tts(request: Request):
         headers={"Content-Disposition": "inline",
                  "X-Chars-Remaining": str(remaining)},
     )
+
+
+# ----------------------------------------------------------------------
+# Live financials / P&L (admin only)
+# ----------------------------------------------------------------------
+def _money(c):
+    try:
+        return "$%.2f" % (int(c) / 100.0)
+    except Exception:
+        return "$0.00"
+
+
+def _gather_finance() -> dict:
+    """Pull live numbers from Stripe + ElevenLabs + the license DB. Blocking;
+    call via run_in_threadpool."""
+    out = {"generated": _now()}
+    stripe = _get_stripe()
+    now = int(time.time())
+    month_ago = now - 30 * 86400
+
+    # --- Active subscriptions -> MRR by plan ---
+    plans = {}  # plan -> [count, mrr_cents]
+    try:
+        for sub in stripe.Subscription.list(status="active", limit=100).auto_paging_iter():
+            items = _sg(sub, "items")
+            data = _sg(items, "data") if items is not None else None
+            if not data:
+                continue
+            price = _sg(data[0], "price")
+            price_id = price if isinstance(price, str) else _sg(price, "id")
+            amt = None if isinstance(price, str) else _sg(price, "unit_amount")
+            plan = (TIERS.get(price_id) or {}).get("plan", price_id or "?")
+            row = plans.setdefault(plan, [0, 0])
+            row[0] += 1
+            row[1] += (amt or 0)
+    except Exception as e:
+        out["sub_error"] = str(e)
+    out["plans"] = plans
+    out["active_subs"] = sum(v[0] for v in plans.values())
+    out["mrr_cents"] = sum(v[1] for v in plans.values())
+
+    # --- Exact gross / fees / net from balance transactions ---
+    def sum_bt(gte):
+        agg = {"gross": 0, "fee": 0, "net": 0, "refunds": 0, "charges": 0, "n": 0}
+        params = {"limit": 100}
+        if gte:
+            params["created"] = {"gte": gte}
+        for bt in stripe.BalanceTransaction.list(**params).auto_paging_iter():
+            agg["n"] += 1
+            if agg["n"] > 2000:
+                break
+            t = _sg(bt, "type")
+            fee = _sg(bt, "fee", 0)
+            net = _sg(bt, "net", 0)
+            amount = _sg(bt, "amount", 0)
+            if t in ("charge", "payment"):
+                agg["gross"] += amount
+                agg["fee"] += fee
+                agg["net"] += net
+                agg["charges"] += 1
+            elif t in ("refund", "payment_refund"):
+                agg["refunds"] += -amount
+                agg["fee"] += fee
+                agg["net"] += net
+        return agg
+    try:
+        out["bt_30d"] = sum_bt(month_ago)
+        out["bt_all"] = sum_bt(None)
+    except Exception as e:
+        out["bt_error"] = str(e)
+
+    # --- Stripe balance (your money) ---
+    try:
+        bal = stripe.Balance.retrieve()
+        out["bal_available"] = sum(_sg(b, "amount", 0) for b in (_sg(bal, "available") or []))
+        out["bal_pending"] = sum(_sg(b, "amount", 0) for b in (_sg(bal, "pending") or []))
+    except Exception as e:
+        out["bal_error"] = str(e)
+
+    # --- ElevenLabs usage + plan ---
+    try:
+        req = urllib.request.Request("https://api.elevenlabs.io/v1/user/subscription",
+                                     headers={"xi-api-key": ELEVENLABS_API_KEY})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            els = json.loads(r.read().decode())
+        out["el_tier"] = els.get("tier")
+        out["el_used"] = els.get("character_count")
+        out["el_limit"] = els.get("character_limit")
+        out["el_reset"] = els.get("next_character_count_reset_unix")
+        out["el_fee_cents"] = ELEVENLABS_PLAN_FEES.get(str(els.get("tier", "")).lower())
+    except Exception as e:
+        out["el_error"] = str(e)
+
+    # --- License DB aggregates ---
+    try:
+        c = _conn()
+        try:
+            rows = c.execute(
+                "SELECT plan, status, COUNT(*) n, COALESCE(SUM(char_used),0) used "
+                "FROM licenses GROUP BY plan, status ORDER BY plan").fetchall()
+            out["lic_rows"] = [dict(r) for r in rows]
+            today = _today()
+            pd = c.execute("SELECT day, chars FROM premium_daily WHERE day IN (?,?)",
+                           (today, "trial:" + today)).fetchall()
+            d = {r["day"]: r["chars"] for r in pd}
+            out["premium_today"] = d.get(today, 0)
+            out["trials_today"] = d.get("trial:" + today, 0)
+        finally:
+            c.close()
+    except Exception as e:
+        out["lic_error"] = str(e)
+
+    # --- Derived P&L ---
+    net30 = (out.get("bt_30d") or {}).get("net", 0)
+    el_fee = out.get("el_fee_cents") or 0
+    out["profit_30d_cents"] = net30 - el_fee
+    return out
+
+
+def _render_finance_section(d: dict) -> str:
+    """Embeddable HTML (cards + tables) for the existing admin analytics page.
+    Uses that page's CSS classes (.card .lbl/.val/.sub, .num, .muted)."""
+    def card(label, value, sub=""):
+        return (f'<div class="card"><p class="lbl">{label}</p>'
+                f'<p class="val">{value}</p><p class="sub">{sub}</p></div>')
+
+    bt30 = d.get("bt_30d") or {}
+    btall = d.get("bt_all") or {}
+    profit = d.get("profit_30d_cents", 0)
+    el_used = d.get("el_used")
+    el_limit = d.get("el_limit")
+    el_pct = (f"{100*el_used/el_limit:.1f}% of limit" if el_used is not None and el_limit else "")
+
+    parts = ["<h2>Money — live P&amp;L</h2>"]
+
+    # Headline cards
+    parts.append("<div class='cards'>")
+    parts.append(card("MRR", _money(d.get("mrr_cents", 0)),
+                      f"{d.get('active_subs',0)} active subs"))
+    parts.append(card("Net revenue · 30d", _money(bt30.get("net", 0)),
+                      f"after {_money(bt30.get('fee',0))} Stripe fees"))
+    parts.append(card("Profit · 30d", _money(profit), "net rev − ElevenLabs plan"))
+    parts.append(card("Stripe balance", _money(d.get("bal_available", 0)),
+                      f"+ {_money(d.get('bal_pending',0))} pending"))
+    parts.append("</div>")
+
+    # Revenue detail
+    parts.append("<h2>Revenue (Stripe, exact)</h2><table>")
+    parts.append("<tr><th>Window</th><th class='num'>Gross</th><th class='num'>Stripe fees</th>"
+                 "<th class='num'>Refunds</th><th class='num'>Net</th><th class='num'>Charges</th></tr>")
+    for label, bt in (("Last 30 days", bt30), ("All time", btall)):
+        parts.append(
+            f"<tr><td>{label}</td><td class='num'>{_money(bt.get('gross',0))}</td>"
+            f"<td class='num neg'>{_money(bt.get('fee',0))}</td>"
+            f"<td class='num'>{_money(bt.get('refunds',0))}</td>"
+            f"<td class='num'>{_money(bt.get('net',0))}</td>"
+            f"<td class='num'>{bt.get('charges',0)}</td></tr>")
+    parts.append("</table>")
+    if d.get("bt_error"):
+        parts.append(f"<p class='warn'>Stripe txn error: {d['bt_error']}</p>")
+
+    # Subscriptions by plan
+    parts.append("<h2>Subscribers by plan</h2><table>")
+    parts.append("<tr><th>Plan</th><th class='num'>Active</th><th class='num'>MRR</th></tr>")
+    for plan, (n, mrr) in sorted((d.get("plans") or {}).items()):
+        parts.append(f"<tr><td>{plan}</td><td class='num'>{n}</td><td class='num'>{_money(mrr)}</td></tr>")
+    if not (d.get("plans")):
+        parts.append("<tr><td colspan='3' class='muted'>No active subscriptions yet.</td></tr>")
+    parts.append("</table>")
+
+    # ElevenLabs cost side
+    parts.append("<h2>ElevenLabs (cost side)</h2><table>")
+    parts.append(f"<tr><td>Plan tier</td><td class='num'>{d.get('el_tier','?')}</td></tr>")
+    parts.append(f"<tr><td>Monthly plan fee</td><td class='num neg'>{_money(d.get('el_fee_cents') or 0)}</td></tr>")
+    parts.append(f"<tr><td>Characters used (period)</td><td class='num'>{(el_used if el_used is not None else '?'):,}</td></tr>"
+                 if isinstance(el_used, int) else
+                 f"<tr><td>Characters used (period)</td><td class='num'>{el_used}</td></tr>")
+    parts.append(f"<tr><td>Character limit</td><td class='num'>{el_limit:,}</td></tr>"
+                 if isinstance(el_limit, int) else
+                 f"<tr><td>Character limit</td><td class='num'>{el_limit}</td></tr>")
+    if el_pct:
+        parts.append(f"<tr><td>Usage</td><td class='num'>{el_pct}</td></tr>")
+    parts.append("</table>")
+    if d.get("el_error"):
+        parts.append(f"<p class='warn'>ElevenLabs error: {d['el_error']}</p>")
+
+    # License DB / character consumption
+    parts.append("<h2>Licenses &amp; character consumption</h2><table>")
+    parts.append("<tr><th>Plan</th><th>Status</th><th class='num'>Licenses</th><th class='num'>Chars used</th></tr>")
+    for r in (d.get("lic_rows") or []):
+        parts.append(f"<tr><td>{r['plan']}</td><td>{r['status']}</td>"
+                     f"<td class='num'>{r['n']}</td><td class='num'>{r['used']:,}</td></tr>")
+    parts.append("</table>")
+    parts.append(f"<p class='muted'>Today: {d.get('premium_today',0):,} premium chars billed to subscribers, "
+                 f"{d.get('trials_today',0):,} free-trial chars.</p>")
+
+    errs = [d[k] for k in ("sub_error", "bt_error", "el_error", "lic_error", "bal_error") if d.get(k)]
+    if errs:
+        parts.append("<p class='muted'>Notes: " + " | ".join(errs) + "</p>")
+    parts.append(f"<p class='muted'>P&amp;L generated {d.get('generated','')}. Stripe figures are exact "
+                 f"(balance transactions). Profit = 30-day net revenue minus the ElevenLabs plan fee; "
+                 f"hosting (mini PC) isn't prorated.</p>")
+    return "".join(parts)
+
+
+def finance_section_or_empty() -> str:
+    """Safe wrapper for the analytics page to embed. Returns '' on any failure."""
+    if not BILLING_ENABLED:
+        return ""
+    try:
+        return _render_finance_section(_gather_finance())
+    except Exception as e:
+        return f"<h2>Money — live P&amp;L</h2><p class='muted'>Finance data unavailable: {e}</p>"
 
 
 # Initialize the DB at import time if billing is configured
