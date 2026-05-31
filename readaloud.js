@@ -273,7 +273,7 @@ function populateVoiceSel() {
   const studioLicensed = license && license.status === 'active';
   if (studioVoices.length) {
     const studioGroup = document.createElement('optgroup');
-    studioGroup.label = studioLicensed ? 'Studio Voices' : '✦ Studio Voices — subscribe to use';
+    studioGroup.label = studioLicensed ? 'Studio Voices' : 'Studio Voices — subscribe to use';
     studioVoices.forEach(v => {
       const opt = document.createElement('option');
       opt.value = `studio:${v.id}`;
