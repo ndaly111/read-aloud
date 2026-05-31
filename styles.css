@@ -1728,6 +1728,17 @@ form button { justify-self: start; }
   color: var(--ink-soft);
   min-height: 1.1em;
 }
+.key-recover { margin-top: 14px; }
+.key-recover #recoverBox { margin-top: 10px; }
+.key-recover #recoverEmail {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  border: 1px solid var(--ink);
+  background: var(--paper-bright);
+  color: var(--ink);
+}
 .modal-card .muted {
   color: var(--ink-faded);
   font-style: italic;

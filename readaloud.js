@@ -146,6 +146,13 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
   if (upClose) upClose.onclick = closeUpgrade;
   const keyApply = $('keyApply');
   if (keyApply) keyApply.onclick = applyKey;
+  const recoverToggle = $('recoverToggle');
+  if (recoverToggle) recoverToggle.onclick = () => {
+    const b = $('recoverBox');
+    if (b) b.hidden = !b.hidden;
+  };
+  const recoverBtn = $('recoverBtn');
+  if (recoverBtn) recoverBtn.onclick = recoverKey;
   const modal = $('upgradeModal');
   if (modal) modal.addEventListener('click', (e) => {
     if (e.target === modal) closeUpgrade();
@@ -1166,6 +1173,26 @@ async function applyKey() {
     updateLicenseUI();
     msg.textContent = `✓ Unlocked — ${lic.char_remaining.toLocaleString()} chars on ${lic.plan}.`;
     setTimeout(closeUpgrade, 1400);
+  } catch (e) {
+    msg.textContent = 'Network error — try again.';
+  }
+}
+
+async function recoverKey() {
+  const input = $('recoverEmail');
+  const msg = $('recoverMsg');
+  if (!input || !msg) return;
+  const email = (input.value || '').trim();
+  if (!email || !email.includes('@')) { msg.textContent = 'Enter the email you paid with.'; return; }
+  msg.textContent = 'Sending…';
+  try {
+    const r = await fetch(`${BILLING_URL}/api/billing/recover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const d = await r.json().catch(() => ({}));
+    msg.textContent = d.message || 'If that email has an active subscription, the key is on its way.';
   } catch (e) {
     msg.textContent = 'Network error — try again.';
   }

@@ -29,15 +29,18 @@ import io
 import json
 import os
 import secrets
+import smtplib
 import sqlite3
 import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+from email.message import EmailMessage
 from threading import Lock
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 
 STRIPE_SECRET = os.environ.get("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
@@ -51,6 +54,15 @@ except Exception:
 
 # Billing only activates when Stripe + DB are fully configured.
 BILLING_ENABLED = bool(STRIPE_SECRET and STRIPE_WEBHOOK_SECRET and LICENSE_DB and TIERS)
+
+# Transactional email (license-key delivery + recovery). Plain SMTP so it works
+# with Resend / SendGrid / Gmail / any relay. Inert unless SMTP_HOST + SMTP_FROM set.
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASS = os.environ.get("SMTP_PASS")
+SMTP_FROM = os.environ.get("SMTP_FROM", "Read-Aloud <noreply@read-aloud.com>")
+EMAIL_ENABLED = bool(SMTP_HOST and SMTP_FROM)
 
 # Premium TTS (ElevenLabs) — only activates when the API key is set AND billing is on.
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
@@ -113,6 +125,10 @@ def init_db() -> None:
             "  day TEXT PRIMARY KEY,"
             "  chars INTEGER NOT NULL DEFAULT 0)"
         )
+        # Migration: flag so the welcome/key email is sent at most once per license.
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(licenses)").fetchall()]
+        if "welcome_emailed" not in cols:
+            conn.execute("ALTER TABLE licenses ADD COLUMN welcome_emailed INTEGER NOT NULL DEFAULT 0")
         conn.commit()
     finally:
         conn.close()
@@ -335,6 +351,93 @@ def _elevenlabs_tts(text: str, voice_id: str) -> bytes:
 
 
 # ----------------------------------------------------------------------
+# Transactional email (license delivery + recovery)
+# ----------------------------------------------------------------------
+def get_active_license_by_email(email: str) -> Optional[dict]:
+    if not LICENSE_DB or not email:
+        return None
+    with _db_lock:
+        c = _conn()
+        try:
+            row = c.execute(
+                "SELECT * FROM licenses WHERE lower(email)=lower(?) AND status='active' "
+                "ORDER BY updated_at DESC LIMIT 1",
+                (email,),
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            c.close()
+
+
+def mark_welcome_emailed(key: str) -> None:
+    if not LICENSE_DB:
+        return
+    with _db_lock:
+        c = _conn()
+        try:
+            c.execute("UPDATE licenses SET welcome_emailed=1, updated_at=? WHERE key=?",
+                      (_now(), key))
+            c.commit()
+        finally:
+            c.close()
+
+
+def _send_email(to_addr: str, subject: str, text_body: str, html_body: Optional[str] = None) -> bool:
+    """Blocking SMTP send. Call via run_in_threadpool from async endpoints."""
+    if not EMAIL_ENABLED or not to_addr:
+        return False
+    msg = EmailMessage()
+    msg["From"] = SMTP_FROM
+    msg["To"] = to_addr
+    msg["Subject"] = subject
+    msg.set_content(text_body)
+    if html_body:
+        msg.add_alternative(html_body, subtype="html")
+    try:
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20) as s:
+                if SMTP_USER:
+                    s.login(SMTP_USER, SMTP_PASS)
+                s.send_message(msg)
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as s:
+                s.ehlo(); s.starttls(); s.ehlo()
+                if SMTP_USER:
+                    s.login(SMTP_USER, SMTP_PASS)
+                s.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"[billing] email send failed to {to_addr}: {e}")
+        return False
+
+
+def _send_license_email(email: str, key: str, plan: str, cap: int) -> bool:
+    subject = "Your Read-Aloud Studio license key"
+    text = (
+        f"Thanks for subscribing to Read-Aloud Studio ({plan}).\n\n"
+        f"Your license key:\n{key}\n\n"
+        f"It's already active in the browser you bought it on. To use Studio voices on "
+        f"another device, go to {SITE_URL}, open \"Unlock Studio voices\", and paste this key.\n\n"
+        f"Keep this email — it's how you recover your key.\n\n"
+        f"Plan: {plan} - {cap:,} characters per month\n"
+    )
+    html = (
+        f'<div style="font-family:Georgia,serif;color:#1a1c22;max-width:520px;line-height:1.5">'
+        f'<h2 style="color:#c8341e;margin:0 0 12px">You\'re in. Thank you.</h2>'
+        f'<p>Thanks for subscribing to <strong>Read-Aloud Studio</strong> ({plan}).</p>'
+        f'<p style="margin:18px 0 6px">Your license key:</p>'
+        f'<p style="font-family:monospace;font-size:15px;background:#faf4e6;border:1px solid #1a1c22;'
+        f'padding:12px;word-break:break-all">{key}</p>'
+        f'<p>It\'s already active in the browser you bought it on. To use Studio voices on another '
+        f'device, go to <a href="{SITE_URL}">{SITE_URL}</a>, open <em>Unlock Studio voices</em>, '
+        f'and paste this key.</p>'
+        f'<p style="color:#6f6857;font-size:14px">Keep this email — it\'s how you recover your key.<br>'
+        f'Plan: {plan} &middot; {cap:,} characters per month.</p></div>'
+    )
+    return _send_email(email, subject, text, html)
+
+
+# ----------------------------------------------------------------------
 # Endpoints
 # ----------------------------------------------------------------------
 @router.post("/api/billing/checkout")
@@ -372,21 +475,22 @@ def _sg(obj, key, default=None):
 
 def _provision_subscription(stripe, sub_id, *, customer, email, checkout_session):
     """Re-retrieve the subscription (canonical shape) and mint/update its license.
-    Uses _sg() everywhere because Stripe objects lack .get() in stripe>=15."""
+    Uses _sg() everywhere because Stripe objects lack .get() in stripe>=15.
+    Returns the license key (or None)."""
     if not sub_id:
-        return
+        return None
     sub = stripe.Subscription.retrieve(sub_id)
     items_obj = _sg(sub, "items")
     data = _sg(items_obj, "data") if items_obj is not None else None
     if not data:
         print(f"[billing] sub {sub_id} has no line items")
-        return
+        return None
     price = _sg(data[0], "price")
     price_id = price if isinstance(price, str) else _sg(price, "id")
     tier = TIERS.get(price_id)  # TIERS is a plain dict — .get is fine
     if not tier:
         print(f"[billing] no tier configured for price {price_id}")
-        return
+        return None
     status = _sg(sub, "status")
     mapped = "active" if status in ("active", "trialing") else \
              ("past_due" if status == "past_due" else "canceled")
@@ -396,6 +500,7 @@ def _provision_subscription(stripe, sub_id, *, customer, email, checkout_session
         status=mapped, email=email, checkout_session=checkout_session,
     )
     print(f"[billing] provisioned license {key} sub={sub_id} plan={tier['plan']} status={mapped}")
+    return key
 
 
 @router.post("/api/billing/webhook")
@@ -416,12 +521,20 @@ async def stripe_webhook(request: Request):
 
     try:
         if etype == "checkout.session.completed":
-            _provision_subscription(
+            email = _sg(_sg(obj, "customer_details") or {}, "email")
+            key = _provision_subscription(
                 stripe, _sg(obj, "subscription"),
                 customer=_sg(obj, "customer"),
-                email=_sg(_sg(obj, "customer_details") or {}, "email"),
+                email=email,
                 checkout_session=_sg(obj, "id"),
             )
+            if key and email:
+                lic = get_license(key)
+                if lic and not lic.get("welcome_emailed"):
+                    sent = await run_in_threadpool(
+                        _send_license_email, email, key, lic["plan"], lic["char_cap"])
+                    if sent:
+                        mark_welcome_emailed(key)
 
         elif etype in ("customer.subscription.updated", "customer.subscription.created"):
             _provision_subscription(
@@ -459,6 +572,36 @@ async def billing_status(key: Optional[str] = None, session_id: Optional[str] = 
         "char_remaining": max(0, lic["char_cap"] - lic["char_used"]),
         "period_start": lic["period_start"],
     }
+
+
+_recover_guard = {}  # email -> last-send epoch; light in-memory spam guard
+
+
+@router.post("/api/billing/recover")
+async def recover_key(request: Request):
+    """Email a buyer their license key. Always returns the same generic message so
+    it can't be used to probe which emails have a subscription."""
+    if not BILLING_ENABLED:
+        raise HTTPException(status_code=404, detail="billing not enabled")
+    body = await request.json()
+    email = (body.get("email") or "").strip()
+    generic = {"ok": True,
+               "message": "If that email has an active subscription, the key is on its way."}
+    if not email or "@" not in email:
+        return generic
+    if not EMAIL_ENABLED:
+        return {"ok": False, "message": "Email delivery isn't set up yet — contact admin@read-aloud.com."}
+    now = time.time()
+    if len(_recover_guard) > 2000:  # bound memory
+        for k in [k for k, t in _recover_guard.items() if now - t > 3600]:
+            _recover_guard.pop(k, None)
+    if now - _recover_guard.get(email.lower(), 0) < 60:
+        return generic  # rate-limit repeated requests for the same email
+    _recover_guard[email.lower()] = now
+    lic = get_active_license_by_email(email)
+    if lic:
+        await run_in_threadpool(_send_license_email, email, lic["key"], lic["plan"], lic["char_cap"])
+    return generic
 
 
 @router.get("/api/billing/tiers")
@@ -595,6 +738,7 @@ if BILLING_ENABLED:
     try:
         init_db()
         print("[billing] enabled — license DB ready")
+        print(f"[billing] email delivery {'enabled (' + str(SMTP_HOST) + ')' if EMAIL_ENABLED else 'disabled (set SMTP_HOST/SMTP_FROM)'}")
         if PREMIUM_TTS_ENABLED:
             print(f"[billing] premium TTS enabled (ElevenLabs model={ELEVENLABS_MODEL}, "
                   f"daily cap={PREMIUM_DAILY_CHAR_CAP:,} chars)")

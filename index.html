@@ -277,6 +277,16 @@
         <button type="button" id="keyApply" class="btn btn--secondary">Apply</button>
       </div>
       <p id="keyMsg" class="key-msg" role="status" aria-live="polite"></p>
+      <div class="key-recover">
+        <button type="button" id="recoverToggle" class="link-btn">Lost your key? Email it to me</button>
+        <div id="recoverBox" hidden>
+          <div class="key-paste-row">
+            <input type="email" id="recoverEmail" placeholder="you@example.com" autocomplete="email">
+            <button type="button" id="recoverBtn" class="btn btn--secondary">Send</button>
+          </div>
+          <p id="recoverMsg" class="key-msg" role="status" aria-live="polite"></p>
+        </div>
+      </div>
     </div>
   </div>
 </div>
