@@ -123,7 +123,10 @@ ALLOWED_ORIGIN_PREFIXES = tuple(ALLOWED_ORIGINS)
 # /api/tts path below is untouched.
 # ----------------------------------------------------------------------
 try:
-    import billing as _billing
+    try:
+        from . import billing as _billing      # loaded as the `api` package (uvicorn api.tts_server:app)
+    except ImportError:
+        import billing as _billing              # run directly from the api/ dir
     app.include_router(_billing.router)
 except Exception as _be:  # never let billing break the core TTS service
     print(f"[tts] billing module not loaded: {_be}")
