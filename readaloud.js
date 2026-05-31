@@ -216,7 +216,7 @@ async function checkApiAvailability() {
             console.log(`Active TTS endpoint: ${url}`);
           }
           activeTtsUrl = url;
-          console.log('✓ Premium neural voices available');
+          console.log('Premium neural voices available');
           return true;
         }
       } catch (e) {
@@ -273,7 +273,7 @@ function populateVoiceSel() {
   const studioLicensed = license && license.status === 'active';
   if (studioVoices.length) {
     const studioGroup = document.createElement('optgroup');
-    studioGroup.label = studioLicensed ? '✦ Studio Voices' : '✦ Studio Voices — subscribe to use';
+    studioGroup.label = studioLicensed ? 'Studio Voices' : '✦ Studio Voices — subscribe to use';
     studioVoices.forEach(v => {
       const opt = document.createElement('option');
       opt.value = `studio:${v.id}`;
@@ -290,7 +290,7 @@ function populateVoiceSel() {
 
   if (apiAvailable && neuralVoices.length) {
     const neuralGroup = document.createElement('optgroup');
-    neuralGroup.label = '⭐ Premium Voices';
+    neuralGroup.label = 'Premium Voices';
 
     neuralVoices.forEach(v => {
       const opt = document.createElement('option');
@@ -304,7 +304,7 @@ function populateVoiceSel() {
 
   // Add browser voices - always available as fallback (limit to 5)
   const browserGroup = document.createElement('optgroup');
-  browserGroup.label = apiAvailable ? '📱 Browser (Offline)' : '📱 Browser Voices';
+  browserGroup.label = apiAvailable ? 'Browser (Offline)' : 'Browser Voices';
 
   const defaultOpt = document.createElement('option');
   defaultOpt.value = 'browser:-1';
@@ -347,10 +347,10 @@ function updateVoiceStatus() {
   const indicator = document.getElementById('voice-type-indicator');
   if (indicator) {
     if (voiceType === 'neural') {
-      indicator.textContent = '⭐ Premium';
+      indicator.textContent = 'Premium';
       indicator.className = 'voice-indicator voice-indicator--premium';
     } else {
-      indicator.textContent = '📱 Browser';
+      indicator.textContent = 'Browser';
       indicator.className = 'voice-indicator voice-indicator--browser';
     }
   }
@@ -1018,7 +1018,7 @@ function updateLicenseUI() {
     const rem = license.char_remaining != null ? license.char_remaining : 0;
     statusEl.hidden = false;
     statusEl.innerHTML =
-      `✦ Studio · <strong>${rem.toLocaleString()}</strong> chars left · ` +
+      `Studio · <strong>${rem.toLocaleString()}</strong> chars left · ` +
       `<button type="button" class="link-btn" id="manageKey">manage</button>`;
     if (upBtn) upBtn.hidden = true;
     const mk = $('manageKey');
@@ -1126,7 +1126,7 @@ function stopPreview() {
     previewAudio = null;
   }
   const btn = $('previewBtn');
-  if (btn && !btn.hidden) btn.textContent = '▶ Hear a sample';
+  if (btn && !btn.hidden) btn.textContent = 'Hear a sample';
 }
 
 function togglePreview() {
@@ -1181,17 +1181,17 @@ async function playSample() {
     previewAudio.onended = () => {
       URL.revokeObjectURL(url);
       previewAudio = null;
-      if (btn) btn.textContent = '▶ Hear a sample';
+      if (btn) btn.textContent = 'Hear a sample';
     };
     previewAudio.onerror = () => {
       previewAudio = null;
-      if (btn) { btn.disabled = false; btn.textContent = '▶ Hear a sample'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Hear a sample'; }
     };
     await previewAudio.play();
-    if (btn) { btn.disabled = false; btn.textContent = '⏸ Stop sample'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Stop sample'; }
   } catch (e) {
     if (url) URL.revokeObjectURL(url);
-    if (btn) { btn.disabled = false; btn.textContent = '▶ Hear a sample'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Hear a sample'; }
   }
 }
 
@@ -1207,13 +1207,13 @@ function showStudioNudge() {
   const eligible = studioVoices.length && !(license && license.status === 'active') && txt.value.trim();
   if (!eligible) { el.hidden = true; return; }
   if (studioTrialUsed()) {
-    el.innerHTML = 'Enjoyed that? <strong>Studio voices</strong> read your full text in lifelike, '
-      + 'human narration. <button type="button" class="nudge-btn" id="nudgeUpgrade">See plans →</button>';
+    el.innerHTML = 'A <strong>Studio</strong> plan reads your whole document in that voice. '
+      + '<button type="button" class="nudge-btn" id="nudgeUpgrade">See plans</button>';
     el.hidden = false;
     const b = $('nudgeUpgrade'); if (b) b.onclick = openUpgrade;
   } else {
-    el.innerHTML = 'Curious how that sounds in a <strong>Studio</strong> voice? '
-      + '<button type="button" class="nudge-btn" id="nudgeTrial">▶ Hear your text in Studio — free</button>';
+    el.innerHTML = 'That was a computer reading. Want the same lines in a <strong>Studio</strong> voice? '
+      + '<button type="button" class="nudge-btn" id="nudgeTrial">Try it on your text — free</button>';
     el.hidden = false;
     const b = $('nudgeTrial'); if (b) b.onclick = runStudioTrial;
   }
@@ -1235,7 +1235,7 @@ async function runStudioTrial() {
       if (r.status === 429) { try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {} }
       let msg = 'Preview unavailable right now.';
       try { const e = await r.json(); if (e.detail) msg = e.detail; } catch (_) {}
-      if (el) el.innerHTML = `${msg} <button type="button" class="nudge-btn" id="nudgeUp2">See plans →</button>`;
+      if (el) el.innerHTML = `${msg} <button type="button" class="nudge-btn" id="nudgeUp2">See plans</button>`;
       const b = $('nudgeUp2'); if (b) b.onclick = openUpgrade;
       return;
     }
@@ -1246,8 +1246,8 @@ async function runStudioTrial() {
     previewAudio = new Audio(url);
     previewAudio.onended = () => { URL.revokeObjectURL(url); previewAudio = null; showStudioNudge(); };
     previewAudio.onerror = () => { previewAudio = null; };
-    if (el) el.innerHTML = '✦ <strong>Playing your text in a Studio voice…</strong> '
-      + '<button type="button" class="nudge-btn" id="nudgeUp3">Unlock full Studio →</button>';
+    if (el) el.innerHTML = '<strong>Playing your text in a Studio voice.</strong> '
+      + '<button type="button" class="nudge-btn" id="nudgeUp3">Unlock the rest</button>';
     const b = $('nudgeUp3'); if (b) b.onclick = openUpgrade;
     await previewAudio.play();
   } catch (e) {
@@ -1339,7 +1339,7 @@ async function applyKey() {
     await loadStudioVoices();
     populateVoiceSel();
     updateLicenseUI();
-    msg.textContent = `✓ Unlocked — ${lic.char_remaining.toLocaleString()} chars on ${lic.plan}.`;
+    msg.textContent = `Unlocked — ${lic.char_remaining.toLocaleString()} chars on ${lic.plan}.`;
     setTimeout(closeUpgrade, 1400);
   } catch (e) {
     msg.textContent = 'Network error — try again.';

@@ -101,7 +101,7 @@
   copyBtn.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(lic.key);
-      copyBtn.textContent = 'Copied ✓';
+      copyBtn.textContent = 'Copied';
       setTimeout(() => (copyBtn.textContent = 'Copy key'), 2000);
     } catch (e) {
       copyBtn.textContent = 'Press Ctrl/Cmd+C';

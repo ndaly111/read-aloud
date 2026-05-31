@@ -702,8 +702,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 # cost: ~(#voices x sample length) one time, then zero — never per-play.
 PREMIUM_SAMPLE_TEXT = os.environ.get(
     "PREMIUM_SAMPLE_TEXT",
-    "Hi there! This is a preview of a Read-Aloud Studio voice. This is how your "
-    "text will sound: natural, expressive, and easy to listen to.")
+    "This is a Read-Aloud Studio voice. Paste your own text and it'll read it "
+    "back to you, just like this.")
 PREMIUM_SAMPLE_DIR = os.environ.get("PREMIUM_SAMPLE_DIR", "/home/ubuntu/read-aloud/samples")
 
 _voices_cache = {"data": None, "ids": set(), "ts": 0.0}
