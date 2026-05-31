@@ -150,6 +150,14 @@ def init_db() -> None:
         cols = [r[1] for r in conn.execute("PRAGMA table_info(licenses)").fetchall()]
         if "welcome_emailed" not in cols:
             conn.execute("ALTER TABLE licenses ADD COLUMN welcome_emailed INTEGER NOT NULL DEFAULT 0")
+        # Studio engagement funnel counters (one row per day per event name).
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS events ("
+            "  day TEXT NOT NULL,"
+            "  name TEXT NOT NULL,"
+            "  count INTEGER NOT NULL DEFAULT 0,"
+            "  PRIMARY KEY (day, name))"
+        )
         conn.commit()
     finally:
         conn.close()
@@ -389,6 +397,42 @@ def daily_trial_refund(n: int) -> None:
                 (n, "trial:" + _today()),
             )
             c.commit()
+        finally:
+            c.close()
+
+
+def bump_event(name: str, n: int = 1) -> None:
+    """Increment a Studio-funnel event counter for today."""
+    if not LICENSE_DB or not name:
+        return
+    with _db_lock:
+        c = _conn()
+        try:
+            c.execute(
+                "INSERT INTO events (day, name, count) VALUES (?,?,?) "
+                "ON CONFLICT(day, name) DO UPDATE SET count = count + ?",
+                (_today(), name, n, n),
+            )
+            c.commit()
+        finally:
+            c.close()
+
+
+def events_summary(names) -> dict:
+    """Return {name: {today, all}} for the given event names."""
+    out = {n: {"today": 0, "all": 0} for n in names}
+    if not LICENSE_DB:
+        return out
+    with _db_lock:
+        c = _conn()
+        try:
+            for r in c.execute("SELECT name, SUM(count) total FROM events GROUP BY name"):
+                if r["name"] in out:
+                    out[r["name"]]["all"] = r["total"] or 0
+            for r in c.execute("SELECT name, count FROM events WHERE day=?", (_today(),)):
+                if r["name"] in out:
+                    out[r["name"]]["today"] = r["count"] or 0
+            return out
         finally:
             c.close()
 
@@ -788,6 +832,7 @@ async def premium_sample(voice_id: str):
         pass
     if _voices_cache["ids"] and voice_id not in _voices_cache["ids"]:
         raise HTTPException(status_code=400, detail="unknown voice")
+    bump_event("sample_play")  # counts every preview play, cached or not
     safe = voice_id.replace("/", "").replace("..", "").replace("\\", "")
     path = os.path.join(PREMIUM_SAMPLE_DIR, f"{safe}.mp3")
     if not os.path.exists(path):
@@ -853,8 +898,32 @@ async def premium_trial(request: Request):
         raise HTTPException(status_code=502, detail="empty audio from provider")
 
     _trial_ip_guard[ip] = now  # mark IP used only on a successful generation
+    bump_event("trial_play")
     return StreamingResponse(io.BytesIO(audio), media_type="audio/mpeg",
                              headers={"Content-Disposition": "inline"})
+
+
+_ALLOWED_EVENTS = {"upgrade_open", "studio_select", "checkout_click"}
+
+
+@router.post("/api/event")
+async def track_event(request: Request):
+    """Lightweight first-party funnel tracking for Studio engagement. Origin-gated;
+    only an allowlist of event names is accepted."""
+    if not BILLING_ENABLED:
+        raise HTTPException(status_code=404, detail="billing not enabled")
+    ref = request.headers.get("origin", "") or request.headers.get("referer", "")
+    if ref and not ref.startswith(("https://read-aloud.com", "https://www.read-aloud.com",
+                                   "http://localhost", "http://127.0.0.1")):
+        raise HTTPException(status_code=403, detail="origin not allowed")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    name = (body.get("name") or "").strip()
+    if name in _ALLOWED_EVENTS:
+        bump_event(name)
+    return {"ok": True}
 
 
 @router.post("/api/tts/premium")
@@ -1042,6 +1111,13 @@ def _gather_finance() -> dict:
     except Exception as e:
         out["lic_error"] = str(e)
 
+    # --- Studio engagement funnel ---
+    try:
+        out["events"] = events_summary(
+            ["sample_play", "studio_select", "upgrade_open", "trial_play", "checkout_click"])
+    except Exception as e:
+        out["events_error"] = str(e)
+
     # --- Derived P&L ---
     net30 = (out.get("bt_30d") or {}).get("net", 0)
     el_fee = out.get("el_fee_cents") or 0
@@ -1063,7 +1139,26 @@ def _render_finance_section(d: dict) -> str:
     el_limit = d.get("el_limit")
     el_pct = (f"{100*el_used/el_limit:.1f}% of limit" if el_used is not None and el_limit else "")
 
-    parts = ["<h2>Money — live P&amp;L</h2>"]
+    parts = []
+
+    # --- Studio engagement funnel (top of the section) ---
+    ev = d.get("events") or {}
+    def evrow(label, key):
+        e = ev.get(key) or {"today": 0, "all": 0}
+        return (f"<tr><td>{label}</td><td class='num'>{e['all']:,}</td>"
+                f"<td class='num'>{e['today']:,}</td></tr>")
+    parts.append("<h2>Studio engagement (funnel)</h2><table>")
+    parts.append("<tr><th>Step</th><th class='num'>All-time</th><th class='num'>Today</th></tr>")
+    parts.append(evrow("Voice samples played", "sample_play"))
+    parts.append(evrow("Studio voice selected", "studio_select"))
+    parts.append(evrow("Upgrade modal opened", "upgrade_open"))
+    parts.append(evrow("Free trials used", "trial_play"))
+    parts.append(evrow("Checkout started", "checkout_click"))
+    parts.append(f"<tr><td><strong>Subscribed (active)</strong></td>"
+                 f"<td class='num'><strong>{d.get('active_subs',0)}</strong></td><td class='num'></td></tr>")
+    parts.append("</table>")
+
+    parts.append("<h2>Money — live P&amp;L</h2>")
 
     # Headline cards
     parts.append("<div class='cards'>")

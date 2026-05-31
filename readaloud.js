@@ -356,9 +356,12 @@ function updateVoiceStatus() {
   }
 }
 
-// Update indicator when voice changes
+// Update indicator when voice changes; track Studio voice selections.
 if (voiceSel) {
-  voiceSel.addEventListener('change', updateVoiceStatus);
+  voiceSel.addEventListener('change', () => {
+    updateVoiceStatus();
+    if (voiceSel.value.startsWith('studio:')) trackEvent('studio_select');
+  });
 }
 
 /* ========== START SPEAK ========== */
@@ -968,6 +971,18 @@ function clearError() {
 
 /* ========== PREMIUM / STUDIO VOICES (ElevenLabs) ========== */
 
+// First-party funnel tracking — fire-and-forget, never blocks the UI.
+function trackEvent(name) {
+  try {
+    fetch(`${BILLING_URL}/api/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+      keepalive: true
+    }).catch(() => {});
+  } catch (e) {}
+}
+
 // Validate the stored license key and refresh quota. Safe to call anytime.
 async function loadLicense() {
   let key = '';
@@ -1259,6 +1274,7 @@ async function runStudioTrial() {
 function openUpgrade() {
   const m = $('upgradeModal');
   if (!m) return;
+  trackEvent('upgrade_open');
   m.hidden = false;
   document.body.style.overflow = 'hidden';
   const ki = $('keyInput');
@@ -1302,6 +1318,7 @@ async function loadTiers() {
 }
 
 async function startCheckout(priceId, btn) {
+  trackEvent('checkout_click');
   if (btn) { btn.disabled = true; btn.textContent = 'Redirecting…'; }
   try {
     const r = await fetch(`${BILLING_URL}/api/billing/checkout`, {
