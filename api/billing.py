@@ -262,6 +262,33 @@ async def create_checkout(request: Request):
         raise HTTPException(status_code=502, detail=f"stripe checkout failed: {e}")
 
 
+def _provision_subscription(stripe, sub_id, *, customer, email, checkout_session):
+    """Re-retrieve the subscription (canonical shape) and mint/update its license.
+    Defensive against payload/expansion differences across Stripe API versions."""
+    if not sub_id:
+        return
+    sub = stripe.Subscription.retrieve(sub_id)
+    items = (sub.get("items") or {}).get("data") or []
+    if not items:
+        print(f"[billing] sub {sub_id} has no line items")
+        return
+    price = items[0].get("price")
+    price_id = price.get("id") if isinstance(price, dict) else price
+    tier = TIERS.get(price_id)
+    if not tier:
+        print(f"[billing] no tier configured for price {price_id}")
+        return
+    status = sub.get("status")
+    mapped = "active" if status in ("active", "trialing") else \
+             ("past_due" if status == "past_due" else "canceled")
+    key = upsert_license_for_sub(
+        sub_id, stripe_customer=customer or sub.get("customer"),
+        plan=tier["plan"], char_cap=int(tier["cap"]),
+        status=mapped, email=email, checkout_session=checkout_session,
+    )
+    print(f"[billing] provisioned license {key} sub={sub_id} plan={tier['plan']} status={mapped}")
+
+
 @router.post("/api/billing/webhook")
 async def stripe_webhook(request: Request):
     """Stripe webhook. Verifies signature, then provisions/updates/disables licenses."""
@@ -280,42 +307,27 @@ async def stripe_webhook(request: Request):
 
     try:
         if etype == "checkout.session.completed":
-            sub_id = obj.get("subscription")
-            customer = obj.get("customer")
-            session_id = obj.get("id")
-            email = (obj.get("customer_details") or {}).get("email")
-            if sub_id:
-                sub = stripe.Subscription.retrieve(sub_id)
-                price_id = sub["items"]["data"][0]["price"]["id"]
-                tier = TIERS.get(price_id)
-                if tier:
-                    upsert_license_for_sub(
-                        sub_id, stripe_customer=customer, plan=tier["plan"],
-                        char_cap=int(tier["cap"]), status="active", email=email,
-                        checkout_session=session_id,
-                    )
+            _provision_subscription(
+                stripe, obj.get("subscription"),
+                customer=obj.get("customer"),
+                email=(obj.get("customer_details") or {}).get("email"),
+                checkout_session=obj.get("id"),
+            )
 
         elif etype in ("customer.subscription.updated", "customer.subscription.created"):
-            sub_id = obj.get("id")
-            customer = obj.get("customer")
-            price_id = obj["items"]["data"][0]["price"]["id"]
-            stripe_status = obj.get("status")  # active, past_due, canceled, etc.
-            tier = TIERS.get(price_id)
-            if tier and sub_id:
-                mapped = "active" if stripe_status in ("active", "trialing") else \
-                         ("past_due" if stripe_status == "past_due" else "canceled")
-                upsert_license_for_sub(
-                    sub_id, stripe_customer=customer, plan=tier["plan"],
-                    char_cap=int(tier["cap"]), status=mapped, email=None,
-                    checkout_session=None,
-                )
+            _provision_subscription(
+                stripe, obj.get("id"),
+                customer=obj.get("customer"),
+                email=None, checkout_session=None,
+            )
 
         elif etype == "customer.subscription.deleted":
             set_status_for_sub(obj.get("id"), "canceled")
 
     except Exception as e:
-        # Log but still 200 so Stripe doesn't hammer retries on a transient app error
-        print(f"[billing] webhook handler error on {etype}: {e}")
+        # Log full traceback but still 200 so Stripe doesn't hammer retries.
+        import traceback
+        print(f"[billing] webhook handler error on {etype}: {e}\n{traceback.format_exc()}")
 
     return {"received": True}
 
