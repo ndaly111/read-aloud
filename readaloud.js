@@ -317,8 +317,11 @@ function populateVoiceSel() {
 
   voiceSel.appendChild(browserGroup);
 
-  // Select first neural voice by default if available, otherwise first browser voice
-  if (apiAvailable && neuralVoices.length) {
+  // Default selection: Studio voices first when a license is active (the user is
+  // paying for them, so make them the default), then premium Edge, then browser.
+  if (studioActive) {
+    voiceSel.value = `studio:${studioVoices[0].id}`;
+  } else if (apiAvailable && neuralVoices.length) {
     voiceSel.value = `neural:${neuralVoices[0].id}`;
   } else {
     voiceSel.value = 'browser:-1';
