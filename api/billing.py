@@ -25,11 +25,14 @@ Required env vars (all must be set for billing to activate):
                             "price_def":{"plan":"pro","cap":60000}}
   SITE_URL                 e.g. https://read-aloud.com  (for success/cancel redirects)
 """
+import io
 import json
 import os
 import secrets
 import sqlite3
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Optional
@@ -48,6 +51,15 @@ except Exception:
 
 # Billing only activates when Stripe + DB are fully configured.
 BILLING_ENABLED = bool(STRIPE_SECRET and STRIPE_WEBHOOK_SECRET and LICENSE_DB and TIERS)
+
+# Premium TTS (ElevenLabs) — only activates when the API key is set AND billing is on.
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
+ELEVENLABS_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2")
+# Circuit breaker: hard ceiling on total premium characters generated per UTC day,
+# across ALL users. Protects against a bug/abuse running up an unbounded ElevenLabs bill.
+PREMIUM_DAILY_CHAR_CAP = int(os.environ.get("PREMIUM_DAILY_CHAR_CAP", "500000"))
+PREMIUM_MAX_CHARS_PER_REQUEST = int(os.environ.get("PREMIUM_MAX_CHARS_PER_REQUEST", "5000"))
+PREMIUM_TTS_ENABLED = bool(BILLING_ENABLED and ELEVENLABS_API_KEY)
 
 router = APIRouter()
 _db_lock = Lock()
@@ -92,6 +104,12 @@ def init_db() -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_lic_sub ON licenses(stripe_sub)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_lic_session ON licenses(checkout_session)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_lic_customer ON licenses(stripe_customer)")
+        # Global daily premium-char counter (circuit breaker against runaway cost)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS premium_daily ("
+            "  day TEXT PRIMARY KEY,"
+            "  chars INTEGER NOT NULL DEFAULT 0)"
+        )
         conn.commit()
     finally:
         conn.close()
@@ -236,6 +254,83 @@ def consume_chars(key: str, n: int) -> tuple:
             c.close()
 
 
+def refund_chars(key: str, n: int) -> None:
+    """Return n characters to a license (used when an ElevenLabs call fails after
+    we've already debited the quota). Floors char_used at 0."""
+    if not LICENSE_DB or n <= 0:
+        return
+    with _db_lock:
+        c = _conn()
+        try:
+            c.execute(
+                "UPDATE licenses SET char_used = MAX(0, char_used - ?), updated_at=? WHERE key=?",
+                (n, _now(), key),
+            )
+            c.commit()
+        finally:
+            c.close()
+
+
+def _today() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def daily_spend_check_and_add(n: int) -> tuple:
+    """Circuit breaker. Atomically check today's global premium-char total against
+    PREMIUM_DAILY_CHAR_CAP and add n if under. Returns (ok, today_total)."""
+    if not LICENSE_DB:
+        return (False, 0)
+    with _db_lock:
+        c = _conn()
+        try:
+            day = _today()
+            row = c.execute("SELECT chars FROM premium_daily WHERE day=?", (day,)).fetchone()
+            cur_total = row["chars"] if row else 0
+            if cur_total + n > PREMIUM_DAILY_CHAR_CAP:
+                return (False, cur_total)
+            c.execute(
+                "INSERT INTO premium_daily (day, chars) VALUES (?, ?) "
+                "ON CONFLICT(day) DO UPDATE SET chars = chars + ?",
+                (day, n, n),
+            )
+            c.commit()
+            return (True, cur_total + n)
+        finally:
+            c.close()
+
+
+def daily_spend_refund(n: int) -> None:
+    if not LICENSE_DB or n <= 0:
+        return
+    with _db_lock:
+        c = _conn()
+        try:
+            c.execute(
+                "UPDATE premium_daily SET chars = MAX(0, chars - ?) WHERE day=?",
+                (n, _today()),
+            )
+            c.commit()
+        finally:
+            c.close()
+
+
+def _elevenlabs_tts(text: str, voice_id: str) -> bytes:
+    """Call ElevenLabs TTS. Returns mp3 bytes or raises. Key stays server-side."""
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    payload = json.dumps({
+        "text": text,
+        "model_id": ELEVENLABS_MODEL,
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+    }).encode("utf-8")
+    req = urllib.request.Request(url, data=payload, method="POST", headers={
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+    })
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return resp.read()
+
+
 # ----------------------------------------------------------------------
 # Endpoints
 # ----------------------------------------------------------------------
@@ -363,11 +458,107 @@ async def billing_status(key: Optional[str] = None, session_id: Optional[str] = 
     }
 
 
+# ----------------------------------------------------------------------
+# Premium TTS (ElevenLabs) — Phase 2
+# ----------------------------------------------------------------------
+from fastapi.responses import StreamingResponse
+
+
+@router.get("/api/tts/premium/voices")
+async def premium_voices():
+    """Proxy ElevenLabs' voice list so the frontend can populate the premium selector.
+    Key stays server-side."""
+    if not PREMIUM_TTS_ENABLED:
+        raise HTTPException(status_code=404, detail="premium tts not enabled")
+    try:
+        req = urllib.request.Request(
+            "https://api.elevenlabs.io/v1/voices",
+            headers={"xi-api-key": ELEVENLABS_API_KEY},
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+        voices = [
+            {"id": v.get("voice_id"), "name": v.get("name"),
+             "labels": v.get("labels", {})}
+            for v in data.get("voices", [])
+        ]
+        return {"voices": voices}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"could not fetch voices: {e}")
+
+
+@router.post("/api/tts/premium")
+async def premium_tts(request: Request):
+    """Body: {"text","voice_id","license_key"}. Validates the license + quota +
+    daily circuit breaker, then streams ElevenLabs audio. Charges the license by
+    character count; refunds on generation failure so failed calls aren't billed."""
+    if not PREMIUM_TTS_ENABLED:
+        raise HTTPException(status_code=404, detail="premium tts not enabled")
+
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    voice_id = body.get("voice_id") or ""
+    key = body.get("license_key") or ""
+
+    if not text:
+        raise HTTPException(status_code=400, detail="text required")
+    if not voice_id:
+        raise HTTPException(status_code=400, detail="voice_id required")
+    if not key:
+        raise HTTPException(status_code=401, detail="license_key required")
+    n = len(text)
+    if n > PREMIUM_MAX_CHARS_PER_REQUEST:
+        raise HTTPException(status_code=413,
+                            detail=f"text too long ({n}); max {PREMIUM_MAX_CHARS_PER_REQUEST} per request")
+
+    # 1) Global daily circuit breaker (protects against runaway cost)
+    ok_day, _total = daily_spend_check_and_add(n)
+    if not ok_day:
+        raise HTTPException(status_code=503,
+                            detail="premium temporarily unavailable (daily capacity reached)")
+
+    # 2) Per-license quota (atomic debit)
+    ok, remaining, reason = consume_chars(key, n)
+    if not ok:
+        daily_spend_refund(n)  # undo the daily add — we're not generating
+        if reason == "no_such_key":
+            raise HTTPException(status_code=401, detail="invalid license key")
+        if reason == "cap_reached":
+            raise HTTPException(status_code=402, detail="monthly character limit reached — upgrade or wait for renewal")
+        raise HTTPException(status_code=403, detail=f"license not active ({reason})")
+
+    # 3) Generate. On failure, refund both counters so the user isn't charged.
+    try:
+        audio = _elevenlabs_tts(text, voice_id)
+    except urllib.error.HTTPError as e:
+        refund_chars(key, n); daily_spend_refund(n)
+        raise HTTPException(status_code=502, detail=f"elevenlabs error {e.code}")
+    except Exception as e:
+        refund_chars(key, n); daily_spend_refund(n)
+        raise HTTPException(status_code=502, detail=f"premium generation failed: {e}")
+
+    if not audio or len(audio) < 100:
+        refund_chars(key, n); daily_spend_refund(n)
+        raise HTTPException(status_code=502, detail="empty audio from provider")
+
+    return StreamingResponse(
+        io.BytesIO(audio),
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": "inline",
+                 "X-Chars-Remaining": str(remaining)},
+    )
+
+
 # Initialize the DB at import time if billing is configured
 if BILLING_ENABLED:
     try:
         init_db()
         print("[billing] enabled — license DB ready")
+        if PREMIUM_TTS_ENABLED:
+            print(f"[billing] premium TTS enabled (ElevenLabs model={ELEVENLABS_MODEL}, "
+                  f"daily cap={PREMIUM_DAILY_CHAR_CAP:,} chars)")
+        else:
+            print("[billing] premium TTS disabled (set ELEVENLABS_API_KEY to enable)")
     except Exception as _e:
         print(f"[billing] init failed, disabling: {_e}")
         BILLING_ENABLED = False
