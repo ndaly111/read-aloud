@@ -1589,6 +1589,19 @@ form button { justify-self: start; }
   border-bottom: 1px dotted var(--vermilion);
 }
 .upgrade-link:hover { color: var(--vermilion-dark); }
+.preview-btn {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  background: var(--vermilion);
+  color: var(--paper-bright);
+  border: 1px solid var(--ink);
+  box-shadow: var(--shadow-soft);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.preview-btn:hover { background: var(--vermilion-dark); }
+.preview-btn:disabled { opacity: 0.6; cursor: default; }
 .license-status {
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -1728,6 +1741,12 @@ form button { justify-self: start; }
   color: var(--ink-soft);
   min-height: 1.1em;
 }
+.modal-support {
+  margin: 14px 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-faded);
+}
+.modal-support a { color: var(--vermilion); }
 .key-recover { margin-top: 14px; }
 .key-recover #recoverBox { margin-top: 10px; }
 .key-recover #recoverEmail {

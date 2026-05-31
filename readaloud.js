@@ -19,7 +19,8 @@ let activeTtsUrl = TTS_ENDPOINTS[0];
 const BILLING_URL = TTS_ENDPOINTS[0];
 const LICENSE_KEY_LS = 'ra_license_key';
 let license = null;        // {key, plan, status, char_cap, char_used, char_remaining}
-let studioVoices = [];     // [{id, name, labels}] from ElevenLabs
+let studioVoices = [];     // [{id, name, labels}] — Studio voice catalog
+let previewAudio = null;   // currently-playing Studio preview sample
 
 // Premium Neural Voices - simplified list (best voices only)
 const NEURAL_VOICES = {
@@ -153,6 +154,8 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
   };
   const recoverBtn = $('recoverBtn');
   if (recoverBtn) recoverBtn.onclick = recoverKey;
+  const previewBtn = $('previewBtn');
+  if (previewBtn) previewBtn.onclick = togglePreview;
   const modal = $('upgradeModal');
   if (modal) modal.addEventListener('click', (e) => {
     if (e.target === modal) closeUpgrade();
@@ -188,14 +191,10 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
     }
   });
 
-  // If a license key is stored (e.g. from the success page), validate it and
-  // unlock Studio voices in the background — never blocks the free tool.
-  loadLicense().then(async () => {
-    if (license && license.status === 'active') {
-      await loadStudioVoices();
-      populateVoiceSel();
-    }
-  });
+  // Load the Studio voice catalog (for previews) and validate any stored license
+  // in the background, then repopulate so Studio voices + the right default appear.
+  // Never blocks the free tool.
+  Promise.all([loadLicense(), loadStudioVoices()]).then(() => populateVoiceSel());
 })();
 
 /* ========== API CHECK ========== */
@@ -268,12 +267,12 @@ function populateVoiceSel() {
   const lang = langSel.value;
   voiceSel.innerHTML = '';
 
-  // Studio (ElevenLabs) voices — only when a license is active. Listed first.
+  // Studio voices — shown to everyone so they can preview before subscribing.
   // The model is multilingual, so all studio voices are offered regardless of language.
-  const studioActive = license && license.status === 'active' && studioVoices.length;
-  if (studioActive) {
+  const studioLicensed = license && license.status === 'active';
+  if (studioVoices.length) {
     const studioGroup = document.createElement('optgroup');
-    studioGroup.label = '✦ Studio Voices';
+    studioGroup.label = studioLicensed ? '✦ Studio Voices' : '✦ Studio Voices — subscribe to use';
     studioVoices.forEach(v => {
       const opt = document.createElement('option');
       opt.value = `studio:${v.id}`;
@@ -326,7 +325,7 @@ function populateVoiceSel() {
 
   // Default selection: Studio voices first when a license is active (the user is
   // paying for them, so make them the default), then premium Edge, then browser.
-  if (studioActive) {
+  if (studioLicensed && studioVoices.length) {
     voiceSel.value = `studio:${studioVoices[0].id}`;
   } else if (apiAvailable && neuralVoices.length) {
     voiceSel.value = `neural:${neuralVoices[0].id}`;
@@ -340,6 +339,12 @@ function populateVoiceSel() {
 
 function updateVoiceStatus() {
   const [voiceType] = voiceSel.value.split(':');
+  // Show the "Hear a sample" button only when a Studio voice is selected.
+  const pv = $('previewBtn');
+  if (pv) {
+    pv.hidden = voiceType !== 'studio';
+    if (voiceType !== 'studio') stopPreview();
+  }
   const indicator = document.getElementById('voice-type-indicator');
   if (indicator) {
     if (voiceType === 'neural') {
@@ -372,6 +377,14 @@ function startSpeak() {
   const [voiceType, voiceId] = voiceSel.value.split(':');
 
   if (voiceType === 'studio') {
+    if (!(license && license.status === 'active')) {
+      // Unlicensed: don't generate — nudge to subscribe (they can still preview).
+      isSpeaking = false;
+      updateControls();
+      setStatus('Ready');
+      openUpgrade();
+      return;
+    }
     useStudioSpeech(voiceId);
   } else if (voiceType === 'neural' && apiAvailable) {
     useNeuralSpeech(voiceId);
@@ -971,7 +984,8 @@ async function loadLicense() {
 }
 
 async function loadStudioVoices() {
-  if (!(license && license.status === 'active')) { studioVoices = []; return; }
+  // Loaded for everyone (the endpoint is public) so unlicensed visitors can
+  // browse and preview Studio voices before subscribing.
   try {
     const r = await fetch(`${BILLING_URL}/api/tts/premium/voices`);
     if (r.ok) { const d = await r.json(); studioVoices = d.voices || []; }
@@ -1084,6 +1098,50 @@ async function useStudioSpeech(voiceId) {
     setStatus('Ready');
   } finally {
     loadLicense(); // refresh remaining quota from the server
+  }
+}
+
+/* ========== STUDIO PREVIEW SAMPLES (free, cached) ========== */
+function stopPreview() {
+  if (previewAudio) {
+    previewAudio.pause();
+    previewAudio = null;
+  }
+  const btn = $('previewBtn');
+  if (btn && !btn.hidden) btn.textContent = '▶ Hear a sample';
+}
+
+function togglePreview() {
+  if (previewAudio && !previewAudio.paused) { stopPreview(); return; }
+  playSample();
+}
+
+async function playSample() {
+  const val = voiceSel.value;
+  if (!val.startsWith('studio:')) return;
+  const vid = val.slice('studio:'.length);
+  const btn = $('previewBtn');
+  stopPreview();
+  if (btn) { btn.disabled = true; btn.textContent = '… loading'; }
+  try {
+    const r = await fetch(`${BILLING_URL}/api/tts/premium/sample?voice_id=${encodeURIComponent(vid)}`);
+    if (!r.ok) throw new Error('sample ' + r.status);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    previewAudio = new Audio(url);
+    previewAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      previewAudio = null;
+      if (btn) btn.textContent = '▶ Hear a sample';
+    };
+    previewAudio.onerror = () => {
+      previewAudio = null;
+      if (btn) { btn.disabled = false; btn.textContent = '▶ Hear a sample'; }
+    };
+    await previewAudio.play();
+    if (btn) { btn.disabled = false; btn.textContent = '⏸ Stop sample'; }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '▶ Hear a sample'; }
   }
 }
 

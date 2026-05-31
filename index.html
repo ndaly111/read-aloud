@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260531b">
+  <link rel="stylesheet" href="/styles.css?v=20260531c">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -51,14 +51,14 @@
       <h1 id="hero-title" class="hero-title">The page,<br><em>read aloud.</em></h1>
 
       <p class="hero-lede">
-        Paste any text — an email you're proofing, a chapter you'd rather hear, lecture notes, a long thread — and let it read itself back. Browser voices stay on your device and work offline. Premium voices stream through Microsoft Edge TTS for a more natural sound. No sign‑up. No paywall.
+        Paste any text — an email you're proofing, a chapter you'd rather hear, lecture notes, a long thread — and let it read itself back. Browser voices stay on your device and work offline. Premium Edge voices stream for a more natural sound — free, no sign‑up. Want studio‑grade AI narration? Optional <strong>Studio voices</strong> start at $9/month.
       </p>
 
       <p class="hero-tags">
         <span>40+ voices</span><span class="sep">·</span>
         <span>0.5× — 2×</span><span class="sep">·</span>
         <span>MP3 download</span><span class="sep">·</span>
-        <span>Free, forever</span>
+        <span>Free core, no account</span>
       </p>
     </div>
 
@@ -86,6 +86,7 @@
                 </label>
               </div>
               <div class="voice-premium-row">
+                <button type="button" id="previewBtn" class="preview-btn" hidden>▶ Hear a sample</button>
                 <button type="button" id="upgradeBtn" class="upgrade-link">✦ Unlock Studio voices</button>
                 <span id="licenseStatus" class="license-status" hidden></span>
               </div>
@@ -277,6 +278,7 @@
         <button type="button" id="keyApply" class="btn btn--secondary">Apply</button>
       </div>
       <p id="keyMsg" class="key-msg" role="status" aria-live="polite"></p>
+      <p class="modal-support">Questions or trouble? <a href="mailto:admin@read-aloud.com">admin@read-aloud.com</a></p>
       <div class="key-recover">
         <button type="button" id="recoverToggle" class="link-btn">Lost your key? Email it to me</button>
         <div id="recoverBox" hidden>
@@ -305,7 +307,7 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260531b"></script>
+<script src="readaloud.js?v=20260531c"></script>
 
 <!-- visit counter + goal fill -->
 <script>

@@ -62,6 +62,7 @@ SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
 SMTP_USER = os.environ.get("SMTP_USER")
 SMTP_PASS = os.environ.get("SMTP_PASS")
 SMTP_FROM = os.environ.get("SMTP_FROM", "Read-Aloud <noreply@read-aloud.com>")
+REPLY_TO = os.environ.get("SUPPORT_EMAIL", "admin@read-aloud.com")
 EMAIL_ENABLED = bool(SMTP_HOST and SMTP_FROM)
 
 # Premium TTS (ElevenLabs) — only activates when the API key is set AND billing is on.
@@ -390,6 +391,8 @@ def _send_email(to_addr: str, subject: str, text_body: str, html_body: Optional[
     msg["From"] = SMTP_FROM
     msg["To"] = to_addr
     msg["Subject"] = subject
+    if REPLY_TO:
+        msg["Reply-To"] = REPLY_TO
     msg.set_content(text_body)
     if html_body:
         msg.add_alternative(html_body, subtype="html")
@@ -645,30 +648,83 @@ async def billing_tiers():
 # ----------------------------------------------------------------------
 # Premium TTS (ElevenLabs) — Phase 2
 # ----------------------------------------------------------------------
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
+
+# Free preview samples: one short fixed clip per voice, generated once and cached
+# to disk. Lets unlicensed visitors hear a Studio voice before paying. Bounded
+# cost: ~(#voices x sample length) one time, then zero — never per-play.
+PREMIUM_SAMPLE_TEXT = os.environ.get(
+    "PREMIUM_SAMPLE_TEXT",
+    "Hi there! This is a preview of a Read-Aloud Studio voice. This is how your "
+    "text will sound: natural, expressive, and easy to listen to.")
+PREMIUM_SAMPLE_DIR = os.environ.get("PREMIUM_SAMPLE_DIR", "/home/ubuntu/read-aloud/samples")
+
+_voices_cache = {"data": None, "ids": set(), "ts": 0.0}
+
+
+def _fetch_voices():
+    """Blocking. Returns the ElevenLabs voice list (cached 1h) and caches the id set."""
+    now = time.time()
+    if _voices_cache["data"] is not None and now - _voices_cache["ts"] < 3600:
+        return _voices_cache["data"]
+    req = urllib.request.Request(
+        "https://api.elevenlabs.io/v1/voices",
+        headers={"xi-api-key": ELEVENLABS_API_KEY},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        data = json.loads(resp.read().decode())
+    voices = [
+        {"id": v.get("voice_id"), "name": v.get("name"), "labels": v.get("labels", {})}
+        for v in data.get("voices", [])
+    ]
+    _voices_cache["data"] = voices
+    _voices_cache["ids"] = {v["id"] for v in voices if v["id"]}
+    _voices_cache["ts"] = now
+    return voices
 
 
 @router.get("/api/tts/premium/voices")
 async def premium_voices():
-    """Proxy ElevenLabs' voice list so the frontend can populate the premium selector.
-    Key stays server-side."""
+    """Public voice list for the Studio selector. Key stays server-side."""
     if not PREMIUM_TTS_ENABLED:
         raise HTTPException(status_code=404, detail="premium tts not enabled")
     try:
-        req = urllib.request.Request(
-            "https://api.elevenlabs.io/v1/voices",
-            headers={"xi-api-key": ELEVENLABS_API_KEY},
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode())
-        voices = [
-            {"id": v.get("voice_id"), "name": v.get("name"),
-             "labels": v.get("labels", {})}
-            for v in data.get("voices", [])
-        ]
+        voices = await run_in_threadpool(_fetch_voices)
         return {"voices": voices}
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"could not fetch voices: {e}")
+
+
+@router.get("/api/tts/premium/sample")
+async def premium_sample(voice_id: str):
+    """Free, cached preview clip for one voice. Generated once on first request
+    (validated against the real voice list so generation is bounded), then served
+    from disk forever — no per-play cost, no license required."""
+    if not PREMIUM_TTS_ENABLED:
+        raise HTTPException(status_code=404, detail="premium tts not enabled")
+    if not voice_id:
+        raise HTTPException(status_code=400, detail="voice_id required")
+    try:
+        await run_in_threadpool(_fetch_voices)
+    except Exception:
+        pass
+    if _voices_cache["ids"] and voice_id not in _voices_cache["ids"]:
+        raise HTTPException(status_code=400, detail="unknown voice")
+    safe = voice_id.replace("/", "").replace("..", "").replace("\\", "")
+    path = os.path.join(PREMIUM_SAMPLE_DIR, f"{safe}.mp3")
+    if not os.path.exists(path):
+        try:
+            audio = await run_in_threadpool(_elevenlabs_tts, PREMIUM_SAMPLE_TEXT, voice_id)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"sample generation failed: {e}")
+        if not audio or len(audio) < 100:
+            raise HTTPException(status_code=502, detail="empty sample from provider")
+        os.makedirs(PREMIUM_SAMPLE_DIR, exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(audio)
+        print(f"[billing] generated preview sample for voice {voice_id} ({len(audio)} bytes)")
+    return FileResponse(path, media_type="audio/mpeg",
+                        headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.post("/api/tts/premium")
