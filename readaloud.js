@@ -1120,20 +1120,49 @@ function togglePreview() {
   playSample();
 }
 
+// Pick a pleasant default preview voice (Roger, the catalog's first, isn't ideal).
+function defaultPreviewVoiceId() {
+  const prefer = ['Sarah', 'Charlotte', 'Brian', 'George', 'Daniel'];
+  for (const name of prefer) {
+    const v = studioVoices.find(x => (x.name || '').split(' - ')[0].trim() === name);
+    if (v) return v.id;
+  }
+  return studioVoices[0] && studioVoices[0].id;
+}
+
+// "Hear a sample": prefer the visitor's OWN text (first ~220 chars, one free trial),
+// then fall back to a short canned sample so they can keep auditioning voices.
 async function playSample() {
   const val = voiceSel.value;
-  const vid = val.startsWith('studio:')
-    ? val.slice('studio:'.length)
-    : (studioVoices[0] && studioVoices[0].id);
+  const vid = val.startsWith('studio:') ? val.slice('studio:'.length) : defaultPreviewVoiceId();
   if (!vid) return;
+  const text = txt.value.trim();
   const btn = $('previewBtn');
   stopPreview();
   if (btn) { btn.disabled = true; btn.textContent = '… loading'; }
+
+  let url = null;
   try {
-    const r = await fetch(`${BILLING_URL}/api/tts/premium/sample?voice_id=${encodeURIComponent(vid)}`);
-    if (!r.ok) throw new Error('sample ' + r.status);
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
+    // First choice: their text, via the one-time personalized trial.
+    if (text && !studioTrialUsed()) {
+      const tr = await fetch(`${BILLING_URL}/api/tts/premium/trial`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice_id: vid })
+      });
+      if (tr.ok) {
+        try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {}
+        url = URL.createObjectURL(await tr.blob());
+      } else if (tr.status === 429) {
+        try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {}
+      }
+    }
+    // Fallback: canned sample clip for this voice (free, unlimited).
+    if (!url) {
+      const r = await fetch(`${BILLING_URL}/api/tts/premium/sample?voice_id=${encodeURIComponent(vid)}`);
+      if (!r.ok) throw new Error('sample ' + r.status);
+      url = URL.createObjectURL(await r.blob());
+    }
     previewAudio = new Audio(url);
     previewAudio.onended = () => {
       URL.revokeObjectURL(url);
@@ -1147,6 +1176,7 @@ async function playSample() {
     await previewAudio.play();
     if (btn) { btn.disabled = false; btn.textContent = '⏸ Stop sample'; }
   } catch (e) {
+    if (url) URL.revokeObjectURL(url);
     if (btn) { btn.disabled = false; btn.textContent = '▶ Hear a sample'; }
   }
 }
