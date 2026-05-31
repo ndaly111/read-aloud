@@ -262,27 +262,38 @@ async def create_checkout(request: Request):
         raise HTTPException(status_code=502, detail=f"stripe checkout failed: {e}")
 
 
+def _sg(obj, key, default=None):
+    """Safe field access for Stripe objects. stripe>=15 StripeObjects do NOT
+    implement .get(), and missing-key subscript raises KeyError, so we guard."""
+    try:
+        val = obj[key]
+    except (KeyError, TypeError, AttributeError):
+        return default
+    return val if val is not None else default
+
+
 def _provision_subscription(stripe, sub_id, *, customer, email, checkout_session):
     """Re-retrieve the subscription (canonical shape) and mint/update its license.
-    Defensive against payload/expansion differences across Stripe API versions."""
+    Uses _sg() everywhere because Stripe objects lack .get() in stripe>=15."""
     if not sub_id:
         return
     sub = stripe.Subscription.retrieve(sub_id)
-    items = (sub.get("items") or {}).get("data") or []
-    if not items:
+    items_obj = _sg(sub, "items")
+    data = _sg(items_obj, "data") if items_obj is not None else None
+    if not data:
         print(f"[billing] sub {sub_id} has no line items")
         return
-    price = items[0].get("price")
-    price_id = price.get("id") if isinstance(price, dict) else price
-    tier = TIERS.get(price_id)
+    price = _sg(data[0], "price")
+    price_id = price if isinstance(price, str) else _sg(price, "id")
+    tier = TIERS.get(price_id)  # TIERS is a plain dict — .get is fine
     if not tier:
         print(f"[billing] no tier configured for price {price_id}")
         return
-    status = sub.get("status")
+    status = _sg(sub, "status")
     mapped = "active" if status in ("active", "trialing") else \
              ("past_due" if status == "past_due" else "canceled")
     key = upsert_license_for_sub(
-        sub_id, stripe_customer=customer or sub.get("customer"),
+        sub_id, stripe_customer=customer or _sg(sub, "customer"),
         plan=tier["plan"], char_cap=int(tier["cap"]),
         status=mapped, email=email, checkout_session=checkout_session,
     )
@@ -308,21 +319,21 @@ async def stripe_webhook(request: Request):
     try:
         if etype == "checkout.session.completed":
             _provision_subscription(
-                stripe, obj.get("subscription"),
-                customer=obj.get("customer"),
-                email=(obj.get("customer_details") or {}).get("email"),
-                checkout_session=obj.get("id"),
+                stripe, _sg(obj, "subscription"),
+                customer=_sg(obj, "customer"),
+                email=_sg(_sg(obj, "customer_details") or {}, "email"),
+                checkout_session=_sg(obj, "id"),
             )
 
         elif etype in ("customer.subscription.updated", "customer.subscription.created"):
             _provision_subscription(
-                stripe, obj.get("id"),
-                customer=obj.get("customer"),
+                stripe, _sg(obj, "id"),
+                customer=_sg(obj, "customer"),
                 email=None, checkout_session=None,
             )
 
         elif etype == "customer.subscription.deleted":
-            set_status_for_sub(obj.get("id"), "canceled")
+            set_status_for_sub(_sg(obj, "id"), "canceled")
 
     except Exception as e:
         # Log full traceback but still 200 so Stripe doesn't hammer retries.
