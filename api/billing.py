@@ -77,6 +77,9 @@ ELEVENLABS_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 # Circuit breaker: hard ceiling on total premium characters generated per UTC day,
 # across ALL users. Protects against a bug/abuse running up an unbounded ElevenLabs bill.
 PREMIUM_DAILY_CHAR_CAP = int(os.environ.get("PREMIUM_DAILY_CHAR_CAP", "500000"))
+# Manual override for the ElevenLabs monthly plan fee (cents), used on the P&L when
+# the API key can't read /v1/user/subscription. e.g. 2200 = Creator ($22/mo).
+ELEVENLABS_PLAN_FEE_CENTS = int(os.environ.get("ELEVENLABS_PLAN_FEE_CENTS", "0"))
 PREMIUM_MAX_CHARS_PER_REQUEST = int(os.environ.get("PREMIUM_MAX_CHARS_PER_REQUEST", "5000"))
 # Free personalized trial: unlicensed visitors hear the first N chars of THEIR text
 # in a Studio voice, once. Bounded by per-IP cooldown + a global daily char cap.
@@ -983,6 +986,8 @@ def _gather_finance() -> dict:
         out["el_fee_cents"] = ELEVENLABS_PLAN_FEES.get(str(els.get("tier", "")).lower())
     except Exception as e:
         out["el_error"] = str(e)
+    # Fall back to the manual plan-fee override if the API didn't give us a tier.
+    out["el_fee_cents"] = out.get("el_fee_cents") or (ELEVENLABS_PLAN_FEE_CENTS or None)
 
     # --- License DB aggregates ---
     try:
@@ -998,6 +1003,12 @@ def _gather_finance() -> dict:
             d = {r["day"]: r["chars"] for r in pd}
             out["premium_today"] = d.get(today, 0)
             out["trials_today"] = d.get("trial:" + today, 0)
+            tot = c.execute(
+                "SELECT COALESCE(SUM(CASE WHEN day LIKE 'trial:%' THEN chars ELSE 0 END),0) trial_all, "
+                "COALESCE(SUM(CASE WHEN day NOT LIKE 'trial:%' THEN chars ELSE 0 END),0) prem_all "
+                "FROM premium_daily").fetchone()
+            out["premium_all"] = tot["prem_all"]
+            out["trials_all"] = tot["trial_all"]
         finally:
             c.close()
     except Exception as e:
@@ -1061,21 +1072,19 @@ def _render_finance_section(d: dict) -> str:
         parts.append("<tr><td colspan='3' class='muted'>No active subscriptions yet.</td></tr>")
     parts.append("</table>")
 
-    # ElevenLabs cost side
-    parts.append("<h2>ElevenLabs (cost side)</h2><table>")
-    parts.append(f"<tr><td>Plan tier</td><td class='num'>{d.get('el_tier','?')}</td></tr>")
-    parts.append(f"<tr><td>Monthly plan fee</td><td class='num neg'>{_money(d.get('el_fee_cents') or 0)}</td></tr>")
-    parts.append(f"<tr><td>Characters used (period)</td><td class='num'>{(el_used if el_used is not None else '?'):,}</td></tr>"
-                 if isinstance(el_used, int) else
-                 f"<tr><td>Characters used (period)</td><td class='num'>{el_used}</td></tr>")
-    parts.append(f"<tr><td>Character limit</td><td class='num'>{el_limit:,}</td></tr>"
-                 if isinstance(el_limit, int) else
-                 f"<tr><td>Character limit</td><td class='num'>{el_limit}</td></tr>")
-    if el_pct:
-        parts.append(f"<tr><td>Usage</td><td class='num'>{el_pct}</td></tr>")
+    # ElevenLabs / character cost side
+    el_used_s = f"{el_used:,}" if isinstance(el_used, int) else "—"
+    el_limit_s = f"{el_limit:,}" if isinstance(el_limit, int) else "—"
+    parts.append("<h2>Character usage &amp; ElevenLabs (cost side)</h2><table>")
+    parts.append(f"<tr><td>Plan tier</td><td class='num'>{d.get('el_tier') or '—'}</td></tr>")
+    parts.append(f"<tr><td>Monthly plan fee</td><td class='num'>{_money(d.get('el_fee_cents') or 0)}</td></tr>")
+    parts.append(f"<tr><td>Chars generated all-time (our tally)</td>"
+                 f"<td class='num'>{d.get('premium_all',0):,} paid &middot; {d.get('trials_all',0):,} trial</td></tr>")
+    parts.append(f"<tr><td>EL usage this period (their API)</td><td class='num'>{el_used_s} / {el_limit_s}</td></tr>")
     parts.append("</table>")
     if d.get("el_error"):
-        parts.append(f"<p class='warn'>ElevenLabs error: {d['el_error']}</p>")
+        parts.append(f"<p class='muted'>ElevenLabs usage API unavailable ({d['el_error']}). "
+                     f"Char counts above are our own tally; set ELEVENLABS_PLAN_FEE_CENTS to record the plan cost.</p>")
 
     # License DB / character consumption
     parts.append("<h2>Licenses &amp; character consumption</h2><table>")
