@@ -116,6 +116,18 @@ app.add_middleware(
 
 ALLOWED_ORIGIN_PREFIXES = tuple(ALLOWED_ORIGINS)
 
+# ----------------------------------------------------------------------
+# Premium billing/licensing (Phase 1). Fully ENV-GATED — the router's
+# endpoints 404 unless Stripe + LICENSE_DB env vars are configured, so this
+# import + include is a no-op on the current free deployment. The free
+# /api/tts path below is untouched.
+# ----------------------------------------------------------------------
+try:
+    import billing as _billing
+    app.include_router(_billing.router)
+except Exception as _be:  # never let billing break the core TTS service
+    print(f"[tts] billing module not loaded: {_be}")
+
 
 def _origin_allowed(request: Request) -> bool:
     """Allow only browser callers from a known site (Origin or Referer)."""

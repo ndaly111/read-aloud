@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Premium activated · Read-Aloud</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav-container">
+    <a class="logo" href="/index.html">Read‑Aloud</a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/index.html">Home</a>
+      <a href="/guides.html">Guides</a>
+      <a href="/help.html">Help</a>
+      <a href="/recommendations.html">Resources</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="masthead">
+  <div style="max-width:680px;margin:0 auto;padding:24px;">
+    <p class="panel-eyebrow">Premium</p>
+    <h1 class="hero-title">You're in. <em>Thank you.</em></h1>
+    <p class="hero-lede">
+      Your premium voices are ready. Copy your license key below and paste it into the
+      tool (under Voice) to unlock them. Keep this key safe — it's how the app knows
+      your subscription is active.
+    </p>
+
+    <div id="keyBox" style="margin:24px 0;padding:20px;border:1px solid var(--ink,#1a1c22);
+         box-shadow:4px 4px 0 0 var(--ink,#1a1c22);background:var(--surface,#faf4e6);">
+      <p class="panel-spec" style="margin:0 0 8px;">Your license key</p>
+      <code id="licenseKey" style="font-family:'Space Mono',monospace;font-size:1rem;
+            word-break:break-all;display:block;">Loading…</code>
+      <p id="planInfo" class="panel-spec" style="margin:12px 0 0;"></p>
+      <button id="copyBtn" class="btn" style="margin-top:14px;" disabled>Copy key</button>
+    </div>
+
+    <p id="errMsg" class="error-line" role="alert" style="display:none;"></p>
+
+    <p class="hero-tags">
+      <a href="/index.html">← Back to the tool</a>
+    </p>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-container">
+    <span>© 2026 Read‑Aloud</span> · <a href="/about.html">About</a> · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+  </div>
+</footer>
+
+<script>
+(async function () {
+  const TTS_API = 'https://tts.read-aloud.com';
+  const keyEl = document.getElementById('licenseKey');
+  const planEl = document.getElementById('planInfo');
+  const copyBtn = document.getElementById('copyBtn');
+  const errEl = document.getElementById('errMsg');
+
+  function fail(msg) {
+    keyEl.textContent = '—';
+    errEl.style.display = 'block';
+    errEl.textContent = msg;
+  }
+
+  const params = new URLSearchParams(location.search);
+  const sessionId = params.get('session_id');
+  if (!sessionId) {
+    fail("No checkout session found. If you just paid, check your email or contact admin@read-aloud.com.");
+    return;
+  }
+
+  // The webhook provisions the license asynchronously; retry briefly if it's
+  // not ready the instant we land here.
+  let lic = null;
+  for (let attempt = 0; attempt < 6 && !lic; attempt++) {
+    try {
+      const resp = await fetch(`${TTS_API}/api/billing/status?session_id=${encodeURIComponent(sessionId)}`);
+      if (resp.ok) { lic = await resp.json(); break; }
+    } catch (e) { /* retry */ }
+    await new Promise(r => setTimeout(r, 1500));
+  }
+
+  if (!lic) {
+    fail("Your key is being set up — refresh in a moment, or check your email. Still stuck? admin@read-aloud.com");
+    return;
+  }
+
+  keyEl.textContent = lic.key;
+  planEl.textContent = `Plan: ${lic.plan} · ${lic.char_remaining.toLocaleString()} of ${lic.char_cap.toLocaleString()} characters this period`;
+  copyBtn.disabled = false;
+  try { localStorage.setItem('ra_license_key', lic.key); } catch (e) {}
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(lic.key);
+      copyBtn.textContent = 'Copied ✓';
+      setTimeout(() => (copyBtn.textContent = 'Copy key'), 2000);
+    } catch (e) {
+      copyBtn.textContent = 'Press Ctrl/Cmd+C';
+    }
+  });
+})();
+</script>
+</body>
+</html>
