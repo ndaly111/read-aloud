@@ -112,6 +112,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["X-Chars-Remaining"],
 )
 
 ALLOWED_ORIGIN_PREFIXES = tuple(ALLOWED_ORIGINS)

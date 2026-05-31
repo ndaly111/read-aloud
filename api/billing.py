@@ -64,6 +64,9 @@ PREMIUM_TTS_ENABLED = bool(BILLING_ENABLED and ELEVENLABS_API_KEY)
 router = APIRouter()
 _db_lock = Lock()
 
+# Cache of public pricing (price amounts fetched from Stripe), refreshed hourly.
+_tiers_cache = {"data": None, "ts": 0.0}
+
 # Lazily imported so the module imports cleanly even if `stripe` isn't installed
 _stripe = None
 
@@ -456,6 +459,44 @@ async def billing_status(key: Optional[str] = None, session_id: Optional[str] = 
         "char_remaining": max(0, lic["char_cap"] - lic["char_used"]),
         "period_start": lic["period_start"],
     }
+
+
+@router.get("/api/billing/tiers")
+async def billing_tiers():
+    """Public pricing for the frontend upgrade UI. Caps come from STRIPE_TIERS_JSON;
+    amounts are pulled live from Stripe (cached 1h). The frontend renders prices from
+    this, so flipping test->live mode needs no frontend change — just new env."""
+    if not BILLING_ENABLED:
+        raise HTTPException(status_code=404, detail="billing not enabled")
+    now = time.time()
+    if _tiers_cache["data"] is not None and now - _tiers_cache["ts"] < 3600:
+        return _tiers_cache["data"]
+    stripe = _get_stripe()
+    out = []
+    for price_id, tier in TIERS.items():
+        amount, currency, interval = None, "usd", "month"
+        try:
+            p = stripe.Price.retrieve(price_id)
+            amount = _sg(p, "unit_amount")
+            currency = _sg(p, "currency", "usd")
+            rec = _sg(p, "recurring")
+            if rec is not None:
+                interval = _sg(rec, "interval", "month")
+        except Exception as e:
+            print(f"[billing] tiers: could not retrieve price {price_id}: {e}")
+        out.append({
+            "price_id": price_id,
+            "plan": tier.get("plan"),
+            "cap": int(tier.get("cap", 0)),
+            "amount_cents": amount,
+            "currency": currency,
+            "interval": interval,
+        })
+    out.sort(key=lambda t: (t["amount_cents"] is None, t["amount_cents"] or 0))
+    payload = {"tiers": out}
+    _tiers_cache["data"] = payload
+    _tiers_cache["ts"] = now
+    return payload
 
 
 # ----------------------------------------------------------------------

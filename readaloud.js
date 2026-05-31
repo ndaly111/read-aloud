@@ -14,6 +14,13 @@ const TTS_ENDPOINTS = [
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
 
+// Billing + Studio (ElevenLabs) premium voices live only on the self-hosted mini PC,
+// never on the Render fallback — so these calls always target the primary endpoint.
+const BILLING_URL = TTS_ENDPOINTS[0];
+const LICENSE_KEY_LS = 'ra_license_key';
+let license = null;        // {key, plan, status, char_cap, char_used, char_remaining}
+let studioVoices = [];     // [{id, name, labels}] from ElevenLabs
+
 // Premium Neural Voices - simplified list (best voices only)
 const NEURAL_VOICES = {
   en: [
@@ -132,6 +139,18 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
   stopBtn.onclick = stopAll;
   $('download').onclick = downloadMp3;
 
+  // Premium / Studio voices wiring
+  const upBtn = $('upgradeBtn');
+  if (upBtn) upBtn.onclick = openUpgrade;
+  const upClose = $('upgradeClose');
+  if (upClose) upClose.onclick = closeUpgrade;
+  const keyApply = $('keyApply');
+  if (keyApply) keyApply.onclick = applyKey;
+  const modal = $('upgradeModal');
+  if (modal) modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeUpgrade();
+  });
+
   txt.addEventListener('input', () => {
     clearError();
     buildDisplay();
@@ -158,6 +177,15 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
   checkApiAvailability().then(available => {
     if (!available) {
       apiAvailable = false;
+      populateVoiceSel();
+    }
+  });
+
+  // If a license key is stored (e.g. from the success page), validate it and
+  // unlock Studio voices in the background — never blocks the free tool.
+  loadLicense().then(async () => {
+    if (license && license.status === 'active') {
+      await loadStudioVoices();
       populateVoiceSel();
     }
   });
@@ -232,6 +260,21 @@ async function loadBrowserVoices() {
 function populateVoiceSel() {
   const lang = langSel.value;
   voiceSel.innerHTML = '';
+
+  // Studio (ElevenLabs) voices — only when a license is active. Listed first.
+  // The model is multilingual, so all studio voices are offered regardless of language.
+  const studioActive = license && license.status === 'active' && studioVoices.length;
+  if (studioActive) {
+    const studioGroup = document.createElement('optgroup');
+    studioGroup.label = '✦ Studio Voices (ElevenLabs)';
+    studioVoices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = `studio:${v.id}`;
+      opt.textContent = v.name;
+      studioGroup.appendChild(opt);
+    });
+    voiceSel.appendChild(studioGroup);
+  }
 
   // Add neural voices first (if API available)
   const neuralVoices = NEURAL_VOICES[lang] || NEURAL_VOICES['en'];
@@ -316,7 +359,9 @@ function startSpeak() {
 
   const [voiceType, voiceId] = voiceSel.value.split(':');
 
-  if (voiceType === 'neural' && apiAvailable) {
+  if (voiceType === 'studio') {
+    useStudioSpeech(voiceId);
+  } else if (voiceType === 'neural' && apiAvailable) {
     useNeuralSpeech(voiceId);
   } else {
     useBrowserSpeech(voiceId);
@@ -892,6 +937,235 @@ function clearError() {
   errorEl.textContent = '';
 }
 
+/* ========== PREMIUM / STUDIO VOICES (ElevenLabs) ========== */
+
+// Validate the stored license key and refresh quota. Safe to call anytime.
+async function loadLicense() {
+  let key = '';
+  try { key = localStorage.getItem(LICENSE_KEY_LS) || ''; } catch (e) {}
+  if (!key) { license = null; updateLicenseUI(); return; }
+  try {
+    const r = await fetch(`${BILLING_URL}/api/billing/status?key=${encodeURIComponent(key)}`);
+    if (r.ok) {
+      license = await r.json();
+    } else {
+      if (r.status === 404) { try { localStorage.removeItem(LICENSE_KEY_LS); } catch (e) {} }
+      license = null;
+    }
+  } catch (e) {
+    license = null; // network error — leave the stored key in place for a later retry
+  }
+  updateLicenseUI();
+}
+
+async function loadStudioVoices() {
+  if (!(license && license.status === 'active')) { studioVoices = []; return; }
+  try {
+    const r = await fetch(`${BILLING_URL}/api/tts/premium/voices`);
+    if (r.ok) { const d = await r.json(); studioVoices = d.voices || []; }
+  } catch (e) { studioVoices = []; }
+}
+
+function updateLicenseUI() {
+  const statusEl = $('licenseStatus');
+  const upBtn = $('upgradeBtn');
+  if (!statusEl) return;
+  if (license && license.status === 'active') {
+    const rem = license.char_remaining != null ? license.char_remaining : 0;
+    statusEl.hidden = false;
+    statusEl.innerHTML =
+      `✦ Studio · <strong>${rem.toLocaleString()}</strong> chars left · ` +
+      `<button type="button" class="link-btn" id="manageKey">manage</button>`;
+    if (upBtn) upBtn.hidden = true;
+    const mk = $('manageKey');
+    if (mk) mk.onclick = openUpgrade;
+  } else {
+    statusEl.hidden = true;
+    if (upBtn) upBtn.hidden = false;
+  }
+}
+
+// Fetch one premium chunk. Throws an Error with .status on failure so the caller
+// can react to billing/auth errors (no silent browser fallback for those).
+async function fetchStudioChunk(text, voiceId) {
+  const r = await fetch(`${BILLING_URL}/api/tts/premium`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, voice_id: voiceId, license_key: license.key })
+  });
+  if (!r.ok) {
+    let detail = `error ${r.status}`;
+    try { const e = await r.json(); detail = e.detail || detail; } catch (_) {}
+    const err = new Error(detail);
+    err.status = r.status;
+    throw err;
+  }
+  const rem = r.headers.get('X-Chars-Remaining');
+  if (rem != null && license) license.char_remaining = parseInt(rem, 10);
+  const blob = await r.blob();
+  if (blob.size < 100) throw new Error('audio too small');
+  return blob;
+}
+
+async function useStudioSpeech(voiceId) {
+  setStatus('Loading studio audio...');
+  isSpeaking = true;
+  isPaused = false;
+  downloadBlobs = [];
+  $('download').disabled = true;
+  updateControls();
+
+  const chunks = chunkText(txt.value, 1500); // stays under the per-request server cap
+  progChar = 0;
+  startTime = Date.now();
+  totalChars = txt.value.length;
+
+  // Pre-flight quota check so we fail fast instead of mid-playback.
+  if (license && license.char_remaining != null && totalChars > license.char_remaining) {
+    isSpeaking = false;
+    updateControls();
+    showError(`Not enough Studio characters left (${license.char_remaining.toLocaleString()} remaining, ` +
+              `need ${totalChars.toLocaleString()}). Upgrade or wait for renewal.`);
+    setStatus('Ready');
+    openUpgrade();
+    return;
+  }
+
+  let nextFetch = fetchStudioChunk(chunks[0], voiceId);
+  try {
+    for (let i = 0; i < chunks.length; i++) {
+      if (!isSpeaking) break;
+
+      setStatus(`Loading chunk ${i + 1}/${chunks.length}...`);
+      const audioBlob = await nextFetch;
+
+      if (i + 1 < chunks.length) {
+        nextFetch = fetchStudioChunk(chunks[i + 1], voiceId);
+      } else {
+        nextFetch = null;
+      }
+
+      downloadBlobs.push(audioBlob);
+      setStatus(chunks.length > 1 ? `Playing (${i + 1}/${chunks.length})...` : 'Playing...');
+      await playAudioBlob(audioBlob, chunks[i].length);
+      progChar += chunks[i].length;
+      updateLicenseUI();
+    }
+    if (isSpeaking) finish();
+  } catch (err) {
+    if (nextFetch) nextFetch.catch(() => {}); // swallow the in-flight look-ahead
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    isSpeaking = false;
+    isPaused = false;
+    updateControls();
+    if (err.status === 402) {
+      showError('Studio limit reached for this period — upgrade or wait for renewal.');
+      openUpgrade();
+    } else if (err.status === 401) {
+      showError("Your license key isn't valid anymore. Re-paste it under “manage”.");
+      openUpgrade();
+    } else if (err.status === 503) {
+      showError('Studio is briefly at capacity — try again shortly, or use a Premium voice.');
+    } else {
+      showError(`Studio voice error: ${err.message}`);
+    }
+    setStatus('Ready');
+  } finally {
+    loadLicense(); // refresh remaining quota from the server
+  }
+}
+
+/* ========== UPGRADE MODAL ========== */
+function openUpgrade() {
+  const m = $('upgradeModal');
+  if (!m) return;
+  m.hidden = false;
+  document.body.style.overflow = 'hidden';
+  const ki = $('keyInput');
+  if (ki) { try { ki.value = localStorage.getItem(LICENSE_KEY_LS) || ''; } catch (e) {} }
+  loadTiers();
+}
+
+function closeUpgrade() {
+  const m = $('upgradeModal');
+  if (!m) return;
+  m.hidden = true;
+  document.body.style.overflow = '';
+}
+
+async function loadTiers() {
+  const grid = $('tierGrid');
+  if (!grid) return;
+  grid.innerHTML = '<p class="muted">Loading plans…</p>';
+  try {
+    const r = await fetch(`${BILLING_URL}/api/billing/tiers`);
+    if (!r.ok) throw new Error('tiers ' + r.status);
+    const d = await r.json();
+    const tiers = d.tiers || [];
+    grid.innerHTML = '';
+    tiers.forEach(t => {
+      const price = t.amount_cents != null ? `$${(t.amount_cents / 100).toFixed(0)}` : '—';
+      const card = document.createElement('div');
+      card.className = 'tier-card';
+      card.innerHTML =
+        `<p class="tier-name">${t.plan}</p>` +
+        `<p class="tier-price">${price}<span>/${t.interval}</span></p>` +
+        `<p class="tier-cap">${(t.cap || 0).toLocaleString()} characters / month</p>` +
+        `<button type="button" class="btn tier-btn">Choose ${t.plan}</button>`;
+      card.querySelector('button').onclick = (e) => startCheckout(t.price_id, e.currentTarget);
+      grid.appendChild(card);
+    });
+    if (!grid.children.length) grid.innerHTML = '<p class="muted">Plans unavailable right now.</p>';
+  } catch (e) {
+    grid.innerHTML = '<p class="muted">Couldn\'t load plans — try again in a moment.</p>';
+  }
+}
+
+async function startCheckout(priceId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Redirecting…'; }
+  try {
+    const r = await fetch(`${BILLING_URL}/api/billing/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price_id: priceId })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.url) { location.href = d.url; return; }
+    throw new Error(d.detail || `checkout failed (${r.status})`);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Try again'; }
+    const msg = $('keyMsg');
+    if (msg) msg.textContent = 'Could not start checkout: ' + e.message;
+  }
+}
+
+async function applyKey() {
+  const input = $('keyInput');
+  const msg = $('keyMsg');
+  if (!input || !msg) return;
+  const key = (input.value || '').trim();
+  if (!key) { msg.textContent = 'Paste your key first.'; return; }
+  msg.textContent = 'Checking…';
+  try {
+    const r = await fetch(`${BILLING_URL}/api/billing/status?key=${encodeURIComponent(key)}`);
+    if (!r.ok) {
+      msg.textContent = r.status === 404 ? "That key wasn't found." : 'Could not validate key.';
+      return;
+    }
+    const lic = await r.json();
+    if (lic.status !== 'active') { msg.textContent = `That subscription is ${lic.status}.`; return; }
+    try { localStorage.setItem(LICENSE_KEY_LS, key); } catch (e) {}
+    license = lic;
+    await loadStudioVoices();
+    populateVoiceSel();
+    updateLicenseUI();
+    msg.textContent = `✓ Unlocked — ${lic.char_remaining.toLocaleString()} chars on ${lic.plan}.`;
+    setTimeout(closeUpgrade, 1400);
+  } catch (e) {
+    msg.textContent = 'Network error — try again.';
+  }
+}
+
 /* ========== KEYBOARD SHORTCUTS ========== */
 function handleShortcuts(event) {
   const isMac = navigator.platform.toUpperCase().includes('MAC');
@@ -904,6 +1178,12 @@ function handleShortcuts(event) {
   }
 
   if (event.key === 'Escape') {
+    const modal = $('upgradeModal');
+    if (modal && !modal.hidden) {
+      event.preventDefault();
+      closeUpgrade();
+      return;
+    }
     if (isSpeaking) {
       event.preventDefault();
       stopAll();

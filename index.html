@@ -85,6 +85,10 @@
                   <select id="voice"><option value="-1">Default</option></select>
                 </label>
               </div>
+              <div class="voice-premium-row">
+                <button type="button" id="upgradeBtn" class="upgrade-link">✦ Unlock Studio voices</button>
+                <span id="licenseStatus" class="license-status" hidden></span>
+              </div>
             </div>
 
             <div class="controls-block">
@@ -253,6 +257,29 @@
     </div>
   </form>
 </section>
+
+<!-- premium upgrade modal -->
+<div id="upgradeModal" class="modal-overlay" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="upgradeTitle">
+    <button type="button" class="modal-close" id="upgradeClose" aria-label="Close">×</button>
+    <p class="panel-eyebrow">Studio Voices</p>
+    <h2 id="upgradeTitle" class="modal-title">Ultra‑realistic voices, <em>on tap.</em></h2>
+    <p class="modal-lede">
+      Powered by ElevenLabs — the most natural AI voices available. Browser and premium
+      Edge voices stay <strong>free, forever</strong>. Pick a plan to add Studio voices with
+      a monthly character allowance. Cancel anytime.
+    </p>
+    <div class="tier-grid" id="tierGrid"><p class="muted">Loading plans…</p></div>
+    <div class="key-paste">
+      <label for="keyInput">Already subscribed? Paste your license key</label>
+      <div class="key-paste-row">
+        <input type="text" id="keyInput" placeholder="ra_…" autocomplete="off" spellcheck="false">
+        <button type="button" id="keyApply" class="btn btn--secondary">Apply</button>
+      </div>
+      <p id="keyMsg" class="key-msg" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+</div>
 
 <div id="adsense-slot" class="ad-slot" data-ad-client="ca-pub-4003447295960802" data-ad-slot="8374615023" data-ad-format="auto" data-full-width-responsive="true">
   Ads load after accepting cookies.

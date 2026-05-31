@@ -1565,3 +1565,175 @@ form button { justify-self: start; }
   .hero-eyebrow { gap: 4px 10px; font-size: 0.68rem; }
   .hero-lede .dropcap { font-size: 3.4rem; }
 }
+
+/* ============================================================
+   Premium / Studio voices — upgrade affordance + modal
+   ============================================================ */
+.voice-premium-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 22px;
+}
+.upgrade-link {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  color: var(--vermilion);
+  cursor: pointer;
+  padding: 2px 0;
+  border-bottom: 1px dotted var(--vermilion);
+}
+.upgrade-link:hover { color: var(--vermilion-dark); }
+.license-status {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faded);
+}
+.license-status strong { color: var(--ink); }
+.link-btn {
+  font: inherit;
+  background: none;
+  border: none;
+  color: var(--vermilion);
+  cursor: pointer;
+  padding: 0;
+  border-bottom: 1px dotted var(--vermilion);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(26, 28, 34, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 18px 18px;
+  overflow-y: auto;
+}
+.modal-overlay[hidden] { display: none; }
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  background: var(--paper-bright);
+  border: 1px solid var(--ink);
+  box-shadow: var(--shadow);
+  padding: 28px 28px 24px;
+}
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 1.6rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-faded);
+}
+.modal-close:hover { color: var(--ink); }
+.modal-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+  margin: 4px 0 10px;
+}
+.modal-title em { font-style: italic; color: var(--vermilion); }
+.modal-lede {
+  margin: 0 0 20px;
+  font-size: 0.98rem;
+  color: var(--ink-soft);
+}
+
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.tier-card {
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: var(--shadow-soft);
+  padding: 16px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tier-name {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  margin: 0;
+}
+.tier-price {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 2rem;
+  line-height: 1;
+  margin: 0;
+}
+.tier-price span {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faded);
+}
+.tier-cap {
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+}
+.tier-btn { margin-top: auto; }
+
+.key-paste {
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 16px;
+}
+.key-paste > label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  margin-bottom: 8px;
+}
+.key-paste-row {
+  display: flex;
+  gap: 8px;
+}
+#keyInput {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  border: 1px solid var(--ink);
+  background: var(--paper-bright);
+  color: var(--ink);
+}
+.key-msg {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  min-height: 1.1em;
+}
+.modal-card .muted {
+  color: var(--ink-faded);
+  font-style: italic;
+}
+
+@media (max-width: 640px) {
+  .modal-card { padding: 24px 18px 20px; }
+  .modal-title { font-size: 1.45rem; }
+}
