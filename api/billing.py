@@ -72,6 +72,11 @@ ELEVENLABS_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 # across ALL users. Protects against a bug/abuse running up an unbounded ElevenLabs bill.
 PREMIUM_DAILY_CHAR_CAP = int(os.environ.get("PREMIUM_DAILY_CHAR_CAP", "500000"))
 PREMIUM_MAX_CHARS_PER_REQUEST = int(os.environ.get("PREMIUM_MAX_CHARS_PER_REQUEST", "5000"))
+# Free personalized trial: unlicensed visitors hear the first N chars of THEIR text
+# in a Studio voice, once. Bounded by per-IP cooldown + a global daily char cap.
+PREMIUM_TRIAL_MAX_CHARS = int(os.environ.get("PREMIUM_TRIAL_MAX_CHARS", "220"))
+PREMIUM_TRIAL_DAILY_CAP = int(os.environ.get("PREMIUM_TRIAL_DAILY_CAP", "30000"))
+PREMIUM_TRIAL_IP_COOLDOWN = int(os.environ.get("PREMIUM_TRIAL_IP_COOLDOWN", "72000"))  # ~20h
 PREMIUM_TTS_ENABLED = bool(BILLING_ENABLED and ELEVENLABS_API_KEY)
 
 router = APIRouter()
@@ -79,6 +84,9 @@ _db_lock = Lock()
 
 # Cache of public pricing (price amounts fetched from Stripe), refreshed hourly.
 _tiers_cache = {"data": None, "ts": 0.0}
+
+# Per-IP cooldown for the free personalized trial (in-memory; bounded on use).
+_trial_ip_guard = {}
 
 # Lazily imported so the module imports cleanly even if `stripe` isn't installed
 _stripe = None
@@ -328,6 +336,45 @@ def daily_spend_refund(n: int) -> None:
             c.execute(
                 "UPDATE premium_daily SET chars = MAX(0, chars - ?) WHERE day=?",
                 (n, _today()),
+            )
+            c.commit()
+        finally:
+            c.close()
+
+
+def daily_trial_check_and_add(n: int) -> tuple:
+    """Separate daily budget for free trials (keyed 'trial:<day>') so a flood of
+    trials can't exhaust the paying-customer cost ceiling. Returns (ok, total)."""
+    if not LICENSE_DB:
+        return (False, 0)
+    with _db_lock:
+        c = _conn()
+        try:
+            day = "trial:" + _today()
+            row = c.execute("SELECT chars FROM premium_daily WHERE day=?", (day,)).fetchone()
+            cur = row["chars"] if row else 0
+            if cur + n > PREMIUM_TRIAL_DAILY_CAP:
+                return (False, cur)
+            c.execute(
+                "INSERT INTO premium_daily (day, chars) VALUES (?, ?) "
+                "ON CONFLICT(day) DO UPDATE SET chars = chars + ?",
+                (day, n, n),
+            )
+            c.commit()
+            return (True, cur + n)
+        finally:
+            c.close()
+
+
+def daily_trial_refund(n: int) -> None:
+    if not LICENSE_DB or n <= 0:
+        return
+    with _db_lock:
+        c = _conn()
+        try:
+            c.execute(
+                "UPDATE premium_daily SET chars = MAX(0, chars - ?) WHERE day=?",
+                (n, "trial:" + _today()),
             )
             c.commit()
         finally:
@@ -725,6 +772,57 @@ async def premium_sample(voice_id: str):
         print(f"[billing] generated preview sample for voice {voice_id} ({len(audio)} bytes)")
     return FileResponse(path, media_type="audio/mpeg",
                         headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.post("/api/tts/premium/trial")
+async def premium_trial(request: Request):
+    """One free, personalized Studio preview: the first ~220 chars of the visitor's
+    OWN text, no license. Throttled per-IP (~once/day) and capped by a separate
+    daily char budget so it can never run up an unbounded bill."""
+    if not PREMIUM_TTS_ENABLED:
+        raise HTTPException(status_code=404, detail="premium tts not enabled")
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    voice_id = body.get("voice_id") or ""
+    if not text:
+        raise HTTPException(status_code=400, detail="text required")
+    if not voice_id:
+        raise HTTPException(status_code=400, detail="voice_id required")
+    try:
+        await run_in_threadpool(_fetch_voices)
+    except Exception:
+        pass
+    if _voices_cache["ids"] and voice_id not in _voices_cache["ids"]:
+        raise HTTPException(status_code=400, detail="unknown voice")
+    text = text[:PREMIUM_TRIAL_MAX_CHARS]
+
+    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+          or (request.client.host if request.client else "unknown"))
+    now = time.time()
+    if len(_trial_ip_guard) > 5000:
+        for k in [k for k, t in _trial_ip_guard.items() if now - t > PREMIUM_TRIAL_IP_COOLDOWN]:
+            _trial_ip_guard.pop(k, None)
+    if now - _trial_ip_guard.get(ip, 0) < PREMIUM_TRIAL_IP_COOLDOWN:
+        raise HTTPException(status_code=429,
+                            detail="you've used your free Studio preview — subscribe to keep going")
+
+    ok_day, _total = daily_trial_check_and_add(len(text))
+    if not ok_day:
+        raise HTTPException(status_code=503,
+                            detail="free previews are at capacity today — try again tomorrow or subscribe")
+
+    try:
+        audio = await run_in_threadpool(_elevenlabs_tts, text, voice_id)
+    except Exception as e:
+        daily_trial_refund(len(text))
+        raise HTTPException(status_code=502, detail=f"trial generation failed: {e}")
+    if not audio or len(audio) < 100:
+        daily_trial_refund(len(text))
+        raise HTTPException(status_code=502, detail="empty audio from provider")
+
+    _trial_ip_guard[ip] = now  # mark IP used only on a successful generation
+    return StreamingResponse(io.BytesIO(audio), media_type="audio/mpeg",
+                             headers={"Content-Disposition": "inline"})
 
 
 @router.post("/api/tts/premium")

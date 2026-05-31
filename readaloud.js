@@ -21,6 +21,7 @@ const LICENSE_KEY_LS = 'ra_license_key';
 let license = null;        // {key, plan, status, char_cap, char_used, char_remaining}
 let studioVoices = [];     // [{id, name, labels}] — Studio voice catalog
 let previewAudio = null;   // currently-playing Studio preview sample
+let lastPlaybackType = ''; // 'browser' | 'neural' | 'studio' — drives the finish nudge
 
 // Premium Neural Voices - simplified list (best voices only)
 const NEURAL_VOICES = {
@@ -371,10 +372,13 @@ function startSpeak() {
     return;
   }
   clearError();
+  const sn = $('studioNudge');
+  if (sn) sn.hidden = true;
   isSpeaking = true;
   startBtn.disabled = true;
 
   const [voiceType, voiceId] = voiceSel.value.split(':');
+  lastPlaybackType = voiceType;
 
   if (voiceType === 'studio') {
     if (!(license && license.status === 'active')) {
@@ -916,6 +920,8 @@ function finish() {
   if (downloadBlobs.length) {
     $('download').disabled = false;
   }
+  // After a FREE playback, invite unlicensed users to try Studio on their own text.
+  if (lastPlaybackType && lastPlaybackType !== 'studio') showStudioNudge();
 }
 
 function downloadMp3() {
@@ -1142,6 +1148,66 @@ async function playSample() {
     if (btn) { btn.disabled = false; btn.textContent = '⏸ Stop sample'; }
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = '▶ Hear a sample'; }
+  }
+}
+
+/* ========== STUDIO CONVERSION NUDGE + FREE TRIAL ========== */
+function studioTrialUsed() {
+  try { return localStorage.getItem('ra_studio_trial_used') === '1'; } catch (e) { return false; }
+}
+
+// Shown after a free playback finishes, to unlicensed users who have text + studio voices.
+function showStudioNudge() {
+  const el = $('studioNudge');
+  if (!el) return;
+  const eligible = studioVoices.length && !(license && license.status === 'active') && txt.value.trim();
+  if (!eligible) { el.hidden = true; return; }
+  if (studioTrialUsed()) {
+    el.innerHTML = 'Enjoyed that? <strong>Studio voices</strong> read your full text in lifelike, '
+      + 'human narration. <button type="button" class="nudge-btn" id="nudgeUpgrade">See plans →</button>';
+    el.hidden = false;
+    const b = $('nudgeUpgrade'); if (b) b.onclick = openUpgrade;
+  } else {
+    el.innerHTML = 'Curious how that sounds in a <strong>Studio</strong> voice? '
+      + '<button type="button" class="nudge-btn" id="nudgeTrial">▶ Hear your text in Studio — free</button>';
+    el.hidden = false;
+    const b = $('nudgeTrial'); if (b) b.onclick = runStudioTrial;
+  }
+}
+
+async function runStudioTrial() {
+  const text = txt.value.trim();
+  const vid = studioVoices[0] && studioVoices[0].id;
+  if (!text || !vid) return;
+  const el = $('studioNudge');
+  if (el) el.innerHTML = '<span class="nudge-loading">Generating your Studio preview…</span>';
+  try {
+    const r = await fetch(`${BILLING_URL}/api/tts/premium/trial`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice_id: vid })
+    });
+    if (!r.ok) {
+      if (r.status === 429) { try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {} }
+      let msg = 'Preview unavailable right now.';
+      try { const e = await r.json(); if (e.detail) msg = e.detail; } catch (_) {}
+      if (el) el.innerHTML = `${msg} <button type="button" class="nudge-btn" id="nudgeUp2">See plans →</button>`;
+      const b = $('nudgeUp2'); if (b) b.onclick = openUpgrade;
+      return;
+    }
+    try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {}
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    stopPreview();
+    previewAudio = new Audio(url);
+    previewAudio.onended = () => { URL.revokeObjectURL(url); previewAudio = null; showStudioNudge(); };
+    previewAudio.onerror = () => { previewAudio = null; };
+    if (el) el.innerHTML = '✦ <strong>Playing your text in a Studio voice…</strong> '
+      + '<button type="button" class="nudge-btn" id="nudgeUp3">Unlock full Studio →</button>';
+    const b = $('nudgeUp3'); if (b) b.onclick = openUpgrade;
+    await previewAudio.play();
+  } catch (e) {
+    if (el) el.innerHTML = 'Preview unavailable — but you can still subscribe.';
   }
 }
 

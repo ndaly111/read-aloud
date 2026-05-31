@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260531c">
+  <link rel="stylesheet" href="/styles.css?v=20260531d">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -124,6 +124,7 @@
 
             <progress id="bar" value="0" max="100"></progress>
             <div id="meter" class="meter"><strong>0 %</strong> · <span id="ela">00:00:00</span> · <span id="rem">00:00:00</span></div>
+            <div id="studioNudge" class="studio-nudge" hidden></div>
           </div>
         </div>
       </section>
@@ -307,7 +308,7 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260531c"></script>
+<script src="readaloud.js?v=20260531d"></script>
 
 <!-- visit counter + goal fill -->
 <script>

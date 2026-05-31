@@ -1602,6 +1602,34 @@ form button { justify-self: start; }
 }
 .preview-btn:hover { background: var(--vermilion-dark); }
 .preview-btn:disabled { opacity: 0.6; cursor: default; }
+
+.studio-nudge {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--ink);
+  border-left: 4px solid var(--vermilion);
+  background: var(--paper-bright);
+  box-shadow: var(--shadow-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.studio-nudge[hidden] { display: none; }
+.nudge-btn {
+  display: inline-block;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+  background: var(--vermilion);
+  color: var(--paper-bright);
+  border: 1px solid var(--ink);
+  box-shadow: var(--shadow-soft);
+  padding: 5px 11px;
+  cursor: pointer;
+}
+.nudge-btn:hover { background: var(--vermilion-dark); }
+.nudge-loading { font-style: italic; color: var(--ink-faded); }
 .license-status {
   font-family: var(--font-mono);
   font-size: 0.72rem;
