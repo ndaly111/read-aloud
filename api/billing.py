@@ -80,6 +80,9 @@ PREMIUM_DAILY_CHAR_CAP = int(os.environ.get("PREMIUM_DAILY_CHAR_CAP", "500000"))
 # Manual override for the ElevenLabs monthly plan fee (cents), used on the P&L when
 # the API key can't read /v1/user/subscription. e.g. 2200 = Creator ($22/mo).
 ELEVENLABS_PLAN_FEE_CENTS = int(os.environ.get("ELEVENLABS_PLAN_FEE_CENTS", "0"))
+# Marginal ElevenLabs cost per 1,000 characters (cents), for estimating the $ cost
+# of each usage category on the P&L. ~20 = $0.20/1k (Creator/Pro-ish).
+ELEVENLABS_COST_PER_1K_CENTS = float(os.environ.get("ELEVENLABS_COST_PER_1K_CENTS", "20"))
 PREMIUM_MAX_CHARS_PER_REQUEST = int(os.environ.get("PREMIUM_MAX_CHARS_PER_REQUEST", "5000"))
 # Free personalized trial: unlicensed visitors hear the first N chars of THEIR text
 # in a Studio voice, once. Bounded by per-IP cooldown + a global daily char cap.
@@ -384,6 +387,25 @@ def daily_trial_refund(n: int) -> None:
             c.execute(
                 "UPDATE premium_daily SET chars = MAX(0, chars - ?) WHERE day=?",
                 (n, "trial:" + _today()),
+            )
+            c.commit()
+        finally:
+            c.close()
+
+
+def daily_counter_add(prefix: str, n: int) -> None:
+    """Increment an arbitrary daily counter in premium_daily (e.g. 'sample:').
+    Tracking only — no cap."""
+    if not LICENSE_DB or n <= 0:
+        return
+    with _db_lock:
+        c = _conn()
+        try:
+            day = prefix + _today()
+            c.execute(
+                "INSERT INTO premium_daily (day, chars) VALUES (?, ?) "
+                "ON CONFLICT(day) DO UPDATE SET chars = chars + ?",
+                (day, n, n),
             )
             c.commit()
         finally:
@@ -778,6 +800,7 @@ async def premium_sample(voice_id: str):
         os.makedirs(PREMIUM_SAMPLE_DIR, exist_ok=True)
         with open(path, "wb") as f:
             f.write(audio)
+        daily_counter_add("sample:", len(PREMIUM_SAMPLE_TEXT))
         print(f"[billing] generated preview sample for voice {voice_id} ({len(audio)} bytes)")
     return FileResponse(path, media_type="audio/mpeg",
                         headers={"Cache-Control": "public, max-age=86400"})
@@ -998,17 +1021,22 @@ def _gather_finance() -> dict:
                 "FROM licenses GROUP BY plan, status ORDER BY plan").fetchall()
             out["lic_rows"] = [dict(r) for r in rows]
             today = _today()
-            pd = c.execute("SELECT day, chars FROM premium_daily WHERE day IN (?,?)",
-                           (today, "trial:" + today)).fetchall()
+            pd = c.execute("SELECT day, chars FROM premium_daily WHERE day IN (?,?,?)",
+                           (today, "trial:" + today, "sample:" + today)).fetchall()
             d = {r["day"]: r["chars"] for r in pd}
             out["premium_today"] = d.get(today, 0)
             out["trials_today"] = d.get("trial:" + today, 0)
             tot = c.execute(
-                "SELECT COALESCE(SUM(CASE WHEN day LIKE 'trial:%' THEN chars ELSE 0 END),0) trial_all, "
-                "COALESCE(SUM(CASE WHEN day NOT LIKE 'trial:%' THEN chars ELSE 0 END),0) prem_all "
+                "SELECT "
+                "COALESCE(SUM(CASE WHEN day LIKE 'trial:%' THEN chars ELSE 0 END),0) trial_all, "
+                "COALESCE(SUM(CASE WHEN day LIKE 'sample:%' THEN chars ELSE 0 END),0) sample_all, "
+                "COALESCE(SUM(CASE WHEN day NOT LIKE 'trial:%' AND day NOT LIKE 'sample:%' "
+                "         THEN chars ELSE 0 END),0) prem_all "
                 "FROM premium_daily").fetchone()
             out["premium_all"] = tot["prem_all"]
             out["trials_all"] = tot["trial_all"]
+            out["samples_all"] = tot["sample_all"]
+            out["samples_today"] = d.get("sample:" + today, 0)
         finally:
             c.close()
     except Exception as e:
@@ -1072,19 +1100,39 @@ def _render_finance_section(d: dict) -> str:
         parts.append("<tr><td colspan='3' class='muted'>No active subscriptions yet.</td></tr>")
     parts.append("</table>")
 
-    # ElevenLabs / character cost side
+    # Character usage broken out by category, with estimated marginal cost.
+    def ccost(chars):
+        return _money(round((chars / 1000.0) * ELEVENLABS_COST_PER_1K_CENTS))
+    paid = d.get("premium_all", 0)
+    trial = d.get("trials_all", 0)
+    sample = d.get("samples_all", 0)
+    parts.append("<h2>Character usage by source (cost side)</h2><table>")
+    parts.append("<tr><th>Source</th><th class='num'>Chars (all-time)</th>"
+                 "<th class='num'>Today</th><th class='num'>Est. cost</th></tr>")
+    parts.append(f"<tr><td>Paid subscribers</td><td class='num'>{paid:,}</td>"
+                 f"<td class='num'>{d.get('premium_today',0):,}</td><td class='num'>{ccost(paid)}</td></tr>")
+    parts.append(f"<tr><td>Free trials (their text)</td><td class='num'>{trial:,}</td>"
+                 f"<td class='num'>{d.get('trials_today',0):,}</td><td class='num'>{ccost(trial)}</td></tr>")
+    parts.append(f"<tr><td>Voice samples (previews)</td><td class='num'>{sample:,}</td>"
+                 f"<td class='num'>{d.get('samples_today',0):,}</td><td class='num'>{ccost(sample)}</td></tr>")
+    parts.append(f"<tr><td><strong>Total generated</strong></td>"
+                 f"<td class='num'><strong>{paid+trial+sample:,}</strong></td><td class='num'></td>"
+                 f"<td class='num'><strong>{ccost(paid+trial+sample)}</strong></td></tr>")
+    parts.append("</table>")
+
+    # ElevenLabs plan / their-side usage
     el_used_s = f"{el_used:,}" if isinstance(el_used, int) else "—"
     el_limit_s = f"{el_limit:,}" if isinstance(el_limit, int) else "—"
-    parts.append("<h2>Character usage &amp; ElevenLabs (cost side)</h2><table>")
-    parts.append(f"<tr><td>Plan tier</td><td class='num'>{d.get('el_tier') or '—'}</td></tr>")
+    parts.append("<table>")
+    parts.append(f"<tr><td>ElevenLabs plan tier</td><td class='num'>{d.get('el_tier') or '—'}</td></tr>")
     parts.append(f"<tr><td>Monthly plan fee</td><td class='num'>{_money(d.get('el_fee_cents') or 0)}</td></tr>")
-    parts.append(f"<tr><td>Chars generated all-time (our tally)</td>"
-                 f"<td class='num'>{d.get('premium_all',0):,} paid &middot; {d.get('trials_all',0):,} trial</td></tr>")
     parts.append(f"<tr><td>EL usage this period (their API)</td><td class='num'>{el_used_s} / {el_limit_s}</td></tr>")
+    parts.append(f"<tr><td>Cost rate used</td><td class='num'>{_money(ELEVENLABS_COST_PER_1K_CENTS)}/1k chars</td></tr>")
     parts.append("</table>")
     if d.get("el_error"):
         parts.append(f"<p class='muted'>ElevenLabs usage API unavailable ({d['el_error']}). "
-                     f"Char counts above are our own tally; set ELEVENLABS_PLAN_FEE_CENTS to record the plan cost.</p>")
+                     f"Char counts are our own tally. Set ELEVENLABS_PLAN_FEE_CENTS for the plan cost "
+                     f"and ELEVENLABS_COST_PER_1K_CENTS to tune the per-character estimate.</p>")
 
     # License DB / character consumption
     parts.append("<h2>Licenses &amp; character consumption</h2><table>")
