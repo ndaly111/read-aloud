@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260531f">
+  <link rel="stylesheet" href="/styles.css?v=20260531g">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -25,6 +25,8 @@
       <a href="/help.html">Help</a>
       <a href="/recommendations.html">Resources</a>
     </nav>
+    <button id="dyslexiaToggle" class="dyslexia-toggle" type="button" aria-pressed="false"
+            title="Switch to a dyslexia-friendly font">Aa · Dyslexia font</button>
   </div>
 </header>
 
@@ -307,8 +309,42 @@ mespeak.loadConfig("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak_config.js
 mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json");
 </script>
 
+<!-- dyslexia-friendly font toggle -->
+<script>
+(function () {
+  const KEY = 'ra_dyslexia';
+  const btn = document.getElementById('dyslexiaToggle');
+  let fontLoaded = false;
+  function loadFont() {
+    if (fontLoaded) return;
+    const l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = 'https://fonts.cdnfonts.com/css/opendyslexic';
+    document.head.appendChild(l);
+    fontLoaded = true;
+  }
+  function apply(on) {
+    if (on) { loadFont(); document.documentElement.classList.add('dyslexia'); }
+    else document.documentElement.classList.remove('dyslexia');
+    if (btn) {
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.classList.toggle('is-on', on);
+      btn.textContent = on ? 'Aa · Dyslexia font ✓' : 'Aa · Dyslexia font';
+    }
+  }
+  let on = false;
+  try { on = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  apply(on);
+  if (btn) btn.addEventListener('click', () => {
+    on = !on;
+    try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
+    apply(on);
+  });
+})();
+</script>
+
 <!-- main logic -->
-<script src="readaloud.js?v=20260531f"></script>
+<script src="readaloud.js?v=20260531g"></script>
 
 <!-- visit counter + goal fill -->
 <script>

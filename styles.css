@@ -1567,6 +1567,46 @@ form button { justify-self: start; }
 }
 
 /* ============================================================
+   Dyslexia-friendly reading mode
+   ============================================================ */
+.dyslexia-toggle {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--paper-bright);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  box-shadow: var(--shadow-soft);
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dyslexia-toggle:hover { background: var(--paper-deep); }
+.dyslexia-toggle.is-on { background: var(--vermilion); color: var(--paper-bright); }
+
+/* When enabled, swap the whole page to OpenDyslexic (lazy-loaded) with roomier
+   spacing. Comic Sans is a known dyslexia-friendly local fallback if the font
+   fails to load. */
+html.dyslexia,
+html.dyslexia body,
+html.dyslexia * {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', var(--font-body) !important;
+  font-variation-settings: normal !important;
+}
+html.dyslexia body { letter-spacing: 0.02em; }
+html.dyslexia p,
+html.dyslexia li,
+html.dyslexia textarea,
+html.dyslexia #disp,
+html.dyslexia .hero-lede {
+  line-height: 1.85;
+  letter-spacing: 0.03em;
+  word-spacing: 0.08em;
+}
+
+/* ============================================================
    Premium / Studio voices — upgrade affordance + modal
    ============================================================ */
 .voice-premium-row {

@@ -987,12 +987,26 @@ async function loadLicense() {
   updateLicenseUI();
 }
 
+// Curated narrators (ordered). Sarah leads, so she's the licensed default and the
+// default preview voice. Character-y voices (Husky Trickster, Fierce Warrior, etc.)
+// are dropped. Falls back to the full catalog if too few of these are present.
+const CURATED_VOICES = ['Sarah', 'Brian', 'George', 'Charlotte', 'Daniel', 'Alice',
+                        'River', 'Bill', 'Lily', 'Matilda'];
+
+function curateVoices(voices) {
+  const firstName = v => (v.name || '').split(' - ')[0].trim();
+  const picked = CURATED_VOICES
+    .map(name => voices.find(v => firstName(v) === name))
+    .filter(Boolean);
+  return picked.length >= 5 ? picked : voices;
+}
+
 async function loadStudioVoices() {
   // Loaded for everyone (the endpoint is public) so unlicensed visitors can
   // browse and preview Studio voices before subscribing.
   try {
     const r = await fetch(`${BILLING_URL}/api/tts/premium/voices`);
-    if (r.ok) { const d = await r.json(); studioVoices = d.voices || []; }
+    if (r.ok) { const d = await r.json(); studioVoices = curateVoices(d.voices || []); }
   } catch (e) { studioVoices = []; }
 }
 
