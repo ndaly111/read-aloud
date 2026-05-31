@@ -266,11 +266,13 @@ function populateVoiceSel() {
   const studioActive = license && license.status === 'active' && studioVoices.length;
   if (studioActive) {
     const studioGroup = document.createElement('optgroup');
-    studioGroup.label = '✦ Studio Voices (ElevenLabs)';
+    studioGroup.label = '✦ Studio Voices';
     studioVoices.forEach(v => {
       const opt = document.createElement('option');
       opt.value = `studio:${v.id}`;
-      opt.textContent = v.name;
+      // Show just the clean first name — strip provider descriptors like
+      // "Roger - Laid-Back, Casual, Resonant".
+      opt.textContent = (v.name || '').split(' - ')[0].trim() || v.name;
       studioGroup.appendChild(opt);
     });
     voiceSel.appendChild(studioGroup);
