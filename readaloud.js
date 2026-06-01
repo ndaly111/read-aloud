@@ -1159,39 +1159,21 @@ function defaultPreviewVoiceId() {
   return studioVoices[0] && studioVoices[0].id;
 }
 
-// "Hear a sample": prefer the visitor's OWN text (first ~220 chars, one free trial),
-// then fall back to a short canned sample so they can keep auditioning voices.
+// "Hear a sample": plays the free, cached canned clip for the selected (or a
+// default) Studio voice. Zero per-visitor character cost.
 async function playSample() {
   const val = voiceSel.value;
   const vid = val.startsWith('studio:') ? val.slice('studio:'.length) : defaultPreviewVoiceId();
   if (!vid) return;
-  const text = txt.value.trim();
   const btn = $('previewBtn');
   stopPreview();
   if (btn) { btn.disabled = true; btn.textContent = '… loading'; }
 
   let url = null;
   try {
-    // First choice: their text, via the one-time personalized trial.
-    if (text && !studioTrialUsed()) {
-      const tr = await fetch(`${BILLING_URL}/api/tts/premium/trial`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice_id: vid })
-      });
-      if (tr.ok) {
-        try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {}
-        url = URL.createObjectURL(await tr.blob());
-      } else if (tr.status === 429) {
-        try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {}
-      }
-    }
-    // Fallback: canned sample clip for this voice (free, unlimited).
-    if (!url) {
-      const r = await fetch(`${BILLING_URL}/api/tts/premium/sample?voice_id=${encodeURIComponent(vid)}`);
-      if (!r.ok) throw new Error('sample ' + r.status);
-      url = URL.createObjectURL(await r.blob());
-    }
+    const r = await fetch(`${BILLING_URL}/api/tts/premium/sample?voice_id=${encodeURIComponent(vid)}`);
+    if (!r.ok) throw new Error('sample ' + r.status);
+    url = URL.createObjectURL(await r.blob());
     previewAudio = new Audio(url);
     previewAudio.onended = () => {
       URL.revokeObjectURL(url);
@@ -1210,64 +1192,20 @@ async function playSample() {
   }
 }
 
-/* ========== STUDIO CONVERSION NUDGE + FREE TRIAL ========== */
-function studioTrialUsed() {
-  try { return localStorage.getItem('ra_studio_trial_used') === '1'; } catch (e) { return false; }
-}
-
-// Shown after a free playback finishes, to unlicensed users who have text + studio voices.
+/* ========== STUDIO CONVERSION NUDGE ========== */
+// Shown after a free playback finishes, to unlicensed users. Offers a free
+// cached Studio sample (no per-visitor character cost) and the plans.
 function showStudioNudge() {
   const el = $('studioNudge');
   if (!el) return;
-  const eligible = studioVoices.length && !(license && license.status === 'active') && txt.value.trim();
+  const eligible = studioVoices.length && !(license && license.status === 'active');
   if (!eligible) { el.hidden = true; return; }
-  if (studioTrialUsed()) {
-    el.innerHTML = 'A <strong>Studio</strong> plan reads your whole document in that voice. '
-      + '<button type="button" class="nudge-btn" id="nudgeUpgrade">See plans</button>';
-    el.hidden = false;
-    const b = $('nudgeUpgrade'); if (b) b.onclick = openUpgrade;
-  } else {
-    el.innerHTML = 'That was a computer reading. Want the same lines in a <strong>Studio</strong> voice? '
-      + '<button type="button" class="nudge-btn" id="nudgeTrial">Try it on your text — free</button>';
-    el.hidden = false;
-    const b = $('nudgeTrial'); if (b) b.onclick = runStudioTrial;
-  }
-}
-
-async function runStudioTrial() {
-  const text = txt.value.trim();
-  const vid = studioVoices[0] && studioVoices[0].id;
-  if (!text || !vid) return;
-  const el = $('studioNudge');
-  if (el) el.innerHTML = '<span class="nudge-loading">Generating your Studio preview…</span>';
-  try {
-    const r = await fetch(`${BILLING_URL}/api/tts/premium/trial`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice_id: vid })
-    });
-    if (!r.ok) {
-      if (r.status === 429) { try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {} }
-      let msg = 'Preview unavailable right now.';
-      try { const e = await r.json(); if (e.detail) msg = e.detail; } catch (_) {}
-      if (el) el.innerHTML = `${msg} <button type="button" class="nudge-btn" id="nudgeUp2">See plans</button>`;
-      const b = $('nudgeUp2'); if (b) b.onclick = openUpgrade;
-      return;
-    }
-    try { localStorage.setItem('ra_studio_trial_used', '1'); } catch (e) {}
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
-    stopPreview();
-    previewAudio = new Audio(url);
-    previewAudio.onended = () => { URL.revokeObjectURL(url); previewAudio = null; showStudioNudge(); };
-    previewAudio.onerror = () => { previewAudio = null; };
-    if (el) el.innerHTML = '<strong>Playing your text in a Studio voice.</strong> '
-      + '<button type="button" class="nudge-btn" id="nudgeUp3">Unlock the rest</button>';
-    const b = $('nudgeUp3'); if (b) b.onclick = openUpgrade;
-    await previewAudio.play();
-  } catch (e) {
-    if (el) el.innerHTML = 'Preview unavailable — but you can still subscribe.';
-  }
+  el.innerHTML = 'That was a computer voice. Studio voices sound far more natural — '
+    + '<button type="button" class="nudge-btn" id="nudgeSample">Hear a Studio sample</button> '
+    + '<button type="button" class="nudge-btn" id="nudgePlans">See plans</button>';
+  el.hidden = false;
+  const s = $('nudgeSample'); if (s) s.onclick = playSample;
+  const p = $('nudgePlans'); if (p) p.onclick = openUpgrade;
 }
 
 /* ========== UPGRADE MODAL ========== */
