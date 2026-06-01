@@ -89,6 +89,10 @@ PREMIUM_MAX_CHARS_PER_REQUEST = int(os.environ.get("PREMIUM_MAX_CHARS_PER_REQUES
 PREMIUM_TRIAL_MAX_CHARS = int(os.environ.get("PREMIUM_TRIAL_MAX_CHARS", "220"))
 PREMIUM_TRIAL_DAILY_CAP = int(os.environ.get("PREMIUM_TRIAL_DAILY_CAP", "30000"))
 PREMIUM_TRIAL_IP_COOLDOWN = int(os.environ.get("PREMIUM_TRIAL_IP_COOLDOWN", "72000"))  # ~20h
+# Personalized "read your own text" trial is OFF by default — it generates real
+# characters per visitor and can burn the ElevenLabs quota fast. Free previews use
+# the cached canned samples instead (zero ongoing cost). Set to "1" to re-enable.
+PREMIUM_TRIAL_ENABLED = os.environ.get("PREMIUM_TRIAL_ENABLED", "0") == "1"
 PREMIUM_TTS_ENABLED = bool(BILLING_ENABLED and ELEVENLABS_API_KEY)
 
 router = APIRouter()
@@ -856,8 +860,8 @@ async def premium_trial(request: Request):
     """One free, personalized Studio preview: the first ~220 chars of the visitor's
     OWN text, no license. Throttled per-IP (~once/day) and capped by a separate
     daily char budget so it can never run up an unbounded bill."""
-    if not PREMIUM_TTS_ENABLED:
-        raise HTTPException(status_code=404, detail="premium tts not enabled")
+    if not PREMIUM_TTS_ENABLED or not PREMIUM_TRIAL_ENABLED:
+        raise HTTPException(status_code=404, detail="trial not enabled")
     body = await request.json()
     text = (body.get("text") or "").strip()
     voice_id = body.get("voice_id") or ""
