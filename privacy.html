@@ -39,7 +39,7 @@
       <li><strong>Neural voices send text to our server.</strong> If you choose a premium neural voice, your text is sent to our TTS server and then to Microsoft Edge TTS to generate high-quality audio. Text is not stored.</li>
       <li><strong>No accounts.</strong> You can use the tool without signing in.</li>
       <li><strong>Ads + Google Analytics only load if you accept.</strong> You can reject and still use the core tool.</li>
-      <li><strong>Two homepage services run regardless of the cookie banner:</strong> a voice fallback loaded from a CDN (meSpeak via jsDelivr) and a simple visit counter request (CountAPI).</li>
+      <li><strong>One homepage service runs regardless of the cookie banner:</strong> a voice fallback loaded from a CDN (meSpeak via jsDelivr).</li>
     </ul>
   </div>
 
@@ -89,9 +89,6 @@
         <strong>Basic server logs:</strong> like most websites, our hosting provider may process standard logs (requested page, date/time, and basic device/network information) for security and reliability.
       </li>
       <li>
-        <strong>Homepage visit counter request:</strong> the homepage sends a request to a third-party counter service (CountAPI) to increment a public visit count. As with any web request, the provider may receive standard request data (such as IP address and user agent).
-      </li>
-      <li>
         <strong>CDN requests for voice fallback:</strong> the homepage loads meSpeak files from a third-party CDN (jsDelivr). The CDN may receive standard request data (such as IP address and user agent).
       </li>
     </ul>
@@ -120,7 +117,7 @@
         If you <strong>reject</strong>, we do not load Google Analytics or Google AdSense.
       </li>
       <li>
-        <strong>Note:</strong> the homepage visit counter (CountAPI) and the meSpeak CDN files (jsDelivr) load regardless of this choice.
+        <strong>Note:</strong> the meSpeak CDN files (jsDelivr) load regardless of this choice.
       </li>
     </ul>
   </div>
@@ -169,12 +166,6 @@
     If you use our contact form, your message is submitted to a third-party form processor (Formspree) so it can be delivered to us.
     Form submissions may include your name, email address, and message content.
     Formspree's processing is governed by their own privacy policy.
-  </p>
-
-  <h3>Visit counter (CountAPI)</h3>
-  <p>
-    The homepage calls a third-party counter endpoint to increment and display a public “visits” number.
-    This call may expose standard request data (like IP address and user agent) to that provider.
   </p>
 
   <h3>Voice fallback files (jsDelivr + meSpeak)</h3>
