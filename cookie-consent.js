@@ -73,16 +73,10 @@
   };
 
   const applyConsent = (value) => {
-    const accepted = (value === ACCEPTED);
-
-    // Update Google Consent Mode signals
-    updateConsentMode(accepted);
-
-    // Load analytics and ads if accepted
-    if (accepted) {
-      initAnalytics();
-      initAdsense();
-    }
+    // Tags are already loaded (see init). This only flips personalization +
+    // storage to "granted" on an explicit accept; reject leaves them denied
+    // (cookieless analytics + non-personalized ads).
+    updateConsentMode(value === ACCEPTED);
   };
 
   const buildBanner = () => {
@@ -93,7 +87,7 @@
     banner.innerHTML = `
       <div>
         <strong>Privacy settings</strong>
-        <p>We only load analytics and ads if you accept. You can update your choice anytime in <a href="/privacy.html">Privacy</a>.</p>
+        <p>We show ads and measure traffic to keep Read&#8209;Aloud free. <strong>Accept</strong> allows personalized ads and analytics cookies; <strong>Reject</strong> keeps ads non&#8209;personalized and analytics cookieless. Change anytime in <a href="/privacy.html">Privacy</a>.</p>
       </div>
       <div class="cookie-banner__actions">
         <button type="button" class="secondary" data-consent="reject">Reject</button>
@@ -127,10 +121,19 @@
 
   const init = () => {
     const stored = localStorage.getItem(CONSENT_KEY);
-    if (!stored) {
-      showBanner();
-    } else {
+
+    // Load analytics + ads for EVERY visitor under Google Consent Mode v2.
+    // Consent defaults to "denied" (set at top), so until a visitor accepts,
+    // GA4 runs cookieless/modeled and AdSense serves non-personalized ads —
+    // every visitor is measured and monetized. Accepting upgrades both to
+    // personalized ads + full analytics cookies.
+    initAnalytics();
+    initAdsense();
+
+    if (stored) {
       applyConsent(stored);
+    } else {
+      showBanner();
     }
     setupReset();
   };

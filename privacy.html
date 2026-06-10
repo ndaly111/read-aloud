@@ -27,7 +27,7 @@
   <header class="page-head">
     <p class="eyebrow"><span>Read‑Aloud</span><span class="sep">·</span><span>Privacy Policy</span></p>
     <h1>How <em>your text</em> is handled.</h1>
-    <p class="lead">Browser voices stay on your device. Premium neural voices stream through our TTS server and Microsoft Edge TTS, but text is not stored. Ads and analytics only load if you accept.</p>
+    <p class="lead">Browser voices stay on your device. Premium neural voices stream through our TTS server and Microsoft Edge TTS, but text is not stored. Ads and analytics run without cookies unless you accept; accepting allows personalized ads and analytics cookies.</p>
     <p class="last-updated"><strong>Last updated</strong> January 28, 2026</p>
   </header>
 
@@ -38,7 +38,7 @@
       <li><strong>Browser voices process text locally.</strong> When you use standard browser voices, your text stays on your device.</li>
       <li><strong>Neural voices send text to our server.</strong> If you choose a premium neural voice, your text is sent to our TTS server and then to Microsoft Edge TTS to generate high-quality audio. Text is not stored.</li>
       <li><strong>No accounts.</strong> You can use the tool without signing in.</li>
-      <li><strong>Ads + Google Analytics only load if you accept.</strong> You can reject and still use the core tool.</li>
+      <li><strong>Ads + Google Analytics run without cookies by default.</strong> Until you accept, ads are non-personalized and analytics is cookieless (Google Consent Mode). Accepting allows personalized ads and analytics cookies; you can reject and still use the core tool.</li>
       <li><strong>One homepage service runs regardless of the cookie banner:</strong> a voice fallback loaded from a CDN (meSpeak via jsDelivr).</li>
     </ul>
   </div>
@@ -111,10 +111,16 @@
         We store your choice in <strong>localStorage</strong> under the key <code>ra_cookie_consent</code> with a value of <code>accepted</code> or <code>rejected</code>.
       </li>
       <li>
-        If you <strong>accept</strong>, we load Google Analytics and (on pages with an ad slot) Google AdSense.
+        We use <strong>Google Consent Mode v2</strong>. Google Analytics and (on pages with an ad slot) Google AdSense load for all visitors, but with consent defaulting to <em>denied</em>.
       </li>
       <li>
-        If you <strong>reject</strong>, we do not load Google Analytics or Google AdSense.
+        Until you <strong>accept</strong>, analytics runs in cookieless/modeled mode and ads are non-personalized — no advertising or analytics cookies are written.
+      </li>
+      <li>
+        If you <strong>accept</strong>, we grant consent: analytics may set cookies and ads may be personalized.
+      </li>
+      <li>
+        If you <strong>reject</strong>, consent stays denied — analytics remains cookieless and ads remain non-personalized.
       </li>
       <li>
         <strong>Note:</strong> the meSpeak CDN files (jsDelivr) load regardless of this choice.
