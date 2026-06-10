@@ -273,7 +273,7 @@ function populateVoiceSel() {
   const studioLicensed = license && license.status === 'active';
   if (studioVoices.length) {
     const studioGroup = document.createElement('optgroup');
-    studioGroup.label = studioLicensed ? 'Studio Voices' : 'Studio Voices — subscribe to use';
+    studioGroup.label = studioLicensed ? 'Studio Voices' : '— Studio voices (optional upgrade) —';
     studioVoices.forEach(v => {
       const opt = document.createElement('option');
       opt.value = `studio:${v.id}`;
@@ -383,11 +383,13 @@ function startSpeak() {
 
   if (voiceType === 'studio') {
     if (!(license && license.status === 'active')) {
-      // Unlicensed: don't generate — nudge to subscribe (they can still preview).
+      // Unlicensed: don't ambush with the pricing modal. Play the free cached
+      // sample of the selected Studio voice and show an inline nudge instead.
       isSpeaking = false;
       updateControls();
       setStatus('Ready');
-      openUpgrade();
+      playSample();
+      showStudioNudge('sample');
       return;
     }
     useStudioSpeech(voiceId);
@@ -1195,14 +1197,18 @@ async function playSample() {
 /* ========== STUDIO CONVERSION NUDGE ========== */
 // Shown after a free playback finishes, to unlicensed users. Offers a free
 // cached Studio sample (no per-visitor character cost) and the plans.
-function showStudioNudge() {
+function showStudioNudge(mode) {
   const el = $('studioNudge');
   if (!el) return;
   const eligible = studioVoices.length && !(license && license.status === 'active');
   if (!eligible) { el.hidden = true; return; }
-  el.innerHTML = 'That was a computer voice. Studio voices sound far more natural — '
-    + '<button type="button" class="nudge-btn" id="nudgeSample">Hear a Studio sample</button> '
-    + '<button type="button" class="nudge-btn" id="nudgePlans">See plans</button>';
+  const intro = mode === 'sample'
+    ? "<strong>That's a Studio voice — here's a free sample.</strong> The free voices above play "
+      + 'your full text instantly. Studio is an optional upgrade for the most lifelike narration.'
+    : 'That was a computer voice. Studio voices sound far more natural.';
+  el.innerHTML = intro + ' '
+    + '<button type="button" class="nudge-btn" id="nudgeSample">▶ Hear free sample</button> '
+    + '<button type="button" class="nudge-btn nudge-btn--ghost" id="nudgePlans">See plans</button>';
   el.hidden = false;
   const s = $('nudgeSample'); if (s) s.onclick = playSample;
   const p = $('nudgePlans'); if (p) p.onclick = openUpgrade;
@@ -1239,12 +1245,20 @@ async function loadTiers() {
     grid.innerHTML = '';
     tiers.forEach(t => {
       const price = t.amount_cents != null ? `$${(t.amount_cents / 100).toFixed(0)}` : '—';
+      const cap = t.cap || 0;
+      // ~900 characters ≈ one minute of spoken audio — frame the cap as a benefit.
+      const mins = Math.round(cap / 900);
+      const audio = mins >= 90 ? `~${(mins / 60).toFixed(1)} hrs of audio`
+                              : `~${Math.max(5, Math.round(mins / 5) * 5)} min of audio`;
+      const popular = t.plan === 'pro';
       const card = document.createElement('div');
-      card.className = 'tier-card';
+      card.className = 'tier-card' + (popular ? ' tier-card--popular' : '');
       card.innerHTML =
+        (popular ? '<span class="tier-flag">Most popular</span>' : '') +
         `<p class="tier-name">${t.plan}</p>` +
         `<p class="tier-price">${price}<span>/${t.interval}</span></p>` +
-        `<p class="tier-cap">${(t.cap || 0).toLocaleString()} characters / month</p>` +
+        `<p class="tier-cap"><span class="tier-cap-big">${audio}</span>` +
+          `<span class="tier-cap-exact">${cap.toLocaleString()} characters / month</span></p>` +
         `<button type="button" class="btn tier-btn">Choose ${t.plan}</button>`;
       card.querySelector('button').onclick = (e) => startCheckout(t.price_id, e.currentTarget);
       grid.appendChild(card);

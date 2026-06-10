@@ -1832,6 +1832,120 @@ html.dyslexia .hero-lede {
   font-style: italic;
 }
 
+/* ---- Studio offer (voice picker) — free-first framing ---- */
+.studio-offer {
+  margin-top: 10px;
+  border-top: 1px dashed var(--rule-soft);
+  padding-top: 10px;
+}
+.free-flag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faded);
+  margin: 0 0 8px;
+}
+.free-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3c8a3c;
+  flex: none;
+}
+.studio-cta {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+  color: var(--vermilion);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+.studio-cta:hover { color: var(--vermilion-dark); }
+.studio-cta .cta-arr { font-family: var(--font-body); }
+.studio-offer-sub {
+  margin: 5px 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-faded);
+}
+.tag-opt {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ochre);
+  border: 1px solid var(--ochre);
+  border-radius: 2px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+/* ---- Modal: free reassurance banner ---- */
+.reassure-banner {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  background: #eaf3e6;
+  border: 1px solid #b9d3ad;
+  border-radius: 2px;
+  padding: 9px 11px;
+  margin: 0 0 16px;
+}
+.reassure-banner .free-dot { margin-top: 4px; }
+.reassure-banner strong { color: var(--ink); }
+
+/* ---- Tier cards: benefit framing + popular anchor ---- */
+.tier-card { position: relative; }
+.tier-card--popular { box-shadow: var(--shadow); }
+.tier-flag {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--vermilion);
+  color: var(--paper-bright);
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.tier-cap-big {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+.tier-cap-exact {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-faded);
+  margin-top: 2px;
+}
+
+/* ---- Nudge: ghost (secondary) button ---- */
+.nudge-btn--ghost {
+  background: var(--paper-bright);
+  color: var(--ink);
+}
+.nudge-btn--ghost:hover { background: var(--paper-deep); }
+
 @media (max-width: 640px) {
   .modal-card { padding: 24px 18px 20px; }
   .modal-title { font-size: 1.45rem; }
