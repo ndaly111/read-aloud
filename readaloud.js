@@ -157,6 +157,8 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
   if (recoverBtn) recoverBtn.onclick = recoverKey;
   const previewBtn = $('previewBtn');
   if (previewBtn) previewBtn.onclick = togglePreview;
+  const modalSampleBtn = $('modalSampleBtn');
+  if (modalSampleBtn) modalSampleBtn.onclick = togglePreview;
   const modal = $('upgradeModal');
   if (modal) modal.addEventListener('click', (e) => {
     if (e.target === modal) closeUpgrade();
