@@ -907,7 +907,7 @@ async def premium_trial(request: Request):
                              headers={"Content-Disposition": "inline"})
 
 
-_ALLOWED_EVENTS = {"upgrade_open", "studio_select", "checkout_click"}
+_ALLOWED_EVENTS = {"upgrade_open", "studio_select", "checkout_click", "sample_done"}
 
 
 @router.post("/api/event")
@@ -1118,7 +1118,8 @@ def _gather_finance() -> dict:
     # --- Studio engagement funnel ---
     try:
         out["events"] = events_summary(
-            ["sample_play", "studio_select", "upgrade_open", "trial_play", "checkout_click"])
+            ["sample_play", "sample_done", "studio_select", "upgrade_open",
+             "trial_play", "checkout_click"])
     except Exception as e:
         out["events_error"] = str(e)
 
@@ -1154,6 +1155,7 @@ def _render_finance_section(d: dict) -> str:
     parts.append("<h2>Studio engagement (funnel)</h2><table>")
     parts.append("<tr><th>Step</th><th class='num'>All-time</th><th class='num'>Today</th></tr>")
     parts.append(evrow("Voice samples played", "sample_play"))
+    parts.append(evrow("Samples heard to the end", "sample_done"))
     parts.append(evrow("Studio voice selected", "studio_select"))
     parts.append(evrow("Upgrade modal opened", "upgrade_open"))
     parts.append(evrow("Free trials used", "trial_play"))
