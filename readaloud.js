@@ -1202,13 +1202,29 @@ function showStudioNudge(mode) {
   if (!el) return;
   const eligible = studioVoices.length && !(license && license.status === 'active');
   if (!eligible) { el.hidden = true; return; }
-  const intro = mode === 'sample'
-    ? "<strong>That's a Studio voice — here's a free sample.</strong> The free voices above play "
-      + 'your full text instantly. Studio is an optional upgrade for the most lifelike narration.'
-    : 'That was a computer voice. Studio voices sound far more natural.';
+  // Three moments, one element:
+  //   'sample'       — visitor pressed Play on a Studio voice (sample now playing)
+  //   'after-sample' — the sample just finished: plans become the primary action
+  //   (default)      — a free playback ended; quiet invitation, shows often
+  let intro, sampleLabel = 'Hear a sample';
+  let plansPrimary = false;
+  if (mode === 'sample') {
+    intro = "<strong>That's a Studio voice, so here's a sample of it.</strong> "
+      + 'The free voices above will read your full text right now.';
+  } else if (mode === 'after-sample') {
+    intro = "<strong>Like that voice?</strong> That's Studio. $9 a month, "
+      + 'and the rest of the tool stays free.';
+    sampleLabel = 'Play it again';
+    plansPrimary = true;
+  } else {
+    intro = 'The Studio voices sound like an actual person reading.';
+    sampleLabel = 'Hear one';
+  }
   el.innerHTML = intro + ' '
-    + '<button type="button" class="nudge-btn" id="nudgeSample">▶ Hear free sample</button> '
-    + '<button type="button" class="nudge-btn nudge-btn--ghost" id="nudgePlans">See plans</button>';
+    + '<button type="button" class="nudge-btn' + (plansPrimary ? ' nudge-btn--ghost' : '')
+    + '" id="nudgeSample">' + sampleLabel + '</button> '
+    + '<button type="button" class="nudge-btn' + (plansPrimary ? '' : ' nudge-btn--ghost')
+    + '" id="nudgePlans">See plans</button>';
   el.hidden = false;
   const s = $('nudgeSample'); if (s) s.onclick = playSample;
   const p = $('nudgePlans'); if (p) p.onclick = openUpgrade;
