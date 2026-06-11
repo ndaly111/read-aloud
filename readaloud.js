@@ -1181,6 +1181,11 @@ async function playSample() {
       URL.revokeObjectURL(url);
       previewAudio = null;
       if (btn) btn.textContent = 'Hear a sample';
+      // The sample just finished — the hottest moment in the funnel.
+      trackEvent('sample_done');
+      // Inline CTA only when the plans modal isn't already showing the offer.
+      const modal = $('upgradeModal');
+      if (modal && modal.hidden) showStudioNudge('after-sample');
     };
     previewAudio.onerror = () => {
       previewAudio = null;
