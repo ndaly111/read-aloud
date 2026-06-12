@@ -42,7 +42,7 @@
   --radius: 2px;            /* almost square — letterpress, not pill */
   --shadow: 4px 4px 0 0 var(--ink);
   --shadow-soft: 2px 2px 0 0 var(--ink);
-  --max-width: 1080px;
+  --max-width: 1200px;
   --measure: 64ch;
 }
 
@@ -547,7 +547,8 @@ progress::-moz-progress-bar {
 
 @media (min-width: 1000px) {
   .masthead-grid {
-    grid-template-columns: 1fr 1fr;
+    /* The instrument is the product — give it the lion's share on desktop. */
+    grid-template-columns: 2fr 3fr;
     gap: 48px;
     align-items: start;
   }
@@ -591,6 +592,10 @@ progress::-moz-progress-bar {
 .masthead-tool .panel--instrument .panel-header { padding: 12px 22px; }
 .masthead-tool .panel--instrument .tool-grid { padding: 22px; }
 .masthead-tool textarea#txt { min-height: 160px; }
+@media (min-width: 1000px) {
+  /* Desktop has room — give the composition area real height. */
+  .masthead-tool textarea#txt { min-height: 300px; }
+}
 
 .hero-eyebrow {
   font-family: var(--font-mono);
