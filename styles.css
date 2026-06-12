@@ -546,12 +546,21 @@ progress::-moz-progress-bar {
 }
 
 @media (min-width: 1000px) {
+  /* Header above, full-width instrument below — the tool IS the page. */
   .masthead-grid {
-    /* The instrument is the product — give it the lion's share on desktop. */
-    grid-template-columns: 2fr 3fr;
-    gap: 48px;
-    align-items: start;
+    gap: 30px;
   }
+  .masthead-text {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 56px;
+    row-gap: 14px;
+    align-items: end;
+  }
+  .hero-eyebrow,
+  .hero-tags { grid-column: 1 / -1; }
+  .hero-title,
+  .hero-lede { margin: 0; }
 }
 
 .masthead-text > * + * { margin-top: 18px; }
@@ -582,13 +591,8 @@ progress::-moz-progress-bar {
 }
 .hero-tags .sep { color: var(--rule); }
 
-/* When inside masthead, the instrument stacks vertically (column is too narrow for 2-col) */
-@media (min-width: 1000px) {
-  .masthead-tool .tool-grid {
-    grid-template-columns: 1fr;
-    gap: 22px;
-  }
-}
+/* Full-width masthead instrument: the base .tool-grid 2-col rule (>=900px,
+   textarea left / controls right) applies — no narrow-column override needed. */
 .masthead-tool .panel--instrument .panel-header { padding: 12px 22px; }
 .masthead-tool .panel--instrument .tool-grid { padding: 22px; }
 .masthead-tool textarea#txt { min-height: 160px; }
