@@ -880,9 +880,10 @@ function speakNextChunk(voiceIndex) {
 }
 
 /* ========== PROGRESS + DISPLAY ========== */
-// Highlight position leads the audio clock slightly: by the time a word's
-// audio reaches the ear the engine is already a few characters further in.
-const HIGHLIGHT_LEAD_CHARS = 3;
+// Bias between the audio clock and the lit word, in characters. The rAF loop
+// already tracks the clock frame-accurately; with a +3 lead the highlight ran
+// ahead of the voice (user-reported), so no extra lead. Negative = trail.
+const HIGHLIGHT_LEAD_CHARS = 0;
 
 let progressLooping = false;
 function startProgressLoop() {
