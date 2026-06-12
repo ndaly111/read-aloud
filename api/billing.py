@@ -93,7 +93,11 @@ PREMIUM_TRIAL_IP_COOLDOWN = int(os.environ.get("PREMIUM_TRIAL_IP_COOLDOWN", "720
 # characters per visitor and can burn the ElevenLabs quota fast. Free previews use
 # the cached canned samples instead (zero ongoing cost). Set to "1" to re-enable.
 PREMIUM_TRIAL_ENABLED = os.environ.get("PREMIUM_TRIAL_ENABLED", "0") == "1"
-PREMIUM_TTS_ENABLED = bool(BILLING_ENABLED and ELEVENLABS_API_KEY)
+# Studio retired 2026-06-11: ear-tested twice, EL voices are inaudibly better
+# than the free Edge voices, 0 subscribers ever. Set PREMIUM_TTS_ENABLED=1 in
+# tts.env to bring the whole tier back (frontend auto-detects via /voices).
+PREMIUM_TTS_ENABLED = (bool(BILLING_ENABLED and ELEVENLABS_API_KEY)
+                       and os.environ.get("PREMIUM_TTS_ENABLED", "1") == "1")
 
 router = APIRouter()
 _db_lock = Lock()
