@@ -23,6 +23,44 @@ let studioVoices = [];     // [{id, name, labels}] — Studio voice catalog
 let previewAudio = null;   // currently-playing Studio preview sample
 let lastPlaybackType = ''; // 'browser' | 'neural' | 'studio' — drives the finish nudge
 
+// One reusable <audio> element for ALL neural chunks. A fresh element per
+// chunk breaks hands-free listening: once the screen locks, iOS/Android only
+// allow play() on an element the user's tap originally unlocked. Reusing the
+// unlocked element (plus Media Session below) keeps multi-chunk reads going
+// with the phone in a pocket.
+let sharedAudio = null;
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+
+function initSharedAudio() {
+  if (sharedAudio) return;
+  sharedAudio = new Audio();
+  sharedAudio.preload = 'auto';
+  // Unlock inside the user's gesture so later chunks may start screen-off.
+  sharedAudio.src = SILENT_WAV;
+  sharedAudio.play().catch(() => {});
+}
+
+// Lock-screen / notification media controls. Without this the OS treats the
+// page as a silent tab and suspends it between chunks.
+function setupMediaSession() {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    const firstWords = txt.value.trim().split(/\s+/).slice(0, 8).join(' ');
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: firstWords || 'Read-Aloud',
+      artist: 'Read-Aloud',
+    });
+    navigator.mediaSession.setActionHandler('play', resumeSpeak);
+    navigator.mediaSession.setActionHandler('pause', pauseSpeak);
+    navigator.mediaSession.setActionHandler('stop', stopAll);
+  } catch (e) { /* MediaMetadata unsupported — fine */ }
+}
+
+function setMediaPlaybackState(state) {
+  if (!('mediaSession' in navigator)) return;
+  try { navigator.mediaSession.playbackState = state; } catch (e) {}
+}
+
 // Premium Neural Voices - simplified list (best voices only)
 const NEURAL_VOICES = {
   en: [
@@ -110,6 +148,8 @@ let keepAliveTimer = null; // Chrome speech synthesis keep-alive
 let currentVoiceIndex = '-1'; // Saved so keep-alive can restart stalled browser TTS
 let currentChunk = ''; // Current browser TTS chunk, saved so stall recovery can re-speak it
 let currentChunkStart = 0; // Absolute char offset where current browser TTS chunk began
+let chunkSpokenAt = 0;     // when the current utterance was handed to speechSynthesis
+let lastBoundaryAt = 0;    // last onboundary event for the current utterance (0 = none yet)
 let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll() unblock it
 let volChangeTimer = null; // Debounce for live volume changes that re-trigger browser TTS
 
@@ -378,6 +418,7 @@ function startSpeak() {
     return;
   }
   clearError();
+  initSharedAudio(); // unlock the shared element while we're in the tap's call stack
   const sn = $('studioNudge');
   if (sn) sn.hidden = true;
   isSpeaking = true;
@@ -460,6 +501,8 @@ async function useNeuralSpeech(voiceId) {
   downloadBlobs = [];
   $('download').disabled = true;
   updateControls();
+  setupMediaSession();
+  setMediaPlaybackState('playing');
 
   const chunks = chunkText(txt.value, 1500); // ~3s TTFB vs ~9s at 4500; pipelined
   progChar = 0;
@@ -555,7 +598,9 @@ function playAudioBlob(blob, chunkLength) {
       return;
     }
     const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
+    // Reuse the gesture-unlocked element so chunk N+1 may start screen-off.
+    const audio = sharedAudio || (sharedAudio = new Audio());
+    audio.src = url;
     audio.volume = +volSlider.value;
     currentAudio = audio;
 
@@ -712,6 +757,8 @@ function useBrowserSpeech(voiceIndex) {
   isPaused = false;
   setStatus('Playing...');
   updateControls();
+  setupMediaSession();
+  setMediaPlaybackState('playing');
   startKeepAlive();
   speakNextChunk(voiceIndex);
   requestAnimationFrame(progressLoop);
@@ -728,6 +775,24 @@ function startKeepAlive() {
       // Standard Chrome keep-alive: pause/resume resets the 15s timer
       speechSynthesis.pause();
       speechSynthesis.resume();
+
+      // Android Chrome's engine can die with `speaking` stuck true — the
+      // recovery branch below never fires and playback stops silently.
+      // Detect the zombie by lack of progress and re-speak the chunk.
+      const now = Date.now();
+      const expectedMs = currentChunk
+        ? (currentChunk.length / (15 * (+rateSlider.value || 1))) * 1000 : 0;
+      const zombie = lastBoundaryAt
+        ? now - lastBoundaryAt > 15000               // boundaries flowed, then stopped
+        : now - chunkSpokenAt > Math.max(20000, expectedMs * 2.5); // platform fires no boundaries
+      if (zombie && currentChunk) {
+        console.warn('Speech engine zombie (speaking stuck true) — re-speaking current chunk');
+        if (utter) utter.onend = null; // keep cancel() from chaining into speakNextChunk
+        speechSynthesis.cancel();
+        queue.unshift(currentChunk);
+        currentChunk = '';
+        setTimeout(() => speakNextChunk(currentVoiceIndex), 100);
+      }
     } else if (!speechSynthesis.pending) {
       // Chrome silently killed speech — nothing is speaking or queued.
       // Put the current (interrupted) chunk back at the front and re-speak.
@@ -785,9 +850,12 @@ function speakNextChunk(voiceIndex) {
 
   const chunkStart = progChar;
   currentChunkStart = chunkStart;
+  chunkSpokenAt = Date.now();
+  lastBoundaryAt = 0;
   utter.onboundary = (e) => {
     progChar = chunkStart + e.charIndex;
     boundarySeen = true;
+    lastBoundaryAt = Date.now();
   };
   utter.onend = () => {
     progChar = chunkStart + chunk.length;
@@ -873,6 +941,7 @@ function pauseSpeak() {
 
   isPaused = true;
   setStatus('Paused');
+  setMediaPlaybackState('paused');
   updateControls();
 }
 
@@ -887,6 +956,7 @@ function resumeSpeak() {
 
   isPaused = false;
   setStatus('Playing...');
+  setMediaPlaybackState('playing');
   updateControls();
 }
 
@@ -914,6 +984,7 @@ function stopAll() {
   $('download').disabled = true;
   resetMeter();
   setStatus('Ready');
+  setMediaPlaybackState('none');
   updateControls();
 }
 
@@ -922,6 +993,7 @@ function finish() {
   isPaused = false;
   currentAudio = null;
   stopKeepAlive();
+  setMediaPlaybackState('none');
   updateMeter(totalChars);
   setStatus('Finished');
   updateControls();
