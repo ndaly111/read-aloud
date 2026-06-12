@@ -779,10 +779,15 @@ from fastapi.responses import FileResponse, StreamingResponse
 # Free preview samples: one short fixed clip per voice, generated once and cached
 # to disk. Lets unlicensed visitors hear a Studio voice before paying. Bounded
 # cost: ~(#voices x sample length) one time, then zero — never per-play.
+# Expressive script on purpose: flat product copy is exactly what free Edge
+# voices render well, hiding ElevenLabs' real advantage (emotion, pacing,
+# delivery). Changed 2026-06-11 after a flat sample made Studio sound
+# identical to the free tier.
 PREMIUM_SAMPLE_TEXT = os.environ.get(
     "PREMIUM_SAMPLE_TEXT",
-    "This is a Read-Aloud Studio voice. Paste your own text and it'll read it "
-    "back to you, just like this.")
+    "The letter arrived on a Tuesday, of all days. She read it twice, laughed "
+    "once, and cried a little anyway. \"Well,\" she whispered, \"it's about "
+    "time.\" Some voices can carry a whole story. This is one of them.")
 PREMIUM_SAMPLE_DIR = os.environ.get("PREMIUM_SAMPLE_DIR", "/home/ubuntu/read-aloud/samples")
 
 _voices_cache = {"data": None, "ids": set(), "ts": 0.0}
