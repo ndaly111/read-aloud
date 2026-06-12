@@ -345,7 +345,10 @@ function updateVoiceStatus() {
   // The "Hear a sample" button is available whenever Studio voices exist — it
   // previews the selected Studio voice, or a default one if the pick isn't Studio.
   const pv = $('previewBtn');
-  if (pv) pv.hidden = !studioVoices.length;
+  if (pv) {
+    pv.hidden = !studioVoices.length;
+    if (!previewAudio || previewAudio.paused) pv.textContent = previewBtnLabel();
+  }
   const indicator = document.getElementById('voice-type-indicator');
   if (indicator) {
     if (voiceType === 'neural') {
@@ -1139,13 +1142,21 @@ async function useStudioSpeech(voiceId) {
 }
 
 /* ========== STUDIO PREVIEW SAMPLES (free, cached) ========== */
+// The preview button ALWAYS plays a Studio voice, never the selected free
+// voice. Label it accordingly or visitors think they compared free vs Studio
+// and heard no difference (they heard Studio twice).
+function previewBtnLabel() {
+  return voiceSel && voiceSel.value.startsWith('studio:')
+    ? 'Hear this voice' : 'Hear a Studio sample';
+}
+
 function stopPreview() {
   if (previewAudio) {
     previewAudio.pause();
     previewAudio = null;
   }
   const btn = $('previewBtn');
-  if (btn && !btn.hidden) btn.textContent = 'Hear a sample';
+  if (btn && !btn.hidden) btn.textContent = previewBtnLabel();
 }
 
 function togglePreview() {
@@ -1182,7 +1193,7 @@ async function playSample() {
     previewAudio.onended = () => {
       URL.revokeObjectURL(url);
       previewAudio = null;
-      if (btn) btn.textContent = 'Hear a sample';
+      if (btn) btn.textContent = previewBtnLabel();
       // The sample just finished — the hottest moment in the funnel.
       trackEvent('sample_done');
       // Inline CTA only when the plans modal isn't already showing the offer.
@@ -1191,13 +1202,13 @@ async function playSample() {
     };
     previewAudio.onerror = () => {
       previewAudio = null;
-      if (btn) { btn.disabled = false; btn.textContent = 'Hear a sample'; }
+      if (btn) { btn.disabled = false; btn.textContent = previewBtnLabel(); }
     };
     await previewAudio.play();
     if (btn) { btn.disabled = false; btn.textContent = 'Stop sample'; }
   } catch (e) {
     if (url) URL.revokeObjectURL(url);
-    if (btn) { btn.disabled = false; btn.textContent = 'Hear a sample'; }
+    if (btn) { btn.disabled = false; btn.textContent = previewBtnLabel(); }
   }
 }
 
