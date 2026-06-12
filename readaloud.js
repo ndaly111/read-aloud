@@ -150,6 +150,8 @@ let currentChunk = ''; // Current browser TTS chunk, saved so stall recovery can
 let currentChunkStart = 0; // Absolute char offset where current browser TTS chunk began
 let chunkSpokenAt = 0;     // when the current utterance was handed to speechSynthesis
 let lastBoundaryAt = 0;    // last onboundary event for the current utterance (0 = none yet)
+let neuralChunkStart = 0;  // absolute char offset of the neural chunk now playing
+let neuralChunkLen = 0;    // its length — progressLoop maps audio time onto these
 let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll() unblock it
 let volChangeTimer = null; // Debounce for live volume changes that re-trigger browser TTS
 
@@ -199,6 +201,10 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
   if (previewBtn) previewBtn.onclick = togglePreview;
   const modalSampleBtn = $('modalSampleBtn');
   if (modalSampleBtn) modalSampleBtn.onclick = togglePreview;
+
+  // Manual scrolling in the reading pane pauses highlight auto-follow briefly.
+  ['wheel', 'touchmove'].forEach((ev) =>
+    disp.addEventListener(ev, () => { userScrolledAt = Date.now(); }, { passive: true }));
   const modal = $('upgradeModal');
   if (modal) modal.addEventListener('click', (e) => {
     if (e.target === modal) closeUpgrade();
@@ -503,6 +509,7 @@ async function useNeuralSpeech(voiceId) {
   updateControls();
   setupMediaSession();
   setMediaPlaybackState('playing');
+  startProgressLoop();
 
   const chunks = chunkText(txt.value, 1500); // ~3s TTFB vs ~9s at 4500; pipelined
   progChar = 0;
@@ -605,6 +612,8 @@ function playAudioBlob(blob, chunkLength) {
     currentAudio = audio;
 
     const chunkStart = progChar;
+    neuralChunkStart = chunkStart;
+    neuralChunkLen = chunkLength;
     let done = false;
 
     function cleanup() {
@@ -761,7 +770,7 @@ function useBrowserSpeech(voiceIndex) {
   setMediaPlaybackState('playing');
   startKeepAlive();
   speakNextChunk(voiceIndex);
-  requestAnimationFrame(progressLoop);
+  startProgressLoop();
 }
 
 // Chrome kills speechSynthesis after ~15s of continuous speech.
@@ -871,9 +880,26 @@ function speakNextChunk(voiceIndex) {
 }
 
 /* ========== PROGRESS + DISPLAY ========== */
+// Highlight position leads the audio clock slightly: by the time a word's
+// audio reaches the ear the engine is already a few characters further in.
+const HIGHLIGHT_LEAD_CHARS = 3;
+
+let progressLooping = false;
+function startProgressLoop() {
+  if (progressLooping) return;
+  progressLooping = true;
+  requestAnimationFrame(progressLoop);
+}
+
 function progressLoop() {
-  if (!isSpeaking) return;
-  if (!boundarySeen && !currentAudio) {
+  if (!isSpeaking) { progressLooping = false; return; }
+  if (currentAudio && currentAudio.duration) {
+    // Neural: read the audio clock every frame. ontimeupdate alone fires only
+    // ~4x/s, which made the highlight visibly trail the voice.
+    const frac = Math.min(1, currentAudio.currentTime / currentAudio.duration);
+    progChar = Math.min(totalChars,
+      neuralChunkStart + Math.floor(frac * neuralChunkLen) + HIGHLIGHT_LEAD_CHARS);
+  } else if (!boundarySeen && !currentAudio) {
     const elapsed = (Date.now() - startTime) / 1000;
     progChar = Math.min(totalChars, Math.round(elapsed * (180 / 60) * 5 * rateSlider.value));
   }
@@ -883,6 +909,8 @@ function progressLoop() {
 
 function buildDisplay() {
   disp.innerHTML = '';
+  lastHlEl = null;
+  lastHlIdx = -1;
   totalChars = txt.value.length;
   txt.value.split(/(\s+)/).forEach((tok) => {
     const s = document.createElement('span');
@@ -907,7 +935,19 @@ function updateMeter(chars) {
   highlight(chars);
 }
 
+let lastHlEl = null;     // currently highlighted span (avoids full-DOM class sweeps at 60fps)
+let lastHlIdx = -1;
+let lastHlAt = 0;
+let userScrolledAt = 0;  // last manual scroll in #disp — auto-follow yields to the reader
+
 function highlight(idx) {
+  // The find loop is O(spans); at 60fps on long texts that's real work.
+  // Skip until the position moved a few characters or 150ms passed.
+  const now = Date.now();
+  if (lastHlIdx >= 0 && Math.abs(idx - lastHlIdx) < 3 && now - lastHlAt < 150) return;
+  lastHlIdx = idx;
+  lastHlAt = now;
+
   let sum = 0;
   let target = null;
   for (const span of disp.childNodes) {
@@ -918,8 +958,27 @@ function highlight(idx) {
     }
     sum += len;
   }
-  Array.from(disp.children).forEach((s) => s.classList.remove('token-highlight'));
-  if (target) target.classList.add('token-highlight');
+  if (target === lastHlEl) return;
+  if (lastHlEl) lastHlEl.classList.remove('token-highlight');
+  lastHlEl = target || null;
+  if (target) {
+    target.classList.add('token-highlight');
+    followHighlight(target);
+  }
+}
+
+// Keep the spoken word visible inside the scrollable #disp box, unless the
+// reader scrolled it themselves in the last few seconds.
+function followHighlight(target) {
+  if (Date.now() - userScrolledAt < 4000) return;
+  const dr = disp.getBoundingClientRect();
+  const tr = target.getBoundingClientRect();
+  if (tr.top < dr.top || tr.bottom > dr.bottom - 8) {
+    disp.scrollTo({
+      top: disp.scrollTop + (tr.top - dr.top) - dr.height / 3,
+      behavior: 'smooth',
+    });
+  }
 }
 
 function formatTime(s) {
