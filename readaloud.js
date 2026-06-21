@@ -40,6 +40,21 @@ function initSharedAudio() {
   sharedAudio.play().catch(() => {});
 }
 
+// Strip every per-chunk event handler off the shared element before it's reused
+// for the next chunk. Without this, a finished chunk's closures stay bound and
+// fire against the next chunk's media — a stale `timeupdate` rewinds the meter,
+// a stale stall-retry restarts playback — which is the skip/rewind/loop bug that
+// appeared once all chunks moved onto one reused <audio> element.
+function detachChunkHandlers(a) {
+  if (!a) return;
+  a.ontimeupdate = null;
+  a.onended = null;
+  a.onerror = null;
+  a.onstalled = null;
+  a.onwaiting = null;
+  a.oncanplaythrough = null;
+}
+
 // Lock-screen / notification media controls. Without this the OS treats the
 // page as a silent tab and suspends it between chunks.
 function setupMediaSession() {
@@ -606,8 +621,15 @@ function playAudioBlob(blob, chunkLength) {
     }
     const url = URL.createObjectURL(blob);
     // Reuse the gesture-unlocked element so chunk N+1 may start screen-off.
+    // Quiesce it BEFORE the src swap: pause it and strip the previous chunk's
+    // handlers, so no leftover timeupdate/stall-retry from the finished chunk
+    // fires against this one (that bleed-through is the skip/rewind/loop bug).
+    // Keep the SAME element object — that's what preserves the iOS/Android
+    // gesture unlock that lets play() run with the screen locked.
     const audio = sharedAudio || (sharedAudio = new Audio());
-    audio.src = url;
+    detachChunkHandlers(audio);
+    try { audio.pause(); } catch (e) { /* pausing an idle element is a no-op */ }
+    audio.src = url; // assigning a new src resets currentTime to 0 for this chunk
     audio.volume = +volSlider.value;
     currentAudio = audio;
 
@@ -618,6 +640,10 @@ function playAudioBlob(blob, chunkLength) {
 
     function cleanup() {
       clearTimeout(safetyTimer);
+      // Detach this chunk's handlers immediately so a late stall/waiting/error
+      // event (e.g. from the about-to-be-revoked blob URL) can't fire a retry
+      // or rewind the meter after we've already resolved.
+      detachChunkHandlers(audio);
       URL.revokeObjectURL(url);
       if (currentAudio === audio) currentAudio = null;
     }
@@ -669,12 +695,23 @@ function playAudioBlob(blob, chunkLength) {
       reject(new Error('Audio error (code ' + code + '): ' + (msg || 'playback failed')));
     };
 
-    // If the browser suspends the audio (tab hidden, network blip, etc.),
-    // retry playing the already-rendered blob rather than failing.
+    // The chunk's MP3 is already fully in memory (we awaited the whole blob),
+    // so a `waiting`/`stalled` here is a transient decode hiccup or an OS
+    // suspend on screen-lock — never a download stall. Only nudge play() when
+    // the element has genuinely fallen paused mid-clip (the screen-lock resume
+    // case f453e7d added); skip it during normal buffering, across a chunk
+    // boundary, or once finished — calling play() then is what produced the
+    // skip/rewind storm. Debounced so it can't hammer on a throttled tab.
+    let lastRetryAt = 0;
     const retryPlay = () => {
       if (done || isPaused) return;
-      console.warn('Audio stalled, retrying play...');
-      audio.play().catch(() => {}); // silent — onerror will handle a real failure
+      if (audio.src !== url) return;             // the next chunk already took the element
+      if (!audio.paused || audio.ended) return;  // still playing or finished — leave it alone
+      const now = Date.now();
+      if (now - lastRetryAt < 1000) return;      // at most ~1 resume nudge per second
+      lastRetryAt = now;
+      console.warn('Audio suspended mid-clip, resuming play...');
+      audio.play().catch(() => {}); // silent — onerror handles a real failure
     };
     audio.onstalled = retryPlay;
     audio.onwaiting = retryPlay;
