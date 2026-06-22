@@ -607,6 +607,12 @@ async function useNeuralSpeech(voiceId) {
     await new Promise(r => setTimeout(r, 2000));
     clearError();
 
+    // The user may have pressed Stop during the 2s "switching" delay above —
+    // stopAll() flips isSpeaking false. Don't start an orphaned browser read
+    // over a read they explicitly stopped. Guard on isSpeaking ONLY (not
+    // isPaused: a pause during the window should still get the fallback).
+    if (!isSpeaking) return;
+
     progChar = 0;
     useBrowserSpeech('-1');
   }
@@ -841,7 +847,10 @@ function startKeepAlive() {
       }
     } else if (!speechSynthesis.pending) {
       // Chrome silently killed speech — nothing is speaking or queued.
-      // Put the current (interrupted) chunk back at the front and re-speak.
+      // Neutralize the dead utterance's onend first so it can't also fire and
+      // advance the queue a second time (mirrors the zombie branch above), then
+      // re-speak. Put the current (interrupted) chunk back at the front.
+      if (utter) utter.onend = null;
       if (currentChunk) {
         console.warn('Speech synthesis stalled, re-speaking current chunk...');
         queue.unshift(currentChunk);
@@ -870,7 +879,13 @@ function stopKeepAlive() {
 // volume slider since utterance.volume is locked once speak() runs.
 function restartBrowserSpeech() {
   if (!isSpeaking || isPaused || currentAudio) return;
-  const charInChunk = Math.max(0, progChar - currentChunkStart);
+  // progChar is only a trustworthy slice point when a boundary event has fired
+  // for THIS utterance. On platforms that don't emit onboundary (Safari, some
+  // Android), progChar is just a drifting elapsed-time estimate — slicing on it
+  // would drop unspoken text (skip) or repeat spoken text. There, re-speak the
+  // whole chunk; a brief repeat beats losing content.
+  const haveBoundary = lastBoundaryAt > 0;
+  const charInChunk = haveBoundary ? Math.max(0, progChar - currentChunkStart) : 0;
   const remainder = currentChunk ? currentChunk.slice(charInChunk) : '';
   if (remainder.length > 0) queue.unshift(remainder);
   currentChunk = '';
@@ -903,7 +918,14 @@ function speakNextChunk(voiceIndex) {
     boundarySeen = true;
     lastBoundaryAt = Date.now();
   };
+  // Only the CURRENT utterance may advance the queue. A superseded utterance
+  // (e.g. one orphaned by the keep-alive stall-recovery re-speak) keeps a live
+  // onend; by the time it fires, `utter` already points at a newer utterance —
+  // bail rather than shift the queue an extra time (double-speak/skip). Also
+  // stop advancing once playback has ended.
+  const thisUtter = utter;
   utter.onend = () => {
+    if (utter !== thisUtter || !isSpeaking) return;
     progChar = chunkStart + chunk.length;
     speakNextChunk(voiceIndex);
   };
