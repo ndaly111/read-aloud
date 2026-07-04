@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260612e">
+  <link rel="stylesheet" href="/styles.css?v=20260704a">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -200,6 +200,33 @@
   </g>
 </svg>
 
+<!-- latest updates — newest first; add a new <li> at the top when something ships -->
+<section class="updates-strip" aria-labelledby="updates-heading">
+  <h2 id="updates-heading" class="updates-heading">Latest <em>updates.</em></h2>
+  <ul class="updates-list">
+    <li>
+      <span class="upd-date">Jul 4, 2026</span>
+      <span class="upd-text">The moving highlight now follows the voice word for word — it no longer drifts away from what you're hearing.</span>
+    </li>
+    <li>
+      <span class="upd-date">Jul 4, 2026</span>
+      <span class="upd-text">Click any word to start reading from that spot. The progress bar works the same way — click anywhere on it to jump around.</span>
+    </li>
+    <li>
+      <span class="upd-date">Jul 4, 2026</span>
+      <span class="upd-text">The speed slider now changes the reading pace instantly, even mid-sentence. No more stopping and restarting.</span>
+    </li>
+    <li>
+      <span class="upd-date">Jul 4, 2026</span>
+      <span class="upd-text">Your place is saved as you listen. Come back later, press Start, and it picks up where you left off.</span>
+    </li>
+    <li>
+      <span class="upd-date">Jul 4, 2026</span>
+      <span class="upd-text">Long documents now read reliably all the way to the end, and Pause stays paused for as long as you need.</span>
+    </li>
+  </ul>
+</section>
+
 <!-- back-matter: audience / shortcuts / further reading -->
 <section class="back-matter" aria-label="About and reference">
   <div class="bm-grid">
@@ -344,7 +371,7 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260621b"></script>
+<script src="readaloud.js?v=20260704a"></script>
 
 <!-- visit counter + goal fill -->
 <script>
