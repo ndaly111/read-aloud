@@ -1444,6 +1444,16 @@ form button { justify-self: start; }
   .updates-list li { flex-direction: column; gap: 2px; }
 }
 
+/* Shown in place of the volume slider on platforms (iOS/iPadOS) where web
+   pages cannot change media volume — hardware buttons only. */
+.vol-note {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faded);
+  margin: 6px 0 0;
+}
+
 /* ============================================================
    Homepage feedback section — inline, magazine "letters" style
    ============================================================ */

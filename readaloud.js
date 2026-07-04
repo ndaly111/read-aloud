@@ -206,6 +206,21 @@ let lastPosSaveAt = 0;   // throttle for saving the reading position
       volChangeTimer = setTimeout(restartBrowserSpeech, 150);
     }
   };
+  // iOS/iPadOS ignore writes to HTMLMediaElement.volume (Apple reserves
+  // loudness for the hardware buttons), so the slider silently does nothing
+  // there. Detect it by writing and reading back, and swap the dead control
+  // for an honest note.
+  (function checkVolumeAdjustable() {
+    const probe = document.createElement('audio');
+    probe.volume = 0.5;
+    if (Math.abs(probe.volume - 0.5) > 0.01) {
+      const ctl = $('volControl');
+      const note = $('volNote');
+      if (ctl) ctl.hidden = true;
+      if (note) note.hidden = false;
+    }
+  })();
+
   startBtn.onclick = startSpeak;
   pauseBtn.onclick = pauseSpeak;
   resumeBtn.onclick = resumeSpeak;

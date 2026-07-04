@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260704a">
+  <link rel="stylesheet" href="/styles.css?v=20260704b">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -102,12 +102,13 @@
               </label>
             </div>
 
-            <div class="controls-block">
+            <div class="controls-block" id="volBlock">
               <h3 class="section-label"><span class="section-num">04</span> Volume</h3>
-              <label class="tempo-label">
+              <label class="tempo-label" id="volControl">
                 <span class="tempo-value"><span id="vv">100</span>%</span>
                 <input type="range" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume">
               </label>
+              <p class="vol-note" id="volNote" hidden>Set with your device's volume buttons.</p>
             </div>
 
             <div class="controls-block">
@@ -204,6 +205,10 @@
 <section class="updates-strip" aria-labelledby="updates-heading">
   <h2 id="updates-heading" class="updates-heading">Latest <em>updates.</em></h2>
   <ul class="updates-list">
+    <li>
+      <span class="upd-date">Jul 4, 2026</span>
+      <span class="upd-text">On iPhone and iPad, reading volume follows your device's volume buttons — the on-screen slider now says so instead of doing nothing.</span>
+    </li>
     <li>
       <span class="upd-date">Jul 4, 2026</span>
       <span class="upd-text">The moving highlight now follows the voice word for word — it no longer drifts away from what you're hearing.</span>
@@ -371,7 +376,7 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260704a"></script>
+<script src="readaloud.js?v=20260704b"></script>
 
 <!-- visit counter + goal fill -->
 <script>
