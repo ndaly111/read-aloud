@@ -820,9 +820,15 @@ def _fetch_voices():
 
 @router.get("/api/tts/premium/voices")
 async def premium_voices():
-    """Public voice list for the Studio selector. Key stays server-side."""
+    """Public voice list for the Studio selector. Key stays server-side.
+
+    When Studio is off this returns 200 with an empty list rather than 404:
+    the frontend hides all Studio UI on an empty list just the same, but the
+    page loads without a red console error. (The other premium endpoints
+    still 404 when disabled — only this one is hit on every page load.)
+    """
     if not PREMIUM_TTS_ENABLED:
-        raise HTTPException(status_code=404, detail="premium tts not enabled")
+        return {"voices": [], "enabled": False}
     try:
         voices = await run_in_threadpool(_fetch_voices)
         return {"voices": voices}
