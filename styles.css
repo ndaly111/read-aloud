@@ -476,6 +476,11 @@ textarea#txt {
   line-height: 1.6;
 }
 
+/* During playback every word is a jump target and the meter is a scrubber. */
+#disp > span { cursor: pointer; }
+#disp > span:hover { background: rgba(200, 52, 30, 0.10); }
+progress { cursor: pointer; }
+
 /* ============================================================
    Progress meter — film strip
    ============================================================ */

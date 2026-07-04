@@ -4,13 +4,11 @@ const LANGS = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'I
 const $ = (id) => document.getElementById(id);
 
 // Edge TTS API endpoints, in priority order.
-// Primary: self-hosted via Cloudflare Tunnel from mini PC (no cold start, larger cache).
-// Fallback: Render free tier (cold-starts but always reachable).
-// activeTtsUrl tracks which one is currently working; flips automatically on failure
-// and on the next 5-minute health probe when the primary recovers.
+// Self-hosted via Cloudflare Tunnel from the mini PC. The old Render fallback
+// was retired 2026-04 — leaving it here made every mid-read hiccup burn up to
+// a minute of retries against a dead host before recovering.
 const TTS_ENDPOINTS = [
   'https://tts.read-aloud.com',
-  'https://read-aloud-s4ov.onrender.com',
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
 
@@ -169,6 +167,10 @@ let neuralChunkStart = 0;  // absolute char offset of the neural chunk now playi
 let neuralChunkLen = 0;    // its length — progressLoop maps audio time onto these
 let audioResolve = null; // Exposed resolve for playAudioBlob — lets stopAll() unblock it
 let volChangeTimer = null; // Debounce for live volume changes that re-trigger browser TTS
+let rateChangeTimer = null; // Debounce for live rate changes that re-trigger browser TTS
+let timed = null;        // active timed-neural session (see useTimedNeuralSpeech)
+let timedCache = null;   // {key, segments} — fetched audio survives Stop for instant restart
+let lastPosSaveAt = 0;   // throttle for saving the reading position
 
 /* ========== INIT ========== */
 (async function init() {
@@ -178,7 +180,19 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
 
   // Event listeners
   langSel.onchange = () => populateVoiceSel();
-  rateSlider.oninput = () => (rateValue.textContent = rateSlider.value);
+  rateSlider.oninput = () => {
+    rateValue.textContent = rateSlider.value;
+    // Timed neural playback: tempo is a live playbackRate change (pitch is
+    // preserved by the browser) — takes effect mid-word, no re-synthesis.
+    if (timed && currentAudio) currentAudio.playbackRate = +rateSlider.value;
+    // Browser TTS: utterance.rate is locked once speak() runs — restart the
+    // remainder, same as the volume slider does. Debounced against dragging.
+    if (isSpeaking && !isPaused && !currentAudio && !timed &&
+        (speechSynthesis.speaking || speechSynthesis.pending)) {
+      clearTimeout(rateChangeTimer);
+      rateChangeTimer = setTimeout(restartBrowserSpeech, 250);
+    }
+  };
   volSlider.oninput = () => {
     volValue.textContent = Math.round(+volSlider.value * 100);
     // Neural TTS: HTMLAudioElement.volume is live-mutable.
@@ -220,12 +234,31 @@ let volChangeTimer = null; // Debounce for live volume changes that re-trigger b
   // Manual scrolling in the reading pane pauses highlight auto-follow briefly.
   ['wheel', 'touchmove'].forEach((ev) =>
     disp.addEventListener(ev, () => { userScrolledAt = Date.now(); }, { passive: true }));
+
+  // Click any word to jump the reading there (timed neural playback only —
+  // word timestamps make the seek exact).
+  disp.addEventListener('click', (e) => {
+    const span = e.target && e.target.closest ? e.target.closest('#disp > span') : null;
+    if (!span || span.dataset.off == null) return;
+    seekToChar(+span.dataset.off);
+  });
+
+  // The progress bar is a scrubber during timed playback.
+  progressBar.addEventListener('click', (e) => {
+    if (!totalChars) return;
+    const r = progressBar.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    seekToChar(Math.floor(frac * totalChars));
+  });
   const modal = $('upgradeModal');
   if (modal) modal.addEventListener('click', (e) => {
     if (e.target === modal) closeUpgrade();
   });
 
   txt.addEventListener('input', () => {
+    // Editing the text mid-read desyncs every offset the player relies on —
+    // stop cleanly instead of highlighting the wrong words.
+    if (isSpeaking) stopAll();
     clearError();
     buildDisplay();
     updateWordCount();
@@ -329,6 +362,7 @@ async function loadBrowserVoices() {
 
 function populateVoiceSel() {
   const lang = langSel.value;
+  const prevPick = voiceSel.value; // restore below if it survives the rebuild
   voiceSel.innerHTML = '';
 
   // Studio voices — shown to everyone so they can preview before subscribing.
@@ -386,6 +420,15 @@ function populateVoiceSel() {
   });
 
   voiceSel.appendChild(browserGroup);
+
+  // Keep the user's explicit pick when this rebuild was a background refresh
+  // (5-min health probe, license/studio catalog load) — those used to yank the
+  // selection back to the default mid-session.
+  if (prevPick && [...voiceSel.options].some(o => o.value === prevPick)) {
+    voiceSel.value = prevPick;
+    updateVoiceStatus();
+    return;
+  }
 
   // Default selection: Studio voices first when a license is active (the user is
   // paying for them, so make them the default), then premium Edge, then browser.
@@ -461,10 +504,368 @@ function startSpeak() {
     }
     useStudioSpeech(voiceId);
   } else if (voiceType === 'neural' && apiAvailable) {
-    useNeuralSpeech(voiceId);
+    useTimedNeuralSpeech(voiceId);
   } else {
     useBrowserSpeech(voiceId);
   }
+}
+
+/* ========== TIMED NEURAL TTS (word-accurate playback) ========== */
+// The /api/tts/timed endpoint returns, per segment, the MP3 audio plus a
+// [time, char_offset] anchor for every spoken word. Those anchors drive the
+// highlight (exact, not estimated), make every word clickable (seek), and
+// let the tempo slider work live via playbackRate — audio is always
+// synthesized at natural speed, so one cached synthesis serves every speed.
+
+const SEGMENT_CHARS = 1200;         // ~75-90s of audio each; first sound in ~2-3s
+const POSITION_LS_PREFIX = 'ra_pos_';
+
+function hashText(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36) + '_' + s.length;
+}
+
+// Split into sentence-grouped segments PRESERVING absolute char offsets.
+// Unlike the legacy chunkText(), nothing is trimmed away invisibly: each
+// segment records exactly which [start, end) slice of the textarea it speaks,
+// so a server word anchor (relative) + seg.start = exact display position.
+function segmentTextWithOffsets(text, maxLen) {
+  const out = [];
+  const re = /[^.!?]+[.!?]+[\s]*|[^.!?]+$/g;
+  let segStart = -1, segEnd = -1;
+  let m;
+
+  const push = (s, e) => {
+    while (s < e && /\s/.test(text[s])) s++;
+    while (e > s && /\s/.test(text[e - 1])) e--;
+    if (e > s) out.push({ text: text.slice(s, e), start: s, end: e,
+                          words: null, blob: null, fetching: null });
+  };
+  const addPiece = (ps, pe) => {
+    if (segStart === -1) { segStart = ps; segEnd = pe; return; }
+    if (pe - segStart > maxLen) { push(segStart, segEnd); segStart = ps; }
+    segEnd = pe;
+  };
+
+  while ((m = re.exec(text)) !== null) {
+    const ps = m.index, pe = m.index + m[0].length;
+    if (pe - ps <= maxLen) { addPiece(ps, pe); continue; }
+    // Oversized sentence: split at whitespace, or hard-cut when there is
+    // none (CJK, long URLs) — offsets stay exact either way.
+    let cur = ps;
+    while (pe - cur > maxLen) {
+      let cut = text.lastIndexOf(' ', cur + maxLen);
+      if (cut <= cur) cut = cur + maxLen;
+      addPiece(cur, cut);
+      cur = cut;
+    }
+    if (cur < pe) addPiece(cur, pe);
+  }
+  if (segStart !== -1) push(segStart, segEnd);
+  return out;
+}
+
+// Fetch one timed segment: audio (base64 MP3) + word anchors. Throws with
+// .legacy=true on 404 so the caller can fall back to the old endpoint while
+// a fresh server deploy is still rolling out.
+async function fetchTimedSegment(seg, voiceId, label) {
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    if (attempt > 1) await new Promise(r => setTimeout(r, 800 * attempt));
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+      const r = await fetch(`${activeTtsUrl}/api/tts/timed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: seg.text, voice: voiceId }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (r.status === 404) {
+        const e = new Error('timed endpoint unavailable');
+        e.legacy = true;
+        throw e;
+      }
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.detail || `API error ${r.status}`);
+      }
+      const d = await r.json();
+      const bin = atob(d.audio || '');
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      if (bytes.length < 100) throw new Error('audio too small');
+      seg.blob = new Blob([bytes], { type: 'audio/mpeg' });
+      seg.words = (d.words || []).map(w => [w[0] / 1000, w[1] + seg.start]);
+      console.log(`Timed segment ${label}: ${bytes.length} bytes, ${seg.words.length} word anchors`);
+      return seg;
+    } catch (e) {
+      if (e.legacy) throw e;
+      lastErr = e;
+      console.warn(`Timed segment ${label} attempt ${attempt} failed:`, e.message);
+    }
+  }
+  throw lastErr || new Error('segment fetch failed');
+}
+
+function segIndexForChar(ch) {
+  if (!timed) return -1;
+  const segs = timed.segments;
+  for (let i = 0; i < segs.length; i++) {
+    if (ch < segs[i].end) return i;
+  }
+  return segs.length - 1;
+}
+
+// Audio time (seconds, natural rate) of the last word starting at or before ch.
+function wordTimeForChar(seg, ch) {
+  if (!seg.words || !seg.words.length) return 0;
+  let t = 0;
+  for (const w of seg.words) {
+    if (w[1] <= ch) t = w[0]; else break;
+  }
+  return Math.max(0, t - 0.05);
+}
+
+// Jump the reading to a character position (word click / scrubber / resume).
+function seekToChar(ch) {
+  if (!timed || !isSpeaking) return;
+  ch = Math.max(0, Math.min(totalChars - 1, ch));
+  const idx = segIndexForChar(ch);
+  if (idx === -1) return;
+  progChar = ch;
+  updateMeter(progChar); // instant visual feedback even while audio catches up
+  const seg = timed.segments[idx];
+  if (idx === timed.i && timed.curSeg === seg && currentAudio) {
+    // Same segment: direct seek. Works paused too — stays paused at the new spot.
+    try { currentAudio.currentTime = wordTimeForChar(seg, ch); } catch (e) {}
+    return;
+  }
+  timed.seekChar = ch;
+  if (audioResolve) audioResolve(); // abandon the current segment's playback
+}
+
+function savePosition(key, ch) {
+  try { localStorage.setItem(key, JSON.stringify({ c: Math.floor(ch), t: Date.now() })); } catch (e) {}
+}
+function loadPosition(key) {
+  try {
+    const d = JSON.parse(localStorage.getItem(key) || 'null');
+    if (!d) return 0;
+    if (Date.now() - d.t > 30 * 86400000) { localStorage.removeItem(key); return 0; }
+    return d.c || 0;
+  } catch (e) { return 0; }
+}
+function clearPosition(key) {
+  try { localStorage.removeItem(key); } catch (e) {}
+}
+
+async function useTimedNeuralSpeech(voiceId) {
+  setStatus('Loading audio...');
+  isSpeaking = true;
+  isPaused = false;
+  downloadBlobs = [];
+  $('download').disabled = true;
+  updateControls();
+  setupMediaSession();
+  setMediaPlaybackState('playing');
+
+  const text = txt.value;
+  totalChars = text.length;
+  progChar = 0;
+  startTime = Date.now();
+
+  const key = hashText(text) + '|' + voiceId;
+  let segments;
+  if (timedCache && timedCache.key === key) {
+    segments = timedCache.segments; // reuse already-fetched audio after a Stop
+  } else {
+    segments = segmentTextWithOffsets(text, SEGMENT_CHARS);
+    timedCache = { key, segments };
+  }
+  if (!segments.length) { finish(); return; }
+
+  timed = {
+    voiceId, segments, i: 0, seekChar: null, curSeg: null,
+    posKey: POSITION_LS_PREFIX + hashText(text),
+  };
+
+  // Resume where the reader left off, unless they were nearly done.
+  const saved = loadPosition(timed.posKey);
+  if (saved > 200 && saved < totalChars * 0.9) {
+    timed.seekChar = saved;
+    setStatus('Resuming where you left off — click the first word to start over.');
+  }
+
+  startProgressLoop();
+
+  try {
+    while (isSpeaking && timed) {
+      // A requested jump (word click / scrubber / resume) picks the segment.
+      if (timed.seekChar != null) {
+        const idx = segIndexForChar(timed.seekChar);
+        if (idx === -1) timed.seekChar = null; else timed.i = idx;
+      }
+      if (timed.i >= segments.length) break;
+
+      // Respect Pause across segment boundaries (the old player didn't:
+      // pausing in a gap let the next chunk start playing over "Paused").
+      while (isPaused && isSpeaking && timed) {
+        await new Promise(r => setTimeout(r, 150));
+      }
+      if (!isSpeaking || !timed) break;
+
+      const seg = segments[timed.i];
+      if (!seg.blob) {
+        setStatus(`Loading part ${timed.i + 1} of ${segments.length}...`);
+        try {
+          await (seg.fetching || fetchTimedSegment(seg, voiceId, `${timed.i + 1}/${segments.length}`));
+        } catch (e) {
+          if (e.legacy) { // server not updated yet — old chunked path still works
+            timed = null;
+            useNeuralSpeechLegacy(voiceId);
+            return;
+          }
+          throw e;
+        } finally {
+          seg.fetching = null;
+        }
+        if (!isSpeaking || !timed) break;
+      }
+
+      // Prefetch the next un-fetched segment while this one plays.
+      const nxt = segments[timed.i + 1];
+      if (nxt && !nxt.blob && !nxt.fetching) {
+        nxt.fetching = fetchTimedSegment(nxt, voiceId, `${timed.i + 2}/${segments.length}`)
+          .catch(() => { nxt.fetching = null; }); // errors re-surface on demand
+      }
+
+      // A seek that arrived during the fetch may point at a different segment.
+      if (timed.seekChar != null && segIndexForChar(timed.seekChar) !== timed.i) continue;
+
+      let startAt = 0;
+      if (timed.seekChar != null) {
+        startAt = wordTimeForChar(seg, timed.seekChar);
+        timed.seekChar = null;
+      }
+
+      setStatus(segments.length > 1 ? `Playing (${timed.i + 1}/${segments.length})...` : 'Playing...');
+      await playTimedSegment(seg, startAt);
+      if (!isSpeaking || !timed) break;
+      if (timed.seekChar != null) continue; // a click interrupted playback — re-route
+      timed.i++;
+    }
+
+    if (isSpeaking && timed) {
+      clearPosition(timed.posKey);
+      downloadBlobs = segments.map(s => s.blob).filter(Boolean);
+      const complete = segments.every(s => s.blob);
+      timed = null;
+      finish();
+      $('download').disabled = !complete || !downloadBlobs.length;
+    }
+  } catch (error) {
+    console.error('Timed TTS error:', error);
+    if (currentAudio) {
+      try { currentAudio.pause(); } catch (e) {}
+      currentAudio = null;
+    }
+    if (timed) savePosition(timed.posKey, progChar);
+    timed = null;
+    if (!isSpeaking) return; // the user pressed Stop during the failure
+    // Keep the reader's place: continue with a browser voice FROM HERE —
+    // the old player restarted the whole text from the top.
+    showError(`Premium voice error: ${error.message}. Continuing with a browser voice.`);
+    setTimeout(clearError, 4000);
+    useBrowserSpeech('-1', Math.floor(progChar));
+  }
+}
+
+// Play one fetched segment on the shared (gesture-unlocked) element.
+function playTimedSegment(seg, startAtSec) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(seg.blob);
+    const audio = sharedAudio || (sharedAudio = new Audio());
+    detachChunkHandlers(audio);
+    try { audio.pause(); } catch (e) { /* pausing an idle element is a no-op */ }
+    audio.loop = false; // may still be set from the silent keep-alive loop
+    audio.src = url;
+    audio.volume = +volSlider.value;
+    try { audio.preservesPitch = true; } catch (e) {}
+    audio.playbackRate = +rateSlider.value; // live tempo; audio is natural-rate
+    currentAudio = audio;
+    timed.curSeg = seg;
+
+    let done = false;
+    let lastT = -1;
+    let lastAdvanceAt = Date.now();
+
+    function settle(fn, arg) {
+      if (done) return;
+      done = true;
+      clearInterval(watchdog);
+      audioResolve = null;
+      detachChunkHandlers(audio);
+      URL.revokeObjectURL(url);
+      if (currentAudio === audio) currentAudio = null;
+      if (timed && timed.curSeg === seg) timed.curSeg = null;
+      fn(arg);
+    }
+
+    // Stuck-playback watchdog: fires only when audio SHOULD be advancing but
+    // isn't. Unlike the old flat 5-minute timer, a long user pause never
+    // trips it (that timer silently un-paused and skipped ahead).
+    const watchdog = setInterval(() => {
+      if (done) return;
+      if (isPaused || audio.paused || audio.ended) { lastAdvanceAt = Date.now(); return; }
+      if (audio.currentTime !== lastT) {
+        lastT = audio.currentTime;
+        lastAdvanceAt = Date.now();
+        return;
+      }
+      if (Date.now() - lastAdvanceAt > 45000) {
+        console.warn('playTimedSegment: no progress for 45s — advancing');
+        settle(resolve);
+      }
+    }, 5000);
+
+    audioResolve = () => settle(resolve); // stopAll()/seek unblock instantly
+
+    audio.onended = () => settle(resolve);
+    audio.onerror = () => {
+      const code = audio.error ? audio.error.code : 'unknown';
+      settle(reject, new Error('Audio error (code ' + code + ')'));
+    };
+
+    // Screen-lock resume nudge — same rules as the legacy player.
+    let lastRetryAt = 0;
+    const retryPlay = () => {
+      if (done || isPaused) return;
+      if (audio.src !== url) return;
+      if (!audio.paused || audio.ended) return;
+      const now = Date.now();
+      if (now - lastRetryAt < 1000) return;
+      lastRetryAt = now;
+      console.warn('Audio suspended mid-clip, resuming play...');
+      audio.play().catch(() => {});
+    };
+    audio.onstalled = retryPlay;
+    audio.onwaiting = retryPlay;
+
+    if (startAtSec > 0) {
+      try { audio.currentTime = startAtSec; } catch (e) {}
+    }
+    audio.play().then(() => {
+      // If the seek was requested before metadata loaded, apply it now.
+      if (startAtSec > 0 && Math.abs(audio.currentTime - startAtSec) > 1) {
+        try { audio.currentTime = startAtSec; } catch (e) {}
+      }
+    }).catch((err) => {
+      settle(reject, new Error('play() rejected: ' + err.message));
+    });
+  });
 }
 
 /* ========== NEURAL TTS (Edge TTS API) ========== */
@@ -515,7 +916,8 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
   throw lastErr || new Error(`All TTS endpoints failed for chunk ${chunkIndex + 1}`);
 }
 
-async function useNeuralSpeech(voiceId) {
+// Legacy chunked player — only used if /api/tts/timed 404s (server mid-deploy).
+async function useNeuralSpeechLegacy(voiceId) {
   setStatus('Loading audio...');
   isSpeaking = true;
   isPaused = false;
@@ -613,8 +1015,8 @@ async function useNeuralSpeech(voiceId) {
     // isPaused: a pause during the window should still get the fallback).
     if (!isSpeaking) return;
 
-    progChar = 0;
-    useBrowserSpeech('-1');
+    // Continue from where the premium read died, not from the top.
+    useBrowserSpeech('-1', Math.floor(progChar));
   }
 }
 
@@ -635,6 +1037,7 @@ function playAudioBlob(blob, chunkLength) {
     const audio = sharedAudio || (sharedAudio = new Audio());
     detachChunkHandlers(audio);
     try { audio.pause(); } catch (e) { /* pausing an idle element is a no-op */ }
+    audio.loop = false; // may still be set from the silent keep-alive loop
     audio.src = url; // assigning a new src resets currentTime to 0 for this chunk
     audio.volume = +volSlider.value;
     currentAudio = audio;
@@ -799,10 +1202,30 @@ function rateToApiFormat(rate) {
 }
 
 /* ========== BROWSER TTS (Web Speech API) ========== */
-function useBrowserSpeech(voiceIndex) {
+// Split into <=CHUNK_SIZE pieces at whitespace when possible, hard cuts when
+// not. The old single regex ([\s\S]{1,N}(?:\s|$)) silently DROPPED any run of
+// more than N chars with no whitespace — Chinese/Japanese text lost everything
+// but its tail.
+function chunkForSpeech(text) {
+  const chunks = [];
+  let i = 0;
+  while (i < text.length) {
+    let end = Math.min(i + CHUNK_SIZE, text.length);
+    if (end < text.length) {
+      const lastWs = text.lastIndexOf(' ', end);
+      if (lastWs > i) end = lastWs + 1;
+    }
+    chunks.push(text.slice(i, end));
+    i = end;
+  }
+  return chunks;
+}
+
+function useBrowserSpeech(voiceIndex, fromChar = 0) {
   currentVoiceIndex = voiceIndex;
-  queue = txt.value.match(new RegExp(`[\\s\\S]{1,${CHUNK_SIZE}}(?:\\s|$)`, 'g')) || [];
-  progChar = 0;
+  fromChar = Math.max(0, Math.min(fromChar || 0, txt.value.length));
+  queue = chunkForSpeech(txt.value.slice(fromChar));
+  progChar = fromChar;
   startTime = Date.now();
   boundarySeen = false;
   isSpeaking = true;
@@ -811,9 +1234,33 @@ function useBrowserSpeech(voiceIndex) {
   updateControls();
   setupMediaSession();
   setMediaPlaybackState('playing');
+  startSilentKeepAlive();
   startKeepAlive();
   speakNextChunk(voiceIndex);
   startProgressLoop();
+}
+
+// speechSynthesis does NOT mark a tab as "playing audio", so after ~5 minutes
+// backgrounded Chrome throttles our timers to ~1/minute and the keep-alive
+// below can no longer outrun the engine's ~15s kill. Looping the silent WAV
+// on the shared element keeps the tab classed as audible and unthrottled for
+// the whole read. (Premium reads are exempt naturally — real audio plays.)
+function startSilentKeepAlive() {
+  if (!sharedAudio) return;
+  try {
+    sharedAudio.src = SILENT_WAV;
+    sharedAudio.loop = true;
+    sharedAudio.volume = 0.01;
+    sharedAudio.play().catch(() => {});
+  } catch (e) {}
+}
+
+function stopSilentKeepAlive() {
+  if (!sharedAudio) return;
+  try {
+    sharedAudio.loop = false;
+    if (sharedAudio.src === SILENT_WAV) sharedAudio.pause();
+  } catch (e) {}
 }
 
 // Chrome kills speechSynthesis after ~15s of continuous speech.
@@ -842,6 +1289,10 @@ function startKeepAlive() {
         if (utter) utter.onend = null; // keep cancel() from chaining into speakNextChunk
         speechSynthesis.cancel();
         queue.unshift(currentChunk);
+        // Roll the pointer back to the chunk start we're about to re-speak.
+        // Without this every recovery inflated progChar by the already-spoken
+        // portion, walking the bar and highlight far ahead of the voice.
+        progChar = currentChunkStart;
         currentChunk = '';
         setTimeout(() => speakNextChunk(currentVoiceIndex), 100);
       }
@@ -854,6 +1305,7 @@ function startKeepAlive() {
       if (currentChunk) {
         console.warn('Speech synthesis stalled, re-speaking current chunk...');
         queue.unshift(currentChunk);
+        progChar = currentChunkStart; // same rollback as the zombie branch
         currentChunk = '';
         speakNextChunk(currentVoiceIndex);
       } else if (queue.length > 0) {
@@ -953,9 +1405,26 @@ function startProgressLoop() {
 
 function progressLoop() {
   if (!isSpeaking) { progressLooping = false; return; }
-  if (currentAudio && currentAudio.duration) {
-    // Neural: read the audio clock every frame. ontimeupdate alone fires only
-    // ~4x/s, which made the highlight visibly trail the voice.
+  if (timed && timed.curSeg && currentAudio) {
+    // Timed neural: the highlight IS the audio clock — snap to the word whose
+    // spoken timestamp we're inside. Exact at any speed, no estimation.
+    const seg = timed.curSeg;
+    const t = currentAudio.currentTime;
+    if (seg.words && seg.words.length) {
+      let ch = seg.start;
+      for (const w of seg.words) {
+        if (w[0] <= t) ch = w[1]; else break;
+      }
+      progChar = ch;
+    }
+    // Remember the reading position every few seconds for cross-visit resume.
+    if (!isPaused && Date.now() - lastPosSaveAt > 3000) {
+      lastPosSaveAt = Date.now();
+      savePosition(timed.posKey, progChar);
+    }
+  } else if (currentAudio && currentAudio.duration) {
+    // Legacy neural: read the audio clock every frame. ontimeupdate alone
+    // fires only ~4x/s, which made the highlight visibly trail the voice.
     const frac = Math.min(1, currentAudio.currentTime / currentAudio.duration);
     progChar = Math.min(totalChars,
       neuralChunkStart + Math.floor(frac * neuralChunkLen) + HIGHLIGHT_LEAD_CHARS);
@@ -972,9 +1441,12 @@ function buildDisplay() {
   lastHlEl = null;
   lastHlIdx = -1;
   totalChars = txt.value.length;
+  let off = 0;
   txt.value.split(/(\s+)/).forEach((tok) => {
     const s = document.createElement('span');
     s.textContent = tok;
+    s.dataset.off = off; // char offset — powers click-to-read-from-here
+    off += tok.length;
     disp.appendChild(s);
   });
   resetMeter();
@@ -1059,6 +1531,7 @@ function pauseSpeak() {
   }
 
   isPaused = true;
+  if (timed) savePosition(timed.posKey, progChar);
   setStatus('Paused');
   setMediaPlaybackState('paused');
   updateControls();
@@ -1068,7 +1541,16 @@ function resumeSpeak() {
   if (!isSpeaking || !isPaused) return;
 
   if (currentAudio) {
-    currentAudio.play();
+    // play() can reject (iOS after a long pause revokes the gesture unlock);
+    // without the catch the UI said "Playing..." over silence.
+    currentAudio.play().catch((err) => {
+      console.warn('resume play() rejected:', err.message);
+      showError('Tap Play again to continue.');
+      isPaused = true;
+      setStatus('Paused');
+      setMediaPlaybackState('paused');
+      updateControls();
+    });
   } else {
     speechSynthesis.resume();
   }
@@ -1080,20 +1562,27 @@ function resumeSpeak() {
 }
 
 function stopAll() {
-  // Stop neural audio and unblock any pending playAudioBlob promise
+  // Remember the spot for resume before tearing the session down.
+  if (timed) {
+    savePosition(timed.posKey, progChar);
+    timed = null;
+  }
+
+  // Stop neural audio and unblock any pending playback promise
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
     currentAudio = null;
   }
   if (audioResolve) {
-    audioResolve(); // unblocks useNeuralSpeech loop so it can check !isSpeaking
+    audioResolve(); // unblocks the player loop so it can check !isSpeaking
     audioResolve = null;
   }
 
   // Stop browser speech
   speechSynthesis.cancel();
   stopKeepAlive();
+  stopSilentKeepAlive();
 
   queue = [];
   currentChunk = '';
@@ -1111,7 +1600,9 @@ function finish() {
   isSpeaking = false;
   isPaused = false;
   currentAudio = null;
+  timed = null;
   stopKeepAlive();
+  stopSilentKeepAlive();
   setMediaPlaybackState('none');
   updateMeter(totalChars);
   setStatus('Finished');
