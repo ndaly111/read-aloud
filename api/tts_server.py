@@ -18,8 +18,10 @@ Returns: audio/mpeg stream
 """
 
 import asyncio
+import base64
 import hashlib
 import io
+import json
 import os
 import sqlite3
 import time
@@ -293,6 +295,47 @@ class TTSRequest(BaseModel):
     pitch: str = Field(default="+0Hz", description="Pitch adjustment (e.g., +5Hz, -10Hz)")
 
 
+class TimedTTSRequest(BaseModel):
+    """Timed TTS request body. No rate/pitch: audio is always synthesized at
+    natural speed and the client adjusts tempo via HTMLMediaElement.playbackRate,
+    so one cache entry serves every speed setting."""
+    text: str = Field(..., min_length=1, max_length=5000, description="Text to convert to speech")
+    voice: str = Field(default="en-US-AriaNeural", description="Voice ID")
+
+
+# WordBoundary offsets/durations arrive in 100-nanosecond ticks.
+TICKS_PER_MS = 10_000
+
+# Cap on a single Edge TTS synthesis. A hung upstream websocket otherwise holds
+# the request open until the client's own abort, leaking the server-side task.
+SYNTH_TIMEOUT_S = 60
+
+
+def _map_word_offsets(text: str, boundaries: list) -> list:
+    """Map spoken WordBoundary events onto character offsets in the source text.
+
+    boundaries: [(offset_ticks, duration_ticks, spoken_word), ...] in spoken order.
+    Returns [[t_ms, char_offset], ...] for every boundary word that could be
+    located in the source. Edge TTS normalizes some tokens before speaking them
+    ("123" -> "one hundred twenty-three", "Dr." -> "Doctor"), so those words
+    don't exist in the source; they are skipped and the client interpolates
+    between the surrounding anchors. The 200-char window keeps a normalized
+    token from false-matching far ahead and derailing the cursor.
+    """
+    words = []
+    lower = text.lower()
+    cursor = 0
+    for offset_ticks, _duration_ticks, spoken in boundaries:
+        w = (spoken or "").strip().lower()
+        if not w:
+            continue
+        idx = lower.find(w, cursor)
+        if idx != -1 and idx - cursor <= 200:
+            words.append([offset_ticks // TICKS_PER_MS, idx])
+            cursor = idx + len(w)
+    return words
+
+
 @app.get("/")
 async def root():
     """Health check endpoint."""
@@ -370,9 +413,13 @@ async def text_to_speech(request: Request, body: TTSRequest):
         )
 
         audio_stream = io.BytesIO()
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_stream.write(chunk["data"])
+
+        async def _synthesize():
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_stream.write(chunk["data"])
+
+        await asyncio.wait_for(_synthesize(), timeout=SYNTH_TIMEOUT_S)
 
         audio_bytes = audio_stream.getvalue()
         audio_cache.put(cache_key, audio_bytes)
@@ -388,6 +435,100 @@ async def text_to_speech(request: Request, body: TTSRequest):
             },
         )
 
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="TTS generation timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS generation failed: {str(e)}")
+
+
+@app.post("/api/tts/timed")
+async def text_to_speech_timed(request: Request, body: TimedTTSRequest):
+    """
+    Convert text to speech and return audio WITH word-level timings.
+
+    Response JSON:
+        audio        base64 MP3
+        words        [[t_ms, char_offset], ...] — spoken-word anchors into the
+                     submitted text, for timestamp-accurate highlighting/seeking
+        duration_ms  approximate audio duration from the last word boundary
+
+    Always synthesized at natural rate; clients change speed via playbackRate.
+    """
+    if not _origin_allowed(request):
+        raise HTTPException(status_code=403, detail="origin not allowed")
+
+    if not check_rate_limit(_client_ip(request)):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait a moment.")
+
+    if body.voice not in VOICES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid voice: {body.voice}. Use GET /api/voices to see available options."
+        )
+
+    _t0 = time.time()
+    char_count = len(body.text)
+
+    cache_key = hashlib.sha256(
+        f"timed|{body.text}|{body.voice}".encode("utf-8")
+    ).hexdigest()
+    cached = audio_cache.get(cache_key)
+    if cached is not None:
+        _usage_log(body.voice, char_count, True, int((time.time() - _t0) * 1000))
+        return StreamingResponse(
+            io.BytesIO(cached),
+            media_type="application/json",
+            headers={"Cache-Control": "public, max-age=3600", "X-Cache": "hit"},
+        )
+
+    try:
+        # boundary="WordBoundary" is required on edge-tts 7.x — the default is
+        # SentenceBoundary, which emits no per-word events at all.
+        communicate = edge_tts.Communicate(
+            text=body.text, voice=body.voice, boundary="WordBoundary"
+        )
+
+        audio_stream = io.BytesIO()
+        boundaries = []
+
+        async def _synthesize():
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_stream.write(chunk["data"])
+                elif chunk["type"] == "WordBoundary":
+                    boundaries.append(
+                        (chunk.get("offset", 0), chunk.get("duration", 0), chunk.get("text", ""))
+                    )
+
+        await asyncio.wait_for(_synthesize(), timeout=SYNTH_TIMEOUT_S)
+
+        audio_bytes = audio_stream.getvalue()
+        if not audio_bytes:
+            raise HTTPException(status_code=500, detail="TTS produced no audio")
+
+        words = _map_word_offsets(body.text, boundaries)
+        duration_ms = (
+            (boundaries[-1][0] + boundaries[-1][1]) // TICKS_PER_MS if boundaries else None
+        )
+        payload = json.dumps({
+            "words": words,
+            "duration_ms": duration_ms,
+            "audio": base64.b64encode(audio_bytes).decode("ascii"),
+        }).encode("utf-8")
+
+        audio_cache.put(cache_key, payload)
+        _usage_log(body.voice, char_count, False, int((time.time() - _t0) * 1000))
+
+        return StreamingResponse(
+            io.BytesIO(payload),
+            media_type="application/json",
+            headers={"Cache-Control": "public, max-age=3600", "X-Cache": "miss"},
+        )
+
+    except HTTPException:
+        raise
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="TTS generation timed out")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TTS generation failed: {str(e)}")
 
