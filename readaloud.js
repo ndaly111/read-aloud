@@ -171,6 +171,8 @@ let rateChangeTimer = null; // Debounce for live rate changes that re-trigger br
 let timed = null;        // active timed-neural session (see useTimedNeuralSpeech)
 let timedCache = null;   // {key, segments} — fetched audio survives Stop for instant restart
 let lastPosSaveAt = 0;   // throttle for saving the reading position
+let lastRead = null;     // {key, segments, voiceId} of the last timed read — for MP3 export
+let preparedDownload = null; // {key, blobs} — cached rate-baked MP3 so re-clicks are instant
 
 /* ========== INIT ========== */
 (async function init() {
@@ -706,6 +708,7 @@ async function useTimedNeuralSpeech(voiceId) {
     voiceId, segments, i: 0, seekChar: null, curSeg: null,
     posKey: POSITION_LS_PREFIX + hashText(text),
   };
+  lastRead = { key, segments, voiceId };
 
   // Resume where the reader left off, unless they were nearly done.
   const saved = loadPosition(timed.posKey);
@@ -1629,13 +1632,46 @@ function finish() {
   if (lastPlaybackType && lastPlaybackType !== 'studio') showStudioNudge();
 }
 
-function downloadMp3() {
+async function downloadMp3() {
   if (!downloadBlobs.length) return;
-  const combined = new Blob(downloadBlobs, { type: 'audio/mpeg' });
+  const rate = +rateSlider.value;
+  const btn = $('download');
+  let blobs = downloadBlobs;
+
+  // Timed playback keeps natural-speed audio (the tempo slider works live via
+  // playbackRate), so an MP3 stitched from those blobs always plays at 1x —
+  // user report. For any other tempo, re-fetch the audio with the speed baked
+  // in via the legacy endpoint (fetchChunkWithRetry reads the slider itself).
+  if (Math.abs(rate - 1) > 0.01 && lastRead && lastRead.segments.length) {
+    const key = `${lastRead.key}|${rate}`;
+    if (preparedDownload && preparedDownload.key === key) {
+      blobs = preparedDownload.blobs;
+    } else {
+      btn.disabled = true;
+      try {
+        const out = [];
+        for (let i = 0; i < lastRead.segments.length; i++) {
+          setStatus(`Preparing MP3 at ${rate}x — part ${i + 1} of ${lastRead.segments.length}...`);
+          out.push(await fetchChunkWithRetry(lastRead.segments[i].text, lastRead.voiceId, i));
+        }
+        blobs = out;
+        preparedDownload = { key, blobs };
+        setStatus('MP3 ready');
+      } catch (e) {
+        showError(`Couldn't prepare the MP3 at ${rate}x — try again in a moment.`);
+        setStatus('Ready');
+        return;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  }
+
+  const combined = new Blob(blobs, { type: 'audio/mpeg' });
   const url = URL.createObjectURL(combined);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'read-aloud.mp3';
+  a.download = Math.abs(rate - 1) > 0.01 ? `read-aloud-${rate}x.mp3` : 'read-aloud.mp3';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
