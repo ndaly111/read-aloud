@@ -1,0 +1,37 @@
+#!/bin/sh
+# Warn-only safety net: user-visible files shipping without a "Latest updates" entry.
+# Activated via: git config core.hooksPath hooks
+# Never blocks a push (always exits 0).
+
+ZERO=0000000000000000000000000000000000000000
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    # Deleting a ref, or pushing a brand-new branch: nothing to compare.
+    [ "$local_sha" = "$ZERO" ] && continue
+    [ "$remote_sha" = "$ZERO" ] && continue
+
+    files=$(git diff --name-only "$remote_sha" "$local_sha" 2>/dev/null) || continue
+
+    echo "$files" | grep -qE '^(index\.html|readaloud\.js|styles\.css|api/)' || continue
+
+    # User-facing files changed. Did the updates list change too?
+    if git diff "$remote_sha" "$local_sha" -- index.html 2>/dev/null | grep -q 'upd-date\|updates-list'; then
+        continue
+    fi
+
+    echo ""
+    echo "============================================================"
+    echo "  WARNING: user-visible files are shipping WITHOUT a"
+    echo "  'Latest updates' entry in index.html."
+    echo ""
+    echo "  Changed user-facing files:"
+    echo "$files" | grep -E '^(index\.html|readaloud\.js|styles\.css|api/)' | sed 's/^/    /'
+    echo ""
+    echo "  Draft a plain-language entry (get Nick's approval) or"
+    echo "  state why this change is invisible to visitors."
+    echo "  See CLAUDE.md -> 'Latest updates workflow'."
+    echo "============================================================"
+    echo ""
+done
+
+exit 0

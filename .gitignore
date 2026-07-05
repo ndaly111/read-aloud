@@ -62,3 +62,6 @@ _drafts/
 /[A-Z][A-Z_]*.md
 !/README.md
 _archive/
+
+# Versioned exceptions
+!/CLAUDE.md
