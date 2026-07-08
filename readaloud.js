@@ -4,16 +4,21 @@ const LANGS = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'I
 const $ = (id) => document.getElementById(id);
 
 // Edge TTS API endpoints, in priority order.
-// Self-hosted via Cloudflare Tunnel from the mini PC. The old Render fallback
-// was retired 2026-04 — leaving it here made every mid-read hiccup burn up to
-// a minute of retries against a dead host before recovering.
+// Primary: self-hosted via Cloudflare Tunnel from the mini PC.
+// Backup: Render (auto-deploys the same code on every push, so it stays current).
+// When the primary is down, Cloudflare returns 502/530 in well under a second, so
+// failover to Render is fast — this is NOT the slow-retry-against-a-dead-host setup
+// that got the old fallback removed in 2026-04. activeTtsUrl sticks to whichever
+// endpoint last worked, so only the first request after an outage pays the switch.
 const TTS_ENDPOINTS = [
   'https://tts.read-aloud.com',
+  'https://read-aloud-s4ov.onrender.com',
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
 
-// Billing + Studio (ElevenLabs) premium voices live only on the self-hosted mini PC,
-// never on the Render fallback — so these calls always target the primary endpoint.
+// Billing + Studio (ElevenLabs) premium voices live only on the self-hosted mini PC
+// (licenses DB + ElevenLabs key aren't on Render) — so these always target the
+// primary. Free neural voices, which is what almost everyone uses, do fail over.
 const BILLING_URL = TTS_ENDPOINTS[0];
 const LICENSE_KEY_LS = 'ra_license_key';
 let license = null;        // {key, plan, status, char_cap, char_used, char_remaining}
@@ -587,42 +592,61 @@ function segmentTextWithOffsets(text, maxLen) {
 // .legacy=true on 404 so the caller can fall back to the old endpoint while
 // a fresh server deploy is still rolling out.
 async function fetchTimedSegment(seg, voiceId, label) {
+  // Try the last-known-good endpoint first, then any other configured endpoint —
+  // so a mini-PC outage fails over to Render instead of dropping to a browser voice
+  // (which can't be downloaded). Only if EVERY endpoint 404s do we fall back to the
+  // legacy chunked player (means the servers are up but too old for /api/tts/timed).
+  const urlOrder = [activeTtsUrl, ...TTS_ENDPOINTS.filter(u => u !== activeTtsUrl)];
   let lastErr;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    if (attempt > 1) await new Promise(r => setTimeout(r, 800 * attempt));
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
-      const r = await fetch(`${activeTtsUrl}/api/tts/timed`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: seg.text, voice: voiceId }),
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (r.status === 404) {
-        const e = new Error('timed endpoint unavailable');
-        e.legacy = true;
-        throw e;
+  let all404 = true;
+  for (const url of urlOrder) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      if (attempt > 1) await new Promise(r => setTimeout(r, 800 * attempt));
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 45000);
+        const r = await fetch(`${url}/api/tts/timed`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: seg.text, voice: voiceId }),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (r.status === 404) {
+          lastErr = new Error('timed endpoint unavailable');
+          break; // this server lacks the endpoint — try the next one, not more attempts
+        }
+        all404 = false;
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err.detail || `API error ${r.status}`);
+        }
+        const d = await r.json();
+        const bin = atob(d.audio || '');
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        if (bytes.length < 100) throw new Error('audio too small');
+        seg.blob = new Blob([bytes], { type: 'audio/mpeg' });
+        seg.words = (d.words || []).map(w => [w[0] / 1000, w[1] + seg.start]);
+        if (activeTtsUrl !== url) {
+          console.log(`Switched active TTS endpoint to ${url}`);
+          activeTtsUrl = url;
+        }
+        console.log(`Timed segment ${label}: ${bytes.length} bytes, ${seg.words.length} word anchors`);
+        return seg;
+      } catch (e) {
+        all404 = false;
+        lastErr = e;
+        console.warn(`Timed segment ${label} via ${url} attempt ${attempt} failed:`, e.message);
       }
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error(err.detail || `API error ${r.status}`);
-      }
-      const d = await r.json();
-      const bin = atob(d.audio || '');
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      if (bytes.length < 100) throw new Error('audio too small');
-      seg.blob = new Blob([bytes], { type: 'audio/mpeg' });
-      seg.words = (d.words || []).map(w => [w[0] / 1000, w[1] + seg.start]);
-      console.log(`Timed segment ${label}: ${bytes.length} bytes, ${seg.words.length} word anchors`);
-      return seg;
-    } catch (e) {
-      if (e.legacy) throw e;
-      lastErr = e;
-      console.warn(`Timed segment ${label} attempt ${attempt} failed:`, e.message);
     }
+  }
+  // Every reachable server returned 404 → the endpoint doesn't exist yet; let the
+  // caller drop to the legacy chunked player (which has its own endpoint failover).
+  if (all404) {
+    const e = lastErr || new Error('timed endpoint unavailable');
+    e.legacy = true;
+    throw e;
   }
   throw lastErr || new Error('segment fetch failed');
 }
