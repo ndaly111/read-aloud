@@ -39,6 +39,7 @@ exclude:
   - _archive
   - docs            # design specs, internal only
   - hooks           # git hooks, internal only
+  - scripts         # dev/test tooling, internal only
   - CLAUDE.md
 
 # Collections

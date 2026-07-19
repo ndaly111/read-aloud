@@ -733,6 +733,7 @@ async function useTimedNeuralSpeech(voiceId) {
     posKey: POSITION_LS_PREFIX + hashText(text),
   };
   lastRead = { key, segments, voiceId };
+  $('download').disabled = false; // MP3 assembles on demand from here on
 
   // Resume where the reader left off, unless they were nearly done.
   const saved = loadPosition(timed.posKey);
@@ -803,10 +804,9 @@ async function useTimedNeuralSpeech(voiceId) {
     if (isSpeaking && timed) {
       clearPosition(timed.posKey);
       downloadBlobs = segments.map(s => s.blob).filter(Boolean);
-      const complete = segments.every(s => s.blob);
       timed = null;
       finish();
-      $('download').disabled = !complete || !downloadBlobs.length;
+      $('download').disabled = false; // any missing parts are fetched on demand
     }
   } catch (error) {
     console.error('Timed TTS error:', error);
@@ -1631,7 +1631,9 @@ function stopAll() {
   isSpeaking = false;
   isPaused = false;
   downloadBlobs = [];
-  $('download').disabled = true;
+  // Stop no longer kills the MP3 button: the last premium reading stays
+  // downloadable (missing parts are fetched on demand in downloadMp3).
+  $('download').disabled = !lastRead;
   resetMeter();
   setStatus('Ready');
   setMediaPlaybackState('none');
@@ -1657,39 +1659,56 @@ function finish() {
 }
 
 async function downloadMp3() {
-  if (!downloadBlobs.length) return;
   const rate = +rateSlider.value;
   const btn = $('download');
   let blobs = downloadBlobs;
 
-  // Timed playback keeps natural-speed audio (the tempo slider works live via
-  // playbackRate), so an MP3 stitched from those blobs always plays at 1x —
-  // user report. For any other tempo, re-fetch the audio with the speed baked
-  // in via the legacy endpoint (fetchChunkWithRetry reads the slider itself).
-  if (Math.abs(rate - 1) > 0.01 && lastRead && lastRead.segments.length) {
+  // The MP3 no longer waits for a completed playback (user report: the button
+  // looked broken after Stop, after a mid-document resume, or before the end).
+  // Assemble it on demand from the last premium reading, fetching any parts
+  // the reader never listened to.
+  if (lastRead && lastRead.segments.length) {
     const key = `${lastRead.key}|${rate}`;
     if (preparedDownload && preparedDownload.key === key) {
       blobs = preparedDownload.blobs;
     } else {
+      const segs = lastRead.segments;
       btn.disabled = true;
       try {
-        const out = [];
-        for (let i = 0; i < lastRead.segments.length; i++) {
-          setStatus(`Preparing MP3 at ${rate}x — part ${i + 1} of ${lastRead.segments.length}...`);
-          out.push(await fetchChunkWithRetry(lastRead.segments[i].text, lastRead.voiceId, i));
+        if (Math.abs(rate - 1) > 0.01) {
+          // Timed playback keeps natural-speed audio (the tempo slider works
+          // live via playbackRate), so a non-1x MP3 must be re-fetched with the
+          // speed baked in (fetchChunkWithRetry reads the slider itself).
+          const out = [];
+          for (let i = 0; i < segs.length; i++) {
+            setStatus(`Preparing MP3 at ${rate}x — part ${i + 1} of ${segs.length}...`);
+            out.push(await fetchChunkWithRetry(segs[i].text, lastRead.voiceId, i));
+          }
+          blobs = out;
+        } else {
+          for (let i = 0; i < segs.length; i++) {
+            const seg = segs[i];
+            if (seg.blob) continue;
+            setStatus(`Preparing MP3 — part ${i + 1} of ${segs.length}...`);
+            // A playback prefetch may already be in flight for this segment.
+            if (seg.fetching) { try { await seg.fetching; } catch (e) {} }
+            if (!seg.blob) await fetchTimedSegment(seg, lastRead.voiceId, `${i + 1}/${segs.length} (download)`);
+          }
+          blobs = segs.map(s => s.blob);
+          if (blobs.some(b => !b)) throw new Error('missing audio parts');
         }
-        blobs = out;
         preparedDownload = { key, blobs };
         setStatus('MP3 ready');
       } catch (e) {
-        showError(`Couldn't prepare the MP3 at ${rate}x — try again in a moment.`);
-        setStatus('Ready');
+        showError(`Couldn't prepare the MP3 — try again in a moment.`);
+        setStatus(isSpeaking ? 'Playing...' : 'Ready');
         return;
       } finally {
         btn.disabled = false;
       }
     }
   }
+  if (!blobs || !blobs.length) return;
 
   const combined = new Blob(blobs, { type: 'audio/mpeg' });
   const url = URL.createObjectURL(combined);
