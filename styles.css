@@ -722,6 +722,7 @@ progress::-moz-progress-bar {
 .section-label {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 12px;
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -742,13 +743,34 @@ progress::-moz-progress-bar {
   letter-spacing: 0;
   color: var(--vermilion);
 }
+/* Running total, right end of the 01 rule. Set at the same weight as the
+   tempo/volume readouts so it registers while typing. */
 .word-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   margin-left: auto;
-  font-weight: 400;
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: none;
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
   color: var(--ink-faded);
+}
+.word-count-num {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.65rem;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variation-settings: "opsz" 60, "SOFT" 50;
+  color: var(--vermilion);
+}
+/* Phones: a six-figure count would otherwise crowd the 01 rule. */
+@media (max-width: 560px) {
+  .word-count-num { font-size: 1.25rem; }
+  .word-count { letter-spacing: 0.12em; }
 }
 
 .tempo-label {

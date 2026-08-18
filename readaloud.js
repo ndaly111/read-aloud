@@ -139,13 +139,15 @@ const stopBtn = $('stop');
 const disp = $('disp');
 const statusEl = $('status');
 const errorEl = $('error');
-const wordCount = $('wordcount');
+const wordCountNum = $('wordcount-num');
+const wordCountLabel = $('wordcount-label');
 
 function updateWordCount() {
-  if (!wordCount || !txt) return;
+  if (!wordCountNum || !txt) return;
   const trimmed = txt.value.trim();
   const n = trimmed ? trimmed.split(/\s+/).length : 0;
-  wordCount.textContent = n === 1 ? '1 word' : n + ' words';
+  wordCountNum.textContent = n.toLocaleString();
+  if (wordCountLabel) wordCountLabel.textContent = n === 1 ? 'word' : 'words';
 }
 
 /* ========== GLOBALS ========== */
