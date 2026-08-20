@@ -235,6 +235,7 @@ let preparedDownload = null; // {key, blobs} — cached rate-baked MP3 so re-cli
   resumeBtn.onclick = resumeSpeak;
   stopBtn.onclick = stopAll;
   $('download').onclick = downloadMp3;
+  $('subtitles').onclick = downloadSubtitles;
 
   // Premium / Studio voices wiring
   const upBtn = $('upgradeBtn');
@@ -711,6 +712,7 @@ async function useTimedNeuralSpeech(voiceId) {
   isPaused = false;
   downloadBlobs = [];
   $('download').disabled = true;
+  $('subtitles').disabled = true;
   updateControls();
   setupMediaSession();
   setMediaPlaybackState('playing');
@@ -736,6 +738,7 @@ async function useTimedNeuralSpeech(voiceId) {
   };
   lastRead = { key, segments, voiceId };
   $('download').disabled = false; // MP3 assembles on demand from here on
+  $('subtitles').disabled = false;
 
   // Resume where the reader left off, unless they were nearly done.
   const saved = loadPosition(timed.posKey);
@@ -809,6 +812,7 @@ async function useTimedNeuralSpeech(voiceId) {
       timed = null;
       finish();
       $('download').disabled = false; // any missing parts are fetched on demand
+      $('subtitles').disabled = false;
     }
   } catch (error) {
     console.error('Timed TTS error:', error);
@@ -967,6 +971,7 @@ async function useNeuralSpeechLegacy(voiceId) {
   isPaused = false;
   downloadBlobs = [];
   $('download').disabled = true;
+  $('subtitles').disabled = true;
   updateControls();
   setupMediaSession();
   setMediaPlaybackState('playing');
@@ -1636,6 +1641,7 @@ function stopAll() {
   // Stop no longer kills the MP3 button: the last premium reading stays
   // downloadable (missing parts are fetched on demand in downloadMp3).
   $('download').disabled = !lastRead;
+  $('subtitles').disabled = !lastRead;
   resetMeter();
   setStatus('Ready');
   setMediaPlaybackState('none');
@@ -1656,6 +1662,7 @@ function finish() {
   if (downloadBlobs.length) {
     $('download').disabled = false;
   }
+  if (lastRead) $('subtitles').disabled = false;
   // After a FREE playback, invite unlicensed users to try Studio on their own text.
   if (lastPlaybackType && lastPlaybackType !== 'studio') showStudioNudge();
 }
@@ -1719,6 +1726,120 @@ async function downloadMp3() {
   a.download = Math.abs(rate - 1) > 0.01 ? `read-aloud-${rate}x.mp3` : 'read-aloud.mp3';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/* ========== SUBTITLE EXPORT (.srt) ========== */
+// The timed reader already receives word-level timestamps with every premium
+// segment (they drive the live highlight), so subtitles cost nothing extra:
+// group those anchors into cues and write them out as SubRip. Browser voices
+// have no timestamps (onboundary only fires live), so this is premium-only.
+
+function srtTime(t) {
+  const ms = Math.max(0, Math.round(t * 1000));
+  const p = (n, w) => String(n).padStart(w, '0');
+  return `${p(Math.floor(ms / 3600000), 2)}:${p(Math.floor(ms / 60000) % 60, 2)}:${p(Math.floor(ms / 1000) % 60, 2)},${p(ms % 1000, 3)}`;
+}
+
+// Duration of a fetched MP3 blob — places each segment's cues on the combined
+// file's timeline. Handles Chrome's Infinity-until-seeked quirk; falls back to
+// the last word anchor if metadata can't be read.
+function blobDuration(blob) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const a = new Audio();
+    let settled = false;
+    const done = (v) => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(url);
+      resolve(v);
+    };
+    a.preload = 'metadata';
+    a.onloadedmetadata = () => {
+      if (isFinite(a.duration)) return done(a.duration);
+      a.ondurationchange = () => { if (isFinite(a.duration)) done(a.duration); };
+      try { a.currentTime = 1e9; } catch (e) {}
+      setTimeout(() => done(isFinite(a.duration) ? a.duration : 0), 2000);
+    };
+    a.onerror = () => done(0);
+    a.src = url;
+  });
+}
+
+// Group one segment's word anchors into readable cues: break at sentence ends,
+// and never let a cue run past ~84 chars or ~6 seconds.
+function cuesForSegment(seg, offset, segDur) {
+  const cues = [];
+  if (!seg.words || !seg.words.length) return cues;
+  let cueStart = null, cueCharA = 0, cueCharB = 0;
+  const flush = (endT) => {
+    if (cueStart === null) return;
+    const text = seg.text.slice(cueCharA - seg.start, cueCharB - seg.start)
+      .replace(/\s+/g, ' ').trim();
+    if (text) cues.push({ start: offset + cueStart, end: offset + endT, text });
+    cueStart = null;
+  };
+  for (let i = 0; i < seg.words.length; i++) {
+    const t = seg.words[i][0], ch = seg.words[i][1];
+    const chEnd = i + 1 < seg.words.length ? seg.words[i + 1][1] : seg.end;
+    if (cueStart !== null) {
+      const soFar = seg.text.slice(cueCharA - seg.start, cueCharB - seg.start);
+      const sentenceBreak = /[.!?\u2026]["')\]]?\s*$/.test(soFar);
+      if (sentenceBreak || chEnd - cueCharA > 84 || t - cueStart > 6) flush(t);
+    }
+    if (cueStart === null) { cueStart = t; cueCharA = ch; }
+    cueCharB = chEnd;
+  }
+  flush(segDur);
+  return cues;
+}
+
+async function downloadSubtitles() {
+  if (!lastRead || !lastRead.segments.length) return;
+  const rate = +rateSlider.value;
+  const btn = $('subtitles');
+  btn.disabled = true;
+  try {
+    const segs = lastRead.segments;
+    // Fetch any parts the reader never listened to (same on-demand model as the MP3).
+    for (let i = 0; i < segs.length; i++) {
+      const seg = segs[i];
+      if (seg.blob && seg.words) continue;
+      setStatus(`Preparing subtitles — part ${i + 1} of ${segs.length}...`);
+      if (seg.fetching) { try { await seg.fetching; } catch (e) {} }
+      if (!seg.blob || !seg.words) await fetchTimedSegment(seg, lastRead.voiceId, `${i + 1}/${segs.length} (subtitles)`);
+    }
+    let offset = 0;
+    const cues = [];
+    for (const seg of segs) {
+      let dur = await blobDuration(seg.blob);
+      if (!isFinite(dur) || dur <= 0) dur = (seg.words && seg.words.length ? seg.words[seg.words.length - 1][0] : 0) + 3;
+      cues.push(...cuesForSegment(seg, offset, dur));
+      offset += dur;
+    }
+    if (!cues.length) throw new Error('no word timings');
+    // A non-1x MP3 is synthesized with the speed baked in, so scale to match that file.
+    const scale = Math.abs(rate - 1) > 0.01 ? 1 / rate : 1;
+    let srt = '';
+    for (let i = 0; i < cues.length; i++) {
+      const c = cues[i];
+      const end = Math.max(c.end, c.start + 0.4);
+      srt += `${i + 1}\n${srtTime(c.start * scale)} --> ${srtTime(end * scale)}\n${c.text}\n\n`;
+    }
+    const url = URL.createObjectURL(new Blob([srt], { type: 'application/x-subrip' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = scale !== 1 ? `read-aloud-${rate}x.srt` : 'read-aloud.srt';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    setStatus(isSpeaking ? 'Playing...' : 'Subtitles ready');
+  } catch (e) {
+    console.error('Subtitle export error:', e);
+    showError(`Couldn't prepare the subtitles — try again in a moment.`);
+    setStatus(isSpeaking ? 'Playing...' : 'Ready');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function resetMeter() {
@@ -1857,6 +1978,7 @@ async function useStudioSpeech(voiceId) {
   isPaused = false;
   downloadBlobs = [];
   $('download').disabled = true;
+  $('subtitles').disabled = true;
   updateControls();
 
   const chunks = chunkText(txt.value, 1500); // stays under the per-request server cap
