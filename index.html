@@ -32,8 +32,7 @@
 
 <!-- support bar -->
 <div id="supportBar" role="region" aria-label="Support Read-Aloud">
-  <div class="fill" id="goalFill"></div>
-  <span id="goalMsg" class="msg"></span>
+  <span class="msg">No ads, no tracking, free for everyone &mdash; there's just a server bill. If Read-Aloud helped you today, cover a coffee.</span>
   <a href="https://coff.ee/readaloud" target="_blank" rel="noopener"
      class="coffeeBtn" aria-label="Buy me a coffee">Buy me a coffee</a>
 </div>
@@ -396,23 +395,6 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 
 <!-- main logic -->
 <script src="readaloud.js?v=20260719a"></script>
-
-<!-- visit counter + goal fill -->
-<script>
-const RAISED = 19;  /* update whenever balance changes */
-const GOAL   = 60;
-
-// CountAPI.xyz shut down in 2023 - using static text instead
-updateBar();
-
-function updateBar(){
-  const pct = Math.min(100, RAISED/GOAL*100);
-  document.getElementById('goalFill').style.width = pct + '%';
-  document.getElementById('goalMsg').innerHTML =
-      `Free TTS for <strong>thousands</strong> of readers — `
-    + `<strong>$${RAISED} of $${GOAL}</strong> hosting funded`;
-}
-</script>
 
 <!-- feedback form submit -->
 <script>

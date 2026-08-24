@@ -871,18 +871,8 @@ input[type="range"]::-moz-range-thumb {
   font-size: 0.78rem;
   letter-spacing: 0.08em;
 }
-#supportBar .fill {
-  position: absolute;
-  inset: 0;
-  background: rgba(200, 52, 30, 0.10);
-  transform-origin: left;
-}
-#supportBar .msg,
-#supportBar .coffeeBtn {
-  position: relative;
-  z-index: 1;
-}
 .coffeeBtn {
+  flex-shrink: 0;
   font-family: var(--font-mono);
   font-weight: 700;
   letter-spacing: 0.16em;
