@@ -16,6 +16,22 @@ const TTS_ENDPOINTS = [
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
 
+// Failover used to be sticky for the whole session: one blip pinned every later
+// request to Render, whose bandwidth is metered (5 GB cap blew in Aug 2026 at
+// ~2% leakage). Now a failed-over session re-tries the primary after a cooldown,
+// so Render only carries traffic while the mini PC is actually unreachable.
+let primaryFailedAt = 0;
+const PRIMARY_RETRY_MS = 5 * 60 * 1000;
+function ttsUrlOrder() {
+  const primary = TTS_ENDPOINTS[0];
+  const preferred = (activeTtsUrl !== primary && Date.now() - primaryFailedAt > PRIMARY_RETRY_MS)
+    ? primary : activeTtsUrl;
+  return [preferred, ...TTS_ENDPOINTS.filter(u => u !== preferred)];
+}
+function noteTtsFailure(url) {
+  if (url === TTS_ENDPOINTS[0]) primaryFailedAt = Date.now();
+}
+
 // Billing + Studio (ElevenLabs) premium voices live only on the self-hosted mini PC
 // (licenses DB + ElevenLabs key aren't on Render) — so these always target the
 // primary. Free neural voices, which is what almost everyone uses, do fail over.
@@ -599,7 +615,7 @@ async function fetchTimedSegment(seg, voiceId, label) {
   // so a mini-PC outage fails over to Render instead of dropping to a browser voice
   // (which can't be downloaded). Only if EVERY endpoint 404s do we fall back to the
   // legacy chunked player (means the servers are up but too old for /api/tts/timed).
-  const urlOrder = [activeTtsUrl, ...TTS_ENDPOINTS.filter(u => u !== activeTtsUrl)];
+  const urlOrder = ttsUrlOrder();
   let lastErr;
   let all404 = true;
   for (const url of urlOrder) {
@@ -617,6 +633,7 @@ async function fetchTimedSegment(seg, voiceId, label) {
         clearTimeout(timeout);
         if (r.status === 404) {
           lastErr = new Error('timed endpoint unavailable');
+          noteTtsFailure(url); // don't re-probe a knowingly-stale primary every segment
           break; // this server lacks the endpoint — try the next one, not more attempts
         }
         all404 = false;
@@ -640,6 +657,7 @@ async function fetchTimedSegment(seg, voiceId, label) {
       } catch (e) {
         all404 = false;
         lastErr = e;
+        noteTtsFailure(url);
         console.warn(`Timed segment ${label} via ${url} attempt ${attempt} failed:`, e.message);
       }
     }
@@ -922,7 +940,7 @@ function playTimedSegment(seg, startAtSec) {
 // configured endpoint twice. Updates activeTtsUrl when fallback succeeds so the next
 // chunk goes straight to the working URL. Returns an audio Blob or throws.
 async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
-  const urlOrder = [activeTtsUrl, ...TTS_ENDPOINTS.filter(u => u !== activeTtsUrl)];
+  const urlOrder = ttsUrlOrder();
   let lastErr;
   for (const url of urlOrder) {
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -957,6 +975,7 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
         return blob;
       } catch (e) {
         lastErr = e;
+        noteTtsFailure(url);
         console.warn(`Chunk ${chunkIndex + 1} via ${url} attempt ${attempt} failed:`, e.message);
       }
     }
