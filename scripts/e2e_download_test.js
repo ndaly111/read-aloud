@@ -70,7 +70,7 @@ const server = http.createServer((req, res) => {
       return req.respond({ status: 200, contentType: 'application/json',
         headers: { 'Access-Control-Allow-Origin': '*' }, body: '[]' });
     }
-    if (u.includes('googletagmanager') || u.includes('googlesyndication') || u.includes('formspree')) return req.abort();
+    if (u.includes('googletagmanager') || u.includes('googlesyndication') || u.includes('formspree') || u.includes('read-aloud-feedback') || u.includes('challenges.cloudflare.com')) return req.abort();
     req.continue();
   });
   page.on('console', m => { if (m.type() === 'error') console.log('  [page error]', m.text().slice(0, 120)); });

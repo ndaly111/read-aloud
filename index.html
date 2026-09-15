@@ -303,8 +303,10 @@
     </label>
     <input type="hidden" name="_subject" value="Feedback from read-aloud.com">
     <input type="hidden" name="_page" value="/index.html">
-    <!-- honeypot: humans don't fill this; bots do. Formspree drops the submission. -->
+    <!-- honeypot: humans don't fill this; bots do. The worker drops the submission. -->
     <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <!-- Cloudflare Turnstile (anti-bot). Sitekey must match the widget for read-aloud.com. -->
+    <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="light" data-size="flexible"></div>
     <div class="feedback-actions">
       <button type="submit" class="btn">Send feedback</button>
       <p class="feedback-status" role="status" aria-live="polite"></p>
@@ -396,7 +398,8 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 <!-- main logic -->
 <script src="readaloud.js?v=20260826a"></script>
 
-<!-- feedback form submit -->
+<!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>
 (() => {
   const form = document.getElementById('feedback-form');
@@ -416,12 +419,13 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
     status.textContent = '';
     status.className = 'feedback-status';
     try {
-      const resp = await fetch('https://formspree.io/f/xpqjrpvp', {
+      const resp = await fetch('https://read-aloud-feedback.ndaly111.workers.dev', {
         method: 'POST',
         body: new FormData(form),
         headers: { 'Accept': 'application/json' }
       });
-      if (!resp.ok) throw new Error('Formspree returned ' + resp.status);
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data.ok) throw new Error(data.error || ('Worker returned ' + resp.status));
       status.textContent = 'Thanks — got it.';
       status.className = 'feedback-status feedback-ok';
       form.reset();
@@ -429,10 +433,13 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
       setTimeout(() => { submit.disabled = false; submit.textContent = 'Send feedback'; }, 2000);
     } catch (err) {
       console.warn('feedback submit failed', err);
-      status.textContent = "Couldn't send. Email admin@read-aloud.com.";
+      status.textContent = (err && err.message && !/^Worker returned/.test(err.message))
+        ? err.message : "Couldn't send. Email admin@read-aloud.com.";
       status.className = 'feedback-status feedback-error';
       submit.disabled = false;
       submit.textContent = 'Try again';
+    } finally {
+      if (window.turnstile) { try { window.turnstile.reset(); } catch (_) {} }
     }
   });
 })();

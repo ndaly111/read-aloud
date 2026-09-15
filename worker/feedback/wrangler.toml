@@ -1,0 +1,23 @@
+name = "read-aloud-feedback"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+account_id = "d36f6a50c928a16dc27e0e789a94617f"
+
+# Cloudflare Email Routing send binding. Destination must be a verified
+# destination address in the read-aloud.com zone's Email Routing settings.
+send_email = [
+  { name = "MAIL", destination_address = "ndaly111@gmail.com" }
+]
+
+# Free-plan rate limit: 5 submissions per IP per 60s.
+[[unsafe.bindings]]
+name = "RL"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 5, period = 60 }
+
+[vars]
+ALLOWED_ORIGINS = "https://read-aloud.com,https://www.read-aloud.com"
+FROM_ADDRESS = "feedback@read-aloud.com"
+TO_ADDRESS = "ndaly111@gmail.com"
+# TURNSTILE_SECRET is set with `wrangler secret put TURNSTILE_SECRET`

@@ -33,7 +33,7 @@
   </header>
 
   <article class="content">
-    <form action="https://formspree.io/f/xpqjrpvp" method="POST">
+    <form id="contact-form" novalidate>
       <label for="name">Name</label>
       <input required id="name" name="name" type="text">
 
@@ -43,10 +43,15 @@
       <label for="msg">Message</label>
       <textarea required id="msg" name="message" rows="6"></textarea>
 
-      <!-- honeypot: humans don't fill this; bots do. Formspree drops the submission. -->
+      <input type="hidden" name="_subject" value="Contact form: read-aloud.com">
+      <input type="hidden" name="_page" value="/contact.html">
+      <!-- honeypot: humans don't fill this; bots do. The worker drops the submission. -->
       <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <!-- Cloudflare Turnstile (anti-bot). Sitekey must match the widget for read-aloud.com. -->
+      <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="light" data-size="flexible"></div>
 
       <button type="submit">Send message</button>
+      <p class="feedback-status" role="status" aria-live="polite"></p>
     </form>
   </article>
 </main>
@@ -56,5 +61,50 @@
     <span>© 2026 Read‑Aloud</span> · <a href="/about.html">About</a> · <a href="/contact.html">Contact</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
   </div>
 </footer>
+
+<!-- contact form submit (Cloudflare Worker -> email; Turnstile-verified) -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+(() => {
+  const form = document.getElementById('contact-form');
+  if (!form) return;
+  const status = form.querySelector('.feedback-status');
+  const submit = form.querySelector('button[type="submit"]');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+      status.textContent = 'Please fill in name, email, and message.';
+      status.className = 'feedback-status feedback-error';
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = 'Sending…';
+    status.textContent = '';
+    status.className = 'feedback-status';
+    try {
+      const resp = await fetch('https://read-aloud-feedback.ndaly111.workers.dev', {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data.ok) throw new Error(data.error || ('Worker returned ' + resp.status));
+      status.textContent = 'Thanks — got it. We usually reply within a few days.';
+      status.className = 'feedback-status feedback-ok';
+      form.reset();
+      submit.textContent = 'Sent';
+    } catch (err) {
+      console.warn('contact submit failed', err);
+      status.textContent = (err && err.message && !/^Worker returned/.test(err.message))
+        ? err.message : "Couldn't send. Email admin@read-aloud.com.";
+      status.className = 'feedback-status feedback-error';
+      submit.disabled = false;
+      submit.textContent = 'Try again';
+    } finally {
+      if (window.turnstile) { try { window.turnstile.reset(); } catch (_) {} }
+    }
+  });
+})();
+</script>
 </body>
 </html>

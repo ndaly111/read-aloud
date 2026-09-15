@@ -60,3 +60,11 @@ The safety-net hook lives in `hooks/pre-push` (versioned). Activate it with:
 ```
 git config core.hooksPath hooks
 ```
+
+## Feedback / contact forms (2026-09-15)
+- Formspree is gone (hit its 50/mo cap). Both forms POST to the Cloudflare Worker in
+  `worker/feedback/` (`https://read-aloud-feedback.ndaly111.workers.dev`), which verifies
+  Turnstile, rate-limits per IP, and emails the message via Cloudflare Email Routing
+  (`send_email` binding, destination ndaly111@gmail.com). Nothing is stored.
+- Deploy: `cd worker/feedback && npx wrangler deploy`. Secret: `TURNSTILE_SECRET`.
+- Turnstile sitekey lives in `index.html` and `contact.html` (`data-sitekey`); keep both in sync.
