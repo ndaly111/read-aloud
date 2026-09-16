@@ -35,6 +35,21 @@ async function verifyTurnstile(token, ip, secret) {
   return data.success === true;
 }
 
+// "Ho Chi Minh City, Vietnam" from Cloudflare's request.cf geo fields.
+// Falls back to the raw ISO code if the runtime can't name it.
+function describeLocation(cf) {
+  const code = cf?.country;
+  if (!code) return "unknown";
+  let country = code;
+  try {
+    country = new Intl.DisplayNames(["en"], { type: "region" }).of(code) || code;
+  } catch (_) {}
+  const city = cf?.city;
+  const region = cf?.region && cf.region !== city ? cf.region : "";
+  const parts = [city, region, country].filter(Boolean);
+  return parts.join(", ");
+}
+
 // Minimal RFC 5322 message. Header values are stripped of CR/LF to prevent
 // header injection; body is 8bit UTF-8 plain text.
 function buildMime({ from, to, replyTo, subject, text }) {
@@ -102,7 +117,7 @@ export default {
       `Email: ${replyTo || "(not given)"}`,
       page ? `Page: ${page}` : null,
       `Referer: ${request.headers.get("Referer") || "(none)"}`,
-      `Country: ${request.cf?.country || "?"}`,
+      `Location: ${describeLocation(request.cf)}`,
       `UA: ${request.headers.get("User-Agent") || "?"}`,
       `Time: ${new Date().toISOString()}`,
     ].filter(l => l !== null).join("\n");
