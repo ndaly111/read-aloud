@@ -96,10 +96,11 @@ a:hover, a:focus {
 main {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 48px 28px 72px;
+  padding: 28px 28px 56px;
 }
+@media (max-width: 640px) { main { padding: 16px 16px 40px; } }
 
-main > * + * { margin-top: 24px; }
+main > * + * { margin-top: 20px; }
 
 /* —— skip link (accessibility) —— */
 .skip-link {
@@ -135,19 +136,20 @@ header.site-header {
 .nav-container {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 16px 28px;
+  padding: 10px 28px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px 16px;
   flex-wrap: wrap;
 }
+@media (max-width: 640px) { .nav-container { padding: 8px 16px; } }
 
 .logo {
   font-family: var(--font-display);
   font-weight: 600;
   font-variation-settings: "opsz" 144, "SOFT" 80;
-  font-size: 1.55rem;
+  font-size: 1.35rem;
   letter-spacing: -0.025em;
   color: var(--ink);
   text-decoration: none;
@@ -157,17 +159,17 @@ header.site-header {
 .site-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 22px;
+  gap: 4px 16px;
   align-items: baseline;
 }
 
 .site-nav a {
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.1em;
   color: var(--ink-soft);
-  padding: 4px 0 6px;
+  padding: 2px 0 4px;
   border-radius: 0;
   border-bottom: 1px solid transparent;
   text-decoration: none;
@@ -467,6 +469,9 @@ textarea#txt {
   resize: vertical;
 }
 
+/* The reading pane only exists while reading; idle, the text box is the text. */
+#disp { display: none; }
+body.is-reading #disp { display: block; }
 #disp {
   max-height: 30vh;
   overflow-y: auto;
@@ -486,7 +491,7 @@ progress { cursor: pointer; }
    ============================================================ */
 progress {
   width: 100%;
-  height: 16px;
+  height: 10px;
   border: 1px solid var(--ink);
   border-radius: var(--radius);
   overflow: hidden;
@@ -512,17 +517,33 @@ progress::-moz-progress-bar {
 
 .meter {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
   color: var(--ink-faded);
-  margin-top: 6px;
+  white-space: nowrap;
 }
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 4px;
+}
+.error-line:empty { display: none; }
+.tool-foot {
+  margin: 10px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-faded);
+}
+.tool-foot a { color: var(--vermilion); }
 .meter strong { color: var(--ink); font-weight: 700; }
 
 .status-line {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
   color: var(--ink-faded);
 }
 .status-line span { color: var(--ink); }
@@ -539,15 +560,19 @@ progress::-moz-progress-bar {
    Masthead — side-by-side hero + instrument
    ============================================================ */
 .masthead {
-  padding: 28px 0 24px;
+  padding: 0 0 20px;
   border-bottom: 1px solid var(--ink);
-  margin-bottom: 28px;
+  margin-bottom: 20px;
   position: relative;
 }
 
 .masthead-grid {
   display: grid;
-  gap: 32px;
+  gap: 18px;
+}
+/* Phones: the title is the whole hero; the tool is the page. */
+@media (max-width: 999px) {
+  .masthead-text .hero-lede { display: none; }
 }
 
 @media (min-width: 1000px) {
@@ -570,13 +595,13 @@ progress::-moz-progress-bar {
 
 .masthead-text > * + * { margin-top: 18px; }
 .masthead-text .hero-title {
-  font-size: clamp(2.4rem, 4vw + 1rem, 4.8rem);
+  font-size: clamp(2rem, 3vw + 1rem, 3.6rem);
   line-height: 0.96;
 }
 .masthead-text .hero-lede {
-  font-size: 1.08rem;
-  line-height: 1.55;
-  margin-top: 22px;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-top: 0;
   max-width: 52ch;
   color: var(--ink-soft);
 }
@@ -598,12 +623,12 @@ progress::-moz-progress-bar {
 
 /* Full-width masthead instrument: the base .tool-grid 2-col rule (>=900px,
    textarea left / controls right) applies — no narrow-column override needed. */
-.masthead-tool .panel--instrument .panel-header { padding: 12px 22px; }
-.masthead-tool .panel--instrument .tool-grid { padding: 22px; }
-.masthead-tool textarea#txt { min-height: 160px; }
+.masthead-tool .panel--instrument .tool-grid { padding: 16px; }
+.masthead-tool textarea#txt { min-height: 150px; }
 @media (min-width: 1000px) {
   /* Desktop has room — give the composition area real height. */
-  .masthead-tool textarea#txt { min-height: 300px; }
+  .masthead-tool .panel--instrument .tool-grid { padding: 20px; }
+  .masthead-tool textarea#txt { min-height: 280px; }
 }
 
 .hero-eyebrow {
@@ -707,7 +732,7 @@ progress::-moz-progress-bar {
 
 .tool-grid {
   display: grid;
-  gap: 28px;
+  gap: 16px;
 }
 @media (min-width: 900px) {
   .tool-grid {
@@ -716,7 +741,7 @@ progress::-moz-progress-bar {
   }
 }
 
-.controls { display: grid; gap: 22px; }
+.controls { display: grid; gap: 14px; align-content: start; }
 .controls-block { display: grid; gap: 8px; }
 
 .section-label {
@@ -748,29 +773,25 @@ progress::-moz-progress-bar {
 .word-count {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 5px;
   margin-left: auto;
   white-space: nowrap;
   font-weight: 700;
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--ink-faded);
 }
 .word-count-num {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 500;
-  font-size: 1.65rem;
+  font-size: 1.05rem;
   line-height: 1;
   letter-spacing: 0;
   text-transform: none;
   font-variation-settings: "opsz" 60, "SOFT" 50;
   color: var(--vermilion);
-}
-/* Phones: a six-figure count would otherwise crowd the 01 rule. */
-@media (max-width: 560px) {
-  .word-count-num { font-size: 1.25rem; }
-  .word-count { letter-spacing: 0.12em; }
 }
 
 .tempo-label {
@@ -798,16 +819,48 @@ progress::-moz-progress-bar {
 
 .control-row {
   display: grid;
-  gap: 14px;
+  gap: 10px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+.control-row label { margin-bottom: 0; }
+
+/* Speed + volume on one line: name, slider, value. */
+.slider-row {
+  display: grid;
+  gap: 10px 16px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-@media (max-width: 640px) { .control-row { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .slider-row { grid-template-columns: 1fr; } }
+.slider {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+}
+.slider-name { font-size: 0.64rem; letter-spacing: 0.12em; }
+.slider-val {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.1rem;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  min-width: 3.4em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 
 .button-row {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
+.button-row .btn { padding: 9px 20px; }
+.btn[hidden] { display: none; }
+/* MP3 and subtitles only exist once there is a premium reading to save. */
+#download:disabled, #subtitles:disabled { display: none; }
 
 /* speed slider — minimal & metered */
 input[type="range"] {
@@ -856,8 +909,8 @@ input[type="range"]::-moz-range-thumb {
    ============================================================ */
 #supportBar {
   max-width: var(--max-width);
-  margin: 16px auto 0;
-  padding: 12px 22px;
+  margin: 10px auto 0;
+  padding: 8px 16px;
   background: var(--paper-bright);
   border: 1px solid var(--ink);
   border-radius: var(--radius);
@@ -1404,19 +1457,31 @@ form button { justify-self: start; }
    Latest updates strip — dated ledger of shipped improvements
    ============================================================ */
 .updates-strip {
-  margin-top: 36px;
-  padding-top: 28px;
-  border-top: 1px solid var(--ink);
+  margin-top: 8px;
+  padding-top: 0;
 }
+.updates-more summary {
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+  padding: 10px 0 4px;
+}
+.updates-more summary::-webkit-details-marker { display: none; }
+.updates-more summary::after { content: " +"; }
+.updates-more[open] summary::after { content: " −"; }
 .updates-heading {
   font-family: var(--font-display);
   font-weight: 500;
   font-variation-settings: "opsz" 100, "SOFT" 30;
-  font-size: clamp(1.6rem, 2vw + 1rem, 2.3rem);
+  font-size: 1.35rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
   color: var(--ink);
-  margin: 12px 0 16px;
+  margin: 0 0 6px;
 }
 .updates-heading em {
   font-style: italic;
@@ -1433,7 +1498,7 @@ form button { justify-self: start; }
   display: flex;
   gap: 18px;
   align-items: baseline;
-  padding: 10px 0;
+  padding: 7px 0;
   border-bottom: 1px dotted var(--rule-soft);
 }
 .updates-list li:last-child { border-bottom: none; }
@@ -1453,7 +1518,8 @@ form button { justify-self: start; }
   color: var(--ink-soft);
 }
 @media (max-width: 560px) {
-  .updates-list li { flex-direction: column; gap: 2px; }
+  .updates-list li { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .upd-date { flex-basis: auto; }
 }
 
 /* Shown in place of the volume slider on platforms (iOS/iPadOS) where web
@@ -1665,17 +1731,19 @@ form button { justify-self: start; }
 .dyslexia-toggle {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   background: var(--paper-bright);
   color: var(--ink);
   border: 1px solid var(--ink);
   box-shadow: var(--shadow-soft);
-  padding: 6px 10px;
+  padding: 3px 8px;
   cursor: pointer;
   white-space: nowrap;
 }
+.file-row .dyslexia-toggle { margin-left: auto; box-shadow: none; }
+.file-row .word-count { margin-left: 0; }
 .dyslexia-toggle:hover { background: var(--paper-deep); }
 .dyslexia-toggle.is-on { background: var(--vermilion); color: var(--paper-bright); }
 
@@ -1731,9 +1799,9 @@ html.dyslexia .hero-lede {
 .file-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 4px 10px;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-family: var(--font-mono);
   font-size: 0.7rem;
   letter-spacing: 0.04em;

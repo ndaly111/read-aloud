@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260924b">
+  <link rel="stylesheet" href="/styles.css?v=20260924c">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -25,8 +25,6 @@
       <a href="/help.html">Help</a>
       <a href="/recommendations.html">Resources</a>
     </nav>
-    <button id="dyslexiaToggle" class="dyslexia-toggle" type="button" aria-pressed="false"
-            title="Switch to a dyslexia-friendly font">Dyslexia font</button>
   </div>
 </header>
 
@@ -43,166 +41,77 @@
 <section class="masthead" aria-labelledby="hero-title">
   <div class="masthead-grid">
     <div class="masthead-text">
-      <p class="hero-eyebrow">
-        <span>Issue 01</span><span class="sep">·</span>
-        <span>Free, no account</span><span class="sep">·</span>
-        <span>Works offline</span>
-      </p>
-
       <h1 id="hero-title" class="hero-title">The page,<br><em>read aloud.</em></h1>
 
       <p class="hero-lede">
         Paste any text — an email you're proofing, a chapter you'd rather hear, lecture notes, a long thread — and let it read itself back. Browser voices stay on your device and work offline. The Edge voices sound like a real person reading to you — and all of it is free, no sign‑up, no account.
       </p>
 
-      <p class="hero-tags">
-        <span>40+ voices</span><span class="sep">·</span>
-        <span>0.5× — 2×</span><span class="sep">·</span>
-        <span>MP3 download</span><span class="sep">·</span>
-        <span>Free core, no account</span>
-      </p>
     </div>
 
     <div class="masthead-tool">
-      <section class="panel panel--instrument" aria-label="Read-aloud instrument">
-        <header class="panel-header">
-          <p class="panel-eyebrow">The Instrument</p>
-          <p class="panel-spec">Edge TTS · Web Speech</p>
-        </header>
-
+      <section class="panel panel--instrument" aria-label="Read-aloud tool">
         <div class="tool-grid">
           <div class="tool-input">
-            <h3 class="section-label"><span class="section-num">01</span> Composition
-              <span class="word-count" id="wordcount" aria-live="polite"><span class="word-count-num" id="wordcount-num">0</span> <span class="word-count-label" id="wordcount-label">words</span></span>
-            </h3>
             <div class="file-row">
               <input type="file" id="fileInput" accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
               <button type="button" id="fileBtn" class="link-btn">Upload a file</button>
-              <span class="file-hint">.txt · .pdf · .docx · stays on your device</span>
+              <span class="file-hint">.txt · .pdf · .docx</span>
               <span id="fileName" class="file-name" aria-live="polite"></span>
+              <button id="dyslexiaToggle" class="dyslexia-toggle" type="button" aria-pressed="false"
+                      title="Switch to a dyslexia-friendly font">Dyslexia font</button>
+              <span class="word-count" id="wordcount" aria-live="polite"><span class="word-count-num" id="wordcount-num">0</span> <span class="word-count-label" id="wordcount-label">words</span></span>
             </div>
-            <textarea id="txt" placeholder="Paste or type text here — or upload a file above…"></textarea>
+            <textarea id="txt" placeholder="Paste or type text here, or upload a file…"></textarea>
             <div id="disp" aria-live="polite"></div>
           </div>
 
           <div class="controls">
-            <div class="controls-block">
-              <h3 class="section-label"><span class="section-num">02</span> Voicing</h3>
-              <div class="control-row">
-                <label>Language <select id="lang"></select></label>
-                <label>Voice
-                  <select id="voice"><option value="-1">Default (free)</option></select>
-                </label>
-              </div>
-              <p class="free-flag"><span class="free-dot"></span>The tool &amp; all 40+ voices here are free — no account.</p>
+            <div class="control-row">
+              <label>Language <select id="lang"></select></label>
+              <label>Voice
+                <select id="voice"><option value="-1">Default (free)</option></select>
+              </label>
             </div>
 
-            <div class="controls-block">
-              <h3 class="section-label"><span class="section-num">03</span> Tempo</h3>
-              <label class="tempo-label">
-                <span class="tempo-value"><span id="rv">1</span>×</span>
+            <div class="slider-row">
+              <label class="slider" for="rate">
+                <span class="slider-name">Speed</span>
                 <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" aria-label="Speed">
+                <span class="slider-val"><span id="rv">1</span>×</span>
               </label>
-            </div>
-
-            <div class="controls-block" id="volBlock">
-              <h3 class="section-label"><span class="section-num">04</span> Volume</h3>
-              <label class="tempo-label" id="volControl">
-                <span class="tempo-value"><span id="vv">100</span>%</span>
-                <input type="range" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume">
-              </label>
-              <p class="vol-note" id="volNote" hidden>Set with your device's volume buttons.</p>
-            </div>
-
-            <div class="controls-block">
-              <h3 class="section-label"><span class="section-num">05</span> Transport</h3>
-              <div class="button-row" role="group" aria-label="Playback controls">
-                <button id="start" class="btn">Start</button>
-                <button id="pause" class="btn btn--secondary">Pause</button>
-                <button id="resume" class="btn btn--secondary">Resume</button>
-                <button id="stop" class="btn btn--danger">Stop</button>
-                <button id="download" class="btn btn--secondary" disabled title="Start a premium-voice reading first — then save it as an MP3 anytime, even without listening to the end">MP3</button>
-                <button id="subtitles" class="btn btn--secondary" disabled title="Save time-synced subtitles (.srt) that line up with the MP3 — available after starting a premium-voice reading">Subtitles</button>
+              <div id="volBlock">
+                <label class="slider" id="volControl" for="vol">
+                  <span class="slider-name">Volume</span>
+                  <input type="range" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+                  <span class="slider-val"><span id="vv">100</span>%</span>
+                </label>
+                <p class="vol-note" id="volNote" hidden>Volume: use your device's buttons.</p>
               </div>
             </div>
 
-            <div class="status-line" aria-live="polite">Status <span id="status">Ready</span></div>
-            <div id="error" class="error-line" role="alert" aria-live="assertive"></div>
+            <div class="button-row" role="group" aria-label="Playback controls">
+              <button id="start" class="btn">Start</button>
+              <button id="pause" class="btn btn--secondary" hidden>Pause</button>
+              <button id="resume" class="btn btn--secondary" hidden>Resume</button>
+              <button id="stop" class="btn btn--danger" hidden>Stop</button>
+              <button id="download" class="btn btn--secondary" disabled title="Save this reading as an MP3">MP3</button>
+              <button id="subtitles" class="btn btn--secondary" disabled title="Save time-synced subtitles (.srt) that line up with the MP3">Subtitles</button>
+            </div>
 
             <progress id="bar" value="0" max="100"></progress>
-            <div id="meter" class="meter"><strong>0 %</strong> · <span id="ela">00:00:00</span> · <span id="rem">00:00:00</span></div>
+            <div class="status-row">
+              <span class="status-line" aria-live="polite"><span id="status">Ready</span></span>
+              <span id="meter" class="meter"><strong>0 %</strong> · <span id="ela">00:00:00</span> · <span id="rem">00:00:00</span></span>
+            </div>
+            <div id="error" class="error-line" role="alert" aria-live="assertive"></div>
           </div>
         </div>
       </section>
+      <p class="tool-foot">Shortcuts: Ctrl+Enter starts, Space pauses, Esc stops. No sound on iPhone? Flip the ring/silent switch. <a href="/help.html">More help</a></p>
     </div>
   </div>
 </section>
-
-<!-- ornament: typeset waveform -->
-<svg class="ornament" viewBox="0 0 360 24" aria-hidden="true" focusable="false">
-  <g fill="currentColor">
-    <rect x="2"   y="10" width="2" height="4"/>
-    <rect x="8"   y="8"  width="2" height="8"/>
-    <rect x="14"  y="6"  width="2" height="12"/>
-    <rect x="20"  y="3"  width="2" height="18"/>
-    <rect x="26"  y="7"  width="2" height="10"/>
-    <rect x="32"  y="9"  width="2" height="6"/>
-    <rect x="38"  y="5"  width="2" height="14"/>
-    <rect x="44"  y="2"  width="2" height="20"/>
-    <rect x="50"  y="6"  width="2" height="12"/>
-    <rect x="56"  y="11" width="2" height="2"/>
-    <rect x="62"  y="9"  width="2" height="6"/>
-    <rect x="68"  y="4"  width="2" height="16"/>
-    <rect x="74"  y="7"  width="2" height="10"/>
-    <rect x="80"  y="11" width="2" height="2"/>
-    <rect x="86"  y="8"  width="2" height="8"/>
-    <rect x="92"  y="3"  width="2" height="18"/>
-    <rect x="98"  y="6"  width="2" height="12"/>
-    <rect x="104" y="10" width="2" height="4"/>
-    <rect x="110" y="7"  width="2" height="10"/>
-    <rect x="116" y="2"  width="2" height="20"/>
-    <rect x="122" y="5"  width="2" height="14"/>
-    <rect x="128" y="9"  width="2" height="6"/>
-    <rect x="134" y="11" width="2" height="2"/>
-    <rect x="140" y="4"  width="2" height="16"/>
-    <rect x="146" y="6"  width="2" height="12"/>
-    <rect x="152" y="9"  width="2" height="6"/>
-    <rect x="158" y="11" width="2" height="2"/>
-    <rect x="164" y="7"  width="2" height="10"/>
-    <rect x="170" y="3"  width="2" height="18"/>
-    <rect x="176" y="0"  width="2" height="24"/>
-    <rect x="182" y="3"  width="2" height="18"/>
-    <rect x="188" y="7"  width="2" height="10"/>
-    <rect x="194" y="11" width="2" height="2"/>
-    <rect x="200" y="9"  width="2" height="6"/>
-    <rect x="206" y="6"  width="2" height="12"/>
-    <rect x="212" y="4"  width="2" height="16"/>
-    <rect x="218" y="11" width="2" height="2"/>
-    <rect x="224" y="9"  width="2" height="6"/>
-    <rect x="230" y="5"  width="2" height="14"/>
-    <rect x="236" y="2"  width="2" height="20"/>
-    <rect x="242" y="6"  width="2" height="12"/>
-    <rect x="248" y="10" width="2" height="4"/>
-    <rect x="254" y="7"  width="2" height="10"/>
-    <rect x="260" y="3"  width="2" height="18"/>
-    <rect x="266" y="8"  width="2" height="8"/>
-    <rect x="272" y="11" width="2" height="2"/>
-    <rect x="278" y="9"  width="2" height="6"/>
-    <rect x="284" y="4"  width="2" height="16"/>
-    <rect x="290" y="6"  width="2" height="12"/>
-    <rect x="296" y="11" width="2" height="2"/>
-    <rect x="302" y="7"  width="2" height="10"/>
-    <rect x="308" y="3"  width="2" height="18"/>
-    <rect x="314" y="6"  width="2" height="12"/>
-    <rect x="320" y="9"  width="2" height="6"/>
-    <rect x="326" y="11" width="2" height="2"/>
-    <rect x="332" y="8"  width="2" height="8"/>
-    <rect x="338" y="6"  width="2" height="12"/>
-    <rect x="344" y="10" width="2" height="4"/>
-    <rect x="350" y="11" width="2" height="2"/>
-    <rect x="356" y="11" width="2" height="2"/>
-  </g>
-</svg>
 
 <!-- latest updates — newest first; add a new <li> at the top when something ships -->
 <section class="updates-strip" aria-labelledby="updates-heading">
@@ -216,6 +125,10 @@
       <span class="upd-date">Aug 19, 2026</span>
       <span class="upd-text">New: subtitle export. After a premium-voice reading, the Subtitles button saves a time-synced .srt file that lines up word-for-word with the MP3 &mdash; listen offline with captions in any player. (Thanks to the reader who suggested it.)</span>
     </li>
+  </ul>
+  <details class="updates-more">
+    <summary>Earlier updates</summary>
+    <ul class="updates-list">
     <li>
       <span class="upd-date">Jul 19, 2026</span>
       <span class="upd-text">You no longer have to listen all the way through to save the MP3. Start a premium-voice reading, and the download button works from that moment on — even after pressing Stop partway. (Thanks to the reader who wrote in about this.)</span>
@@ -252,44 +165,8 @@
       <span class="upd-date">Jul 4, 2026</span>
       <span class="upd-text">Long documents now read reliably all the way to the end, and Pause stays paused for as long as you need.</span>
     </li>
-  </ul>
-</section>
-
-<!-- back-matter: audience / shortcuts / further reading -->
-<section class="back-matter" aria-label="About and reference">
-  <div class="bm-grid">
-    <div class="bm-col">
-      <h3 class="bm-label">Audience</h3>
-      <ul class="bm-list">
-        <li><strong>Students</strong> — review notes by ear</li>
-        <li><strong>Editors &amp; writers</strong> — hear what your eyes miss</li>
-        <li><strong>Dyslexia &amp; ADHD</strong> — listen instead of scan</li>
-        <li><strong>Language learners</strong> — pronunciation and pacing</li>
-        <li><strong>Hands‑free</strong> — commuting, cooking, stretching</li>
-      </ul>
-    </div>
-
-    <div class="bm-col">
-      <h3 class="bm-label">Keyboard</h3>
-      <ul class="bm-list bm-keys">
-        <li><span class="keys"><kbd>Ctrl</kbd><kbd>↵</kbd></span><span class="action">Start (<kbd>⌘</kbd><kbd>↵</kbd> on Mac)</span></li>
-        <li><span class="keys"><kbd>Space</kbd></span><span class="action">Pause / resume</span></li>
-        <li><span class="keys"><kbd>Esc</kbd></span><span class="action">Stop</span></li>
-      </ul>
-      <p class="bm-note">On iOS, flip the Ring/Silent switch if no audio plays. More fixes in the <a href="/help.html">Help guide</a>.</p>
-    </div>
-
-    <div class="bm-col">
-      <h3 class="bm-label">Further reading</h3>
-      <ul class="bm-list">
-        <li><a href="/guide-how-to-use.html">How to use this tool</a></li>
-        <li><a href="/guide-proofread.html">Proofread by ear</a></li>
-        <li><a href="/guide-study.html">Study workflows</a></li>
-        <li><a href="/guide-language-learning.html">Language learning</a></li>
-        <li><a href="/guides.html">All guides</a></li>
-      </ul>
-    </div>
-  </div>
+    </ul>
+  </details>
 </section>
 
 <!-- feedback / questions — magazine "letters to the editor" -->
@@ -367,7 +244,7 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260924a"></script>
+<script src="readaloud.js?v=20260924b"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>

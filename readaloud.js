@@ -1816,6 +1816,13 @@ function updateControls() {
   pauseBtn.disabled = !isSpeaking || isPaused;
   resumeBtn.disabled = !isSpeaking || !isPaused;
   stopBtn.disabled = !isSpeaking;
+  // One button per state: Start <-> Stop, Pause <-> Resume. The disabled
+  // ones stay in the DOM (hidden) so the keyboard shortcuts keep working.
+  startBtn.hidden = isSpeaking;
+  document.body.classList.toggle('is-reading', isSpeaking);
+  stopBtn.hidden = !isSpeaking;
+  pauseBtn.hidden = !isSpeaking || isPaused;
+  resumeBtn.hidden = !isSpeaking || !isPaused;
 }
 
 function setStatus(text) {
