@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260924a">
+  <link rel="stylesheet" href="/styles.css?v=20260924b">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -75,14 +75,14 @@
             <h3 class="section-label"><span class="section-num">01</span> Composition
               <span class="word-count" id="wordcount" aria-live="polite"><span class="word-count-num" id="wordcount-num">0</span> <span class="word-count-label" id="wordcount-label">words</span></span>
             </h3>
-            <textarea id="txt" placeholder="Paste or type text here — or upload a file below…"></textarea>
-            <div id="disp" aria-live="polite"></div>
             <div class="file-row">
               <input type="file" id="fileInput" accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
               <button type="button" id="fileBtn" class="link-btn">Upload a file</button>
-              <span class="file-hint">.txt · .pdf · .docx — or drop one onto the text box. It stays on your device.</span>
+              <span class="file-hint">.txt · .pdf · .docx · stays on your device</span>
               <span id="fileName" class="file-name" aria-live="polite"></span>
             </div>
+            <textarea id="txt" placeholder="Paste or type text here — or upload a file above…"></textarea>
+            <div id="disp" aria-live="polite"></div>
           </div>
 
           <div class="controls">
