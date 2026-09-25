@@ -410,7 +410,7 @@ function populateVoiceSel() {
 
   // Add browser voices - always available as fallback (limit to 5)
   const browserGroup = document.createElement('optgroup');
-  browserGroup.label = apiAvailable ? 'Browser (Offline)' : 'Browser Voices';
+  browserGroup.label = apiAvailable ? 'Offline voices (this device)' : 'Voices on this device';
 
   const defaultOpt = document.createElement('option');
   defaultOpt.value = 'browser:-1';
@@ -561,7 +561,8 @@ async function fetchTimedSegment(seg, voiceId, label) {
       if (attempt > 1) await new Promise(r => setTimeout(r, 800 * attempt));
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 45000);
+        // 100s, not 45: the backup engine renders on a CPU slower than real time.
+        const timeout = setTimeout(() => controller.abort(), 100000);
         const r = await fetch(`${url}/api/tts/timed`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -585,6 +586,12 @@ async function fetchTimedSegment(seg, voiceId, label) {
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
         if (bytes.length < 100) throw new Error('audio too small');
         seg.blob = new Blob([bytes], { type: 'audio/mpeg' });
+        seg.engine = d.engine || 'edge';
+        // The backup engine may have spoken only a prefix of this segment (it is
+        // slower than real time, so it answers in sentence-sized pieces). Keep
+        // what was spoken here and hand the remainder to a new segment after it.
+        const spoken = d.spoken_chars != null ? d.spoken_chars : seg.text.length;
+        if (spoken > 0 && spoken < seg.text.length) splitSegmentAt(seg, spoken);
         seg.words = (d.words || []).map(w => [w[0] / 1000, w[1] + seg.start]);
         if (activeTtsUrl !== url) {
           console.log(`Switched active TTS endpoint to ${url}`);
@@ -608,6 +615,19 @@ async function fetchTimedSegment(seg, voiceId, label) {
     throw e;
   }
   throw lastErr || new Error('segment fetch failed');
+}
+
+// Split `seg` so it covers only its first `n` chars; the rest becomes a new,
+// unfetched segment right after it in the shared segments array.
+function splitSegmentAt(seg, n) {
+  const arr = (timed && timed.segments) || (lastRead && lastRead.segments);
+  const idx = arr ? arr.indexOf(seg) : -1;
+  const restText = seg.text.slice(n).replace(/^\s+/, '');
+  if (idx === -1 || !restText) return;
+  const restStart = seg.start + (seg.text.length - restText.length);
+  arr.splice(idx + 1, 0, { text: restText, start: restStart, end: seg.end });
+  seg.text = seg.text.slice(0, n).replace(/\s+$/, '');
+  seg.end = seg.start + seg.text.length;
 }
 
 function segIndexForChar(ch) {
@@ -739,11 +759,14 @@ async function useTimedNeuralSpeech(voiceId) {
         if (!isSpeaking || !timed) break;
       }
 
-      // Prefetch the next un-fetched segment while this one plays.
-      const nxt = segments[timed.i + 1];
-      if (nxt && !nxt.blob && !nxt.fetching) {
-        nxt.fetching = fetchTimedSegment(nxt, voiceId, `${timed.i + 2}/${segments.length}`)
-          .catch(() => { nxt.fetching = null; }); // errors re-surface on demand
+      // Keep the next TWO segments in flight while this one plays, so one
+      // slow synthesis (or a backup-engine render) doesn't leave a gap.
+      for (const k of [1, 2]) {
+        const nxt = segments[timed.i + k];
+        if (nxt && !nxt.blob && !nxt.fetching) {
+          nxt.fetching = fetchTimedSegment(nxt, voiceId, `${timed.i + k + 1}/${segments.length}`)
+            .catch(() => { nxt.fetching = null; }); // errors re-surface on demand
+        }
       }
 
       // A seek that arrived during the fetch may point at a different segment.
@@ -755,7 +778,8 @@ async function useTimedNeuralSpeech(voiceId) {
         timed.seekChar = null;
       }
 
-      setStatus(segments.length > 1 ? `Playing (${timed.i + 1}/${segments.length})...` : 'Playing...');
+      const via = seg.engine && seg.engine !== 'edge' ? ' · backup voice' : '';
+      setStatus((segments.length > 1 ? `Playing (${timed.i + 1}/${segments.length})...` : 'Playing...') + via);
       await playTimedSegment(seg, startAt);
       if (!isSpeaking || !timed) break;
       if (timed.seekChar != null) continue; // a click interrupted playback — re-route

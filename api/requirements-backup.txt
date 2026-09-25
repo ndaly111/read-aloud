@@ -1,0 +1,7 @@
+# Backup voice engine (mini PC only; Render never installs this file).
+# Installed by read-aloud-update.sh after requirements.txt. Voice files live in
+# /home/ubuntu/tts_models/piper (see piper_fetch.sh in the ops notes).
+piper-tts>=1.8
+onnx>=1.15
+lameenc>=1.8
+numpy>=1.26

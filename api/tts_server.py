@@ -23,6 +23,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sqlite3
 import time
 from collections import OrderedDict
@@ -30,7 +31,13 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Optional
 
+import threading
 import edge_tts
+
+try:
+    from . import backup_engine          # loaded as the `api` package
+except ImportError:
+    import backup_engine                 # run directly from api/
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
@@ -285,6 +292,45 @@ class TimedTTSRequest(BaseModel):
     so one cache entry serves every speed setting."""
     text: str = Field(..., min_length=1, max_length=5000, description="Text to convert to speech")
     voice: str = Field(default="en-US-AriaNeural", description="Voice ID")
+    engine: str = Field(default="auto", pattern="^(auto|edge|backup)$",
+                        description="auto = Edge, falling back to the local backup engine when Edge fails")
+
+
+# ----------------------------------------------------------------------
+# Edge circuit breaker. Edge failures are usually an upstream outage that
+# lasts minutes; without this every segment would burn the full synthesis
+# timeout before falling back. After BREAKER_FAILS failures within
+# BREAKER_WINDOW_S, requests go straight to the backup engine for BREAKER_OPEN_S, then
+# one request is allowed through to probe Edge again.
+# ----------------------------------------------------------------------
+BREAKER_FAILS = 3
+BREAKER_WINDOW_S = 120
+BREAKER_OPEN_S = 120
+_edge_failures: list = []      # timestamps of recent failures
+_edge_open_until: float = 0.0
+_fallback_count = 0
+
+
+def _edge_breaker_open() -> bool:
+    return time.time() < _edge_open_until
+
+
+def _note_edge_failure() -> None:
+    global _edge_open_until
+    now = time.time()
+    _edge_failures.append(now)
+    while _edge_failures and now - _edge_failures[0] > BREAKER_WINDOW_S:
+        _edge_failures.pop(0)
+    if len(_edge_failures) >= BREAKER_FAILS:
+        _edge_open_until = now + BREAKER_OPEN_S
+        _edge_failures.clear()
+        print(f"[tts] Edge breaker OPEN for {BREAKER_OPEN_S}s")
+
+
+def _note_edge_success() -> None:
+    global _edge_open_until
+    _edge_failures.clear()
+    _edge_open_until = 0.0
 
 
 # WordBoundary offsets/durations arrive in 100-nanosecond ticks.
@@ -318,6 +364,10 @@ def _map_word_offsets(text: str, boundaries: list) -> list:
             words.append([offset_ticks // TICKS_PER_MS, idx])
             cursor = idx + len(w)
     return words
+
+
+if backup_engine.available() and os.environ.get("BACKUP_WARM", "1") == "1":
+    threading.Thread(target=backup_engine.warm, name="backup-warm", daemon=True).start()
 
 
 @app.get("/")
@@ -465,56 +515,135 @@ async def text_to_speech_timed(request: Request, body: TimedTTSRequest):
             headers={"Cache-Control": "public, max-age=3600", "X-Cache": "hit"},
         )
 
-    try:
-        # boundary="WordBoundary" is required on edge-tts 7.x — the default is
-        # SentenceBoundary, which emits no per-word events at all.
-        communicate = edge_tts.Communicate(
-            text=body.text, voice=body.voice, boundary="WordBoundary"
-        )
+    # Engine selection: Edge unless it is known-down or the caller asked for
+    # the backup. Whatever spoke, the response shape is identical.
+    edge_err = None
+    result = None
+    engine = body.engine
+    can_fallback = backup_engine.supports(body.voice)
+    try_edge = engine == "edge" or (engine == "auto" and not (_edge_breaker_open() and can_fallback))
 
-        audio_stream = io.BytesIO()
-        boundaries = []
+    if try_edge:
+        try:
+            result = await _edge_timed(body.text, body.voice)
+            _note_edge_success()
+        except Exception as e:
+            edge_err = e
+            _note_edge_failure()
+            print(f"[tts] Edge failed ({type(e).__name__}: {e}); "
+                  f"backup {'available' if can_fallback else 'unavailable'} for {body.voice}")
 
-        async def _synthesize():
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    audio_stream.write(chunk["data"])
-                elif chunk["type"] == "WordBoundary":
-                    boundaries.append(
-                        (chunk.get("offset", 0), chunk.get("duration", 0), chunk.get("text", ""))
-                    )
+    spoken_text = body.text
+    if result is None and engine != "edge" and can_fallback:
+        spoken_text = _fallback_prefix(body.text)
+        try:
+            result = await asyncio.wait_for(
+                run_in_threadpool(backup_engine.synthesize, spoken_text, body.voice),
+                timeout=BACKUP_TIMEOUT_S,
+            )
+            result["engine"] = "backup"
+            global _fallback_count
+            _fallback_count += 1
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Backup voice timed out")
+        except Exception as e:
+            detail = f"Backup voice failed: {e}"
+            if edge_err is not None:
+                detail = f"Edge failed ({edge_err}); {detail}"
+            raise HTTPException(status_code=500, detail=detail)
 
-        await asyncio.wait_for(_synthesize(), timeout=SYNTH_TIMEOUT_S)
+    if result is None:
+        if isinstance(edge_err, asyncio.TimeoutError):
+            raise HTTPException(status_code=504, detail="TTS generation timed out")
+        if edge_err is not None:
+            raise HTTPException(status_code=500, detail=f"TTS generation failed: {edge_err}")
+        raise HTTPException(status_code=503, detail="No voice engine available for this voice")
 
-        audio_bytes = audio_stream.getvalue()
-        if not audio_bytes:
-            raise HTTPException(status_code=500, detail="TTS produced no audio")
+    payload = json.dumps({
+        "words": result["words"],
+        "duration_ms": result["duration_ms"],
+        "engine": result["engine"],
+        "spoken_chars": len(spoken_text),
+        "audio": base64.b64encode(result["audio"]).decode("ascii"),
+    }).encode("utf-8")
 
-        words = _map_word_offsets(body.text, boundaries)
-        duration_ms = (
-            (boundaries[-1][0] + boundaries[-1][1]) // TICKS_PER_MS if boundaries else None
-        )
-        payload = json.dumps({
-            "words": words,
-            "duration_ms": duration_ms,
-            "audio": base64.b64encode(audio_bytes).decode("ascii"),
-        }).encode("utf-8")
-
+    # Only Edge output goes in the cache; a cached backup rendition would keep
+    # serving the backup voice for an hour after Edge recovered.
+    if result["engine"] == "edge":
         audio_cache.put(cache_key, payload)
-        _usage_log(body.voice, char_count, False, int((time.time() - _t0) * 1000))
+    _usage_log(body.voice if result["engine"] == "edge" else f"backup:{body.voice}",
+               char_count, False, int((time.time() - _t0) * 1000))
 
-        return StreamingResponse(
-            io.BytesIO(payload),
-            media_type="application/json",
-            headers={"Cache-Control": "public, max-age=3600", "X-Cache": "miss"},
-        )
+    return StreamingResponse(
+        io.BytesIO(payload),
+        media_type="application/json",
+        headers={"Cache-Control": "public, max-age=3600", "X-Cache": "miss",
+                 "X-Engine": result["engine"]},
+    )
 
-    except HTTPException:
-        raise
-    except asyncio.TimeoutError:
-        raise HTTPException(status_code=504, detail="TTS generation timed out")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"TTS generation failed: {str(e)}")
+
+BACKUP_TIMEOUT_S = 60
+# The backup engine renders on the mini PC's CPU (~5x real time with Piper,
+# less when the box is busy). It never renders a whole 1200-char client segment
+# at once: it speaks a sentence-bounded prefix and reports `spoken_chars`; the
+# client re-segments the remainder and keeps two requests in flight, so the
+# first sound arrives in a few seconds.
+FALLBACK_MAX_CHARS = int(os.environ.get("FALLBACK_MAX_CHARS", "400"))
+
+
+def _fallback_prefix(text: str, limit: int = FALLBACK_MAX_CHARS) -> str:
+    if len(text) <= limit:
+        return text
+    window = text[:limit]
+    cut = -1
+    for m in re.finditer(r"[.!?…]+[\"'”’)]*(?=\s)", window):
+        cut = m.end()
+    if cut < limit // 3:
+        cut = window.rfind(" ")
+    if cut < limit // 3:
+        cut = limit
+    return text[:cut]
+
+
+async def _edge_timed(text: str, voice: str) -> dict:
+    """Synthesize with Edge and return {audio, words, duration_ms, engine}."""
+    # boundary="WordBoundary" is required on edge-tts 7.x — the default is
+    # SentenceBoundary, which emits no per-word events at all.
+    communicate = edge_tts.Communicate(text=text, voice=voice, boundary="WordBoundary")
+    audio_stream = io.BytesIO()
+    boundaries = []
+
+    async def _synthesize():
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_stream.write(chunk["data"])
+            elif chunk["type"] == "WordBoundary":
+                boundaries.append(
+                    (chunk.get("offset", 0), chunk.get("duration", 0), chunk.get("text", ""))
+                )
+
+    await asyncio.wait_for(_synthesize(), timeout=SYNTH_TIMEOUT_S)
+    audio_bytes = audio_stream.getvalue()
+    if not audio_bytes:
+        raise RuntimeError("TTS produced no audio")
+    return {
+        "audio": audio_bytes,
+        "words": _map_word_offsets(text, boundaries),
+        "duration_ms": (boundaries[-1][0] + boundaries[-1][1]) // TICKS_PER_MS if boundaries else None,
+        "engine": "edge",
+    }
+
+
+@app.get("/api/engines")
+async def engines_status():
+    """Which engines are live. Public, tiny, no secrets — for the dashboard and curl."""
+    return {
+        "edge": {"breaker_open": _edge_breaker_open(),
+                 "open_for_s": max(0, int(_edge_open_until - time.time())),
+                 "recent_failures": len(_edge_failures)},
+        "backup": backup_engine.status(),
+        "fallbacks_served": _fallback_count,
+    }
 
 
 @app.get("/api/tts")
