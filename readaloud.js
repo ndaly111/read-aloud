@@ -32,16 +32,6 @@ function noteTtsFailure(url) {
   if (url === TTS_ENDPOINTS[0]) primaryFailedAt = Date.now();
 }
 
-// Billing + Studio (ElevenLabs) premium voices live only on the self-hosted mini PC
-// (licenses DB + ElevenLabs key aren't on Render) — so these always target the
-// primary. Free neural voices, which is what almost everyone uses, do fail over.
-const BILLING_URL = TTS_ENDPOINTS[0];
-const LICENSE_KEY_LS = 'ra_license_key';
-let license = null;        // {key, plan, status, char_cap, char_used, char_remaining}
-let studioVoices = [];     // [{id, name, labels}] — Studio voice catalog
-let previewAudio = null;   // currently-playing Studio preview sample
-let lastPlaybackType = ''; // 'browser' | 'neural' | 'studio' — drives the finish nudge
-
 // One reusable <audio> element for ALL neural chunks. A fresh element per
 // chunk breaks hands-free listening: once the screen locks, iOS/Android only
 // allow play() on an element the user's tap originally unlocked. Reusing the
@@ -253,24 +243,29 @@ let preparedDownload = null; // {key, blobs} — cached rate-baked MP3 so re-cli
   $('download').onclick = downloadMp3;
   $('subtitles').onclick = downloadSubtitles;
 
-  // Premium / Studio voices wiring
-  const upBtn = $('upgradeBtn');
-  if (upBtn) upBtn.onclick = openUpgrade;
-  const upClose = $('upgradeClose');
-  if (upClose) upClose.onclick = closeUpgrade;
-  const keyApply = $('keyApply');
-  if (keyApply) keyApply.onclick = applyKey;
-  const recoverToggle = $('recoverToggle');
-  if (recoverToggle) recoverToggle.onclick = () => {
-    const b = $('recoverBox');
-    if (b) b.hidden = !b.hidden;
-  };
-  const recoverBtn = $('recoverBtn');
-  if (recoverBtn) recoverBtn.onclick = recoverKey;
-  const previewBtn = $('previewBtn');
-  if (previewBtn) previewBtn.onclick = togglePreview;
-  const modalSampleBtn = $('modalSampleBtn');
-  if (modalSampleBtn) modalSampleBtn.onclick = togglePreview;
+  // File upload (.txt / .md / .pdf / .docx) — button, picker, and drag-drop.
+  const fileInput = $('fileInput');
+  const fileBtn = $('fileBtn');
+  if (fileBtn && fileInput) {
+    fileBtn.onclick = () => fileInput.click();
+    fileInput.addEventListener('change', () => {
+      loadFile(fileInput.files && fileInput.files[0]);
+      fileInput.value = ''; // so picking the same file again re-triggers change
+    });
+  }
+  const hasFile = (e) => e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+  ['dragenter', 'dragover'].forEach((ev) => txt.addEventListener(ev, (e) => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    txt.classList.add('drop-target');
+  }));
+  txt.addEventListener('dragleave', () => txt.classList.remove('drop-target'));
+  txt.addEventListener('drop', (e) => {
+    txt.classList.remove('drop-target');
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    loadFile(e.dataTransfer.files[0]);
+  });
 
   // Manual scrolling in the reading pane pauses highlight auto-follow briefly.
   ['wheel', 'touchmove'].forEach((ev) =>
@@ -290,10 +285,6 @@ let preparedDownload = null; // {key, blobs} — cached rate-baked MP3 so re-cli
     const r = progressBar.getBoundingClientRect();
     const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     seekToChar(Math.floor(frac * totalChars));
-  });
-  const modal = $('upgradeModal');
-  if (modal) modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeUpgrade();
   });
 
   txt.addEventListener('input', () => {
@@ -328,11 +319,6 @@ let preparedDownload = null; // {key, blobs} — cached rate-baked MP3 so re-cli
       populateVoiceSel();
     }
   });
-
-  // Load the Studio voice catalog (for previews) and validate any stored license
-  // in the background, then repopulate so Studio voices + the right default appear.
-  // Never blocks the free tool.
-  Promise.all([loadLicense(), loadStudioVoices()]).then(() => populateVoiceSel());
 })();
 
 /* ========== API CHECK ========== */
@@ -406,24 +392,6 @@ function populateVoiceSel() {
   const prevPick = voiceSel.value; // restore below if it survives the rebuild
   voiceSel.innerHTML = '';
 
-  // Studio voices — shown to everyone so they can preview before subscribing.
-  // The model is multilingual, so all studio voices are offered regardless of language.
-  const studioLicensed = license && license.status === 'active';
-  if (studioVoices.length) {
-    const studioGroup = document.createElement('optgroup');
-    studioGroup.label = studioLicensed ? 'Studio Voices' : '— Studio voices (optional upgrade) —';
-    studioVoices.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = `studio:${v.id}`;
-      // Show just the clean first name — strip provider descriptors like
-      // "Roger - Laid-Back, Casual, Resonant".
-      opt.textContent = (v.name || '').split(' - ')[0].trim() || v.name;
-      studioGroup.appendChild(opt);
-    });
-    voiceSel.appendChild(studioGroup);
-  }
-
-  // Add neural voices first (if API available)
   const neuralVoices = NEURAL_VOICES[lang] || NEURAL_VOICES['en'];
 
   if (apiAvailable && neuralVoices.length) {
@@ -463,7 +431,7 @@ function populateVoiceSel() {
   voiceSel.appendChild(browserGroup);
 
   // Keep the user's explicit pick when this rebuild was a background refresh
-  // (5-min health probe, license/studio catalog load) — those used to yank the
+  // (5-min health probe) — those used to yank the
   // selection back to the default mid-session.
   if (prevPick && [...voiceSel.options].some(o => o.value === prevPick)) {
     voiceSel.value = prevPick;
@@ -471,11 +439,8 @@ function populateVoiceSel() {
     return;
   }
 
-  // Default selection: Studio voices first when a license is active (the user is
-  // paying for them, so make them the default), then premium Edge, then browser.
-  if (studioLicensed && studioVoices.length) {
-    voiceSel.value = `studio:${studioVoices[0].id}`;
-  } else if (apiAvailable && neuralVoices.length) {
+  // Default selection: premium Edge first, then browser.
+  if (apiAvailable && neuralVoices.length) {
     voiceSel.value = `neural:${neuralVoices[0].id}`;
   } else {
     voiceSel.value = 'browser:-1';
@@ -487,13 +452,6 @@ function populateVoiceSel() {
 
 function updateVoiceStatus() {
   const [voiceType] = voiceSel.value.split(':');
-  // The "Hear a sample" button is available whenever Studio voices exist — it
-  // previews the selected Studio voice, or a default one if the pick isn't Studio.
-  const pv = $('previewBtn');
-  if (pv) {
-    pv.hidden = !studioVoices.length;
-    if (!previewAudio || previewAudio.paused) pv.textContent = previewBtnLabel();
-  }
   const indicator = document.getElementById('voice-type-indicator');
   if (indicator) {
     if (voiceType === 'neural') {
@@ -506,13 +464,8 @@ function updateVoiceStatus() {
   }
 }
 
-// Update indicator when voice changes; track Studio voice selections.
-if (voiceSel) {
-  voiceSel.addEventListener('change', () => {
-    updateVoiceStatus();
-    if (voiceSel.value.startsWith('studio:')) trackEvent('studio_select');
-  });
-}
+// Update indicator when voice changes.
+if (voiceSel) voiceSel.addEventListener('change', updateVoiceStatus);
 
 /* ========== START SPEAK ========== */
 function startSpeak() {
@@ -524,27 +477,12 @@ function startSpeak() {
   }
   clearError();
   initSharedAudio(); // unlock the shared element while we're in the tap's call stack
-  const sn = $('studioNudge');
-  if (sn) sn.hidden = true;
   isSpeaking = true;
   startBtn.disabled = true;
 
   const [voiceType, voiceId] = voiceSel.value.split(':');
-  lastPlaybackType = voiceType;
 
-  if (voiceType === 'studio') {
-    if (!(license && license.status === 'active')) {
-      // Unlicensed: don't ambush with the pricing modal. Play the free cached
-      // sample of the selected Studio voice and show an inline nudge instead.
-      isSpeaking = false;
-      updateControls();
-      setStatus('Ready');
-      playSample();
-      showStudioNudge('sample');
-      return;
-    }
-    useStudioSpeech(voiceId);
-  } else if (voiceType === 'neural' && apiAvailable) {
+  if (voiceType === 'neural' && apiAvailable) {
     useTimedNeuralSpeech(voiceId);
   } else {
     useBrowserSpeech(voiceId);
@@ -1682,8 +1620,6 @@ function finish() {
     $('download').disabled = false;
   }
   if (lastRead) $('subtitles').disabled = false;
-  // After a FREE playback, invite unlicensed users to try Studio on their own text.
-  if (lastPlaybackType && lastPlaybackType !== 'studio') showStudioNudge();
 }
 
 async function downloadMp3() {
@@ -1894,397 +1830,120 @@ function clearError() {
   errorEl.textContent = '';
 }
 
-/* ========== PREMIUM / STUDIO VOICES (ElevenLabs) ========== */
+/* ========== FILE UPLOAD (.txt / .md / .pdf / .docx) ========== */
+// Everything runs in the browser — the file never leaves the device. The PDF
+// and Word parsers are fetched from a CDN only when a file of that type is
+// picked, so the page stays light for everyone who just pastes text.
+const FILE_MAX_CHARS = 500000; // ~90k words; keeps the word-by-word display responsive
+const PDFJS_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+const PDFJS_WORKER_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+const MAMMOTH_URL = 'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js';
+const loadedScripts = {};
 
-// First-party funnel tracking — fire-and-forget, never blocks the UI.
-function trackEvent(name) {
-  try {
-    fetch(`${BILLING_URL}/api/event`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-      keepalive: true
-    }).catch(() => {});
-  } catch (e) {}
-}
-
-// Validate the stored license key and refresh quota. Safe to call anytime.
-async function loadLicense() {
-  let key = '';
-  try { key = localStorage.getItem(LICENSE_KEY_LS) || ''; } catch (e) {}
-  if (!key) { license = null; updateLicenseUI(); return; }
-  try {
-    const r = await fetch(`${BILLING_URL}/api/billing/status?key=${encodeURIComponent(key)}`);
-    if (r.ok) {
-      license = await r.json();
-    } else {
-      if (r.status === 404) { try { localStorage.removeItem(LICENSE_KEY_LS); } catch (e) {} }
-      license = null;
-    }
-  } catch (e) {
-    license = null; // network error — leave the stored key in place for a later retry
+function loadScript(url) {
+  if (!loadedScripts[url]) {
+    loadedScripts[url] = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = url;
+      s.onload = resolve;
+      s.onerror = () => { delete loadedScripts[url]; reject(new Error('the reader library did not load — check your connection')); };
+      document.head.appendChild(s);
+    });
   }
-  updateLicenseUI();
+  return loadedScripts[url];
 }
 
-// Curated narrators (ordered). Sarah leads, so she's the licensed default and the
-// default preview voice. Character-y voices (Husky Trickster, Fierce Warrior, etc.)
-// are dropped. Falls back to the full catalog if too few of these are present.
-const CURATED_VOICES = ['Sarah', 'Brian', 'George', 'Charlotte', 'Daniel', 'Alice',
-                        'River', 'Bill', 'Lily', 'Matilda'];
-
-function curateVoices(voices) {
-  const firstName = v => (v.name || '').split(' - ')[0].trim();
-  const picked = CURATED_VOICES
-    .map(name => voices.find(v => firstName(v) === name))
-    .filter(Boolean);
-  return picked.length >= 5 ? picked : voices;
+function fileKind(file) {
+  const name = (file.name || '').toLowerCase();
+  const type = file.type || '';
+  if (name.endsWith('.pdf') || type === 'application/pdf') return 'pdf';
+  if (name.endsWith('.docx') ||
+      type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
+  if (/\.(txt|md|markdown|text)$/.test(name) || type.startsWith('text/')) return 'text';
+  return '';
 }
 
-async function loadStudioVoices() {
-  // Loaded for everyone (the endpoint is public) so unlicensed visitors can
-  // browse and preview Studio voices before subscribing.
-  try {
-    const r = await fetch(`${BILLING_URL}/api/tts/premium/voices`);
-    if (r.ok) { const d = await r.json(); studioVoices = curateVoices(d.voices || []); }
-  } catch (e) { studioVoices = []; }
+// PDF text comes out one positioned run at a time; re-flow it into paragraphs
+// so the reader gets sentences, not a line-break after every visual line.
+function cleanPdfText(t) {
+  return t
+    .replace(/-\n(?=[a-z])/g, '')        // re-join words hyphen-ated across lines
+    .replace(/(?:\.\s?){4,}/g, ' ')      // leader dots in tables of contents
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/([^\n])\n(?!\n)/g, '$1 ')  // single breaks are layout, not paragraphs
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 }
 
-function updateLicenseUI() {
-  const statusEl = $('licenseStatus');
-  const upBtn = $('upgradeBtn');
-  if (!statusEl) return;
-  if (license && license.status === 'active') {
-    const rem = license.char_remaining != null ? license.char_remaining : 0;
-    statusEl.hidden = false;
-    statusEl.innerHTML =
-      `Studio · <strong>${rem.toLocaleString()}</strong> chars left · ` +
-      `<button type="button" class="link-btn" id="manageKey">manage</button>`;
-    if (upBtn) upBtn.hidden = true;
-    const mk = $('manageKey');
-    if (mk) mk.onclick = openUpgrade;
-  } else {
-    statusEl.hidden = true;
-    if (upBtn) upBtn.hidden = false;
+async function extractPdfText(file) {
+  await loadScript(PDFJS_URL);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const pages = [];
+  for (let n = 1; n <= pdf.numPages; n++) {
+    setStatus(`Reading PDF… page ${n} of ${pdf.numPages}`);
+    const page = await pdf.getPage(n);
+    const content = await page.getTextContent();
+    let text = '';
+    content.items.forEach((it) => {
+      if (typeof it.str !== 'string') return;
+      text += it.str;
+      text += it.hasEOL ? '\n' : ' ';
+    });
+    pages.push(text);
+    page.cleanup();
   }
+  return cleanPdfText(pages.join('\n\n'));
 }
 
-// Fetch one premium chunk. Throws an Error with .status on failure so the caller
-// can react to billing/auth errors (no silent browser fallback for those).
-async function fetchStudioChunk(text, voiceId) {
-  const r = await fetch(`${BILLING_URL}/api/tts/premium`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, voice_id: voiceId, license_key: license.key })
-  });
-  if (!r.ok) {
-    let detail = `error ${r.status}`;
-    try { const e = await r.json(); detail = e.detail || detail; } catch (_) {}
-    const err = new Error(detail);
-    err.status = r.status;
-    throw err;
-  }
-  const rem = r.headers.get('X-Chars-Remaining');
-  if (rem != null && license) license.char_remaining = parseInt(rem, 10);
-  const blob = await r.blob();
-  if (blob.size < 100) throw new Error('audio too small');
-  return blob;
+async function extractDocxText(file) {
+  await loadScript(MAMMOTH_URL);
+  const r = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+  return (r.value || '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-async function useStudioSpeech(voiceId) {
-  setStatus('Loading studio audio...');
-  isSpeaking = true;
-  isPaused = false;
-  downloadBlobs = [];
-  $('download').disabled = true;
-  $('subtitles').disabled = true;
-  updateControls();
-
-  const chunks = chunkText(txt.value, 1500); // stays under the per-request server cap
-  progChar = 0;
-  startTime = Date.now();
-  totalChars = txt.value.length;
-
-  // Pre-flight quota check so we fail fast instead of mid-playback.
-  if (license && license.char_remaining != null && totalChars > license.char_remaining) {
-    isSpeaking = false;
-    updateControls();
-    showError(`Not enough Studio characters left (${license.char_remaining.toLocaleString()} remaining, ` +
-              `need ${totalChars.toLocaleString()}). Upgrade or wait for renewal.`);
-    setStatus('Ready');
-    openUpgrade();
+async function loadFile(file) {
+  if (!file) return;
+  const kind = fileKind(file);
+  if (!kind) {
+    showError("That file type isn't supported yet — try a .txt, .pdf, or .docx.");
     return;
   }
-
-  let nextFetch = fetchStudioChunk(chunks[0], voiceId);
+  if (isSpeaking) stopAll();
+  clearError();
+  const btn = $('fileBtn');
+  if (btn) btn.disabled = true;
+  setStatus('Reading file…');
   try {
-    for (let i = 0; i < chunks.length; i++) {
-      if (!isSpeaking) break;
+    let text;
+    if (kind === 'pdf') text = await extractPdfText(file);
+    else if (kind === 'docx') text = await extractDocxText(file);
+    else text = (await file.text()).replace(/\r\n?/g, '\n').trim();
 
-      setStatus(`Loading chunk ${i + 1}/${chunks.length}...`);
-      const audioBlob = await nextFetch;
-
-      if (i + 1 < chunks.length) {
-        nextFetch = fetchStudioChunk(chunks[i + 1], voiceId);
-      } else {
-        nextFetch = null;
-      }
-
-      downloadBlobs.push(audioBlob);
-      setStatus(chunks.length > 1 ? `Playing (${i + 1}/${chunks.length})...` : 'Playing...');
-      await playAudioBlob(audioBlob, chunks[i].length);
-      progChar += chunks[i].length;
-      updateLicenseUI();
-    }
-    if (isSpeaking) finish();
-  } catch (err) {
-    if (nextFetch) nextFetch.catch(() => {}); // swallow the in-flight look-ahead
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    isSpeaking = false;
-    isPaused = false;
-    updateControls();
-    if (err.status === 402) {
-      showError('Studio limit reached for this period — upgrade or wait for renewal.');
-      openUpgrade();
-    } else if (err.status === 401) {
-      showError("Your license key isn't valid anymore. Re-paste it under “manage”.");
-      openUpgrade();
-    } else if (err.status === 503) {
-      showError('Studio is briefly at capacity — try again shortly, or use a Premium voice.');
-    } else {
-      showError(`Studio voice error: ${err.message}`);
-    }
-    setStatus('Ready');
-  } finally {
-    loadLicense(); // refresh remaining quota from the server
-  }
-}
-
-/* ========== STUDIO PREVIEW SAMPLES (free, cached) ========== */
-// The preview button ALWAYS plays a Studio voice, never the selected free
-// voice. Label it accordingly or visitors think they compared free vs Studio
-// and heard no difference (they heard Studio twice).
-function previewBtnLabel() {
-  return voiceSel && voiceSel.value.startsWith('studio:')
-    ? 'Hear this voice' : 'Hear a Studio sample';
-}
-
-function stopPreview() {
-  if (previewAudio) {
-    previewAudio.pause();
-    previewAudio = null;
-  }
-  const btn = $('previewBtn');
-  if (btn && !btn.hidden) btn.textContent = previewBtnLabel();
-}
-
-function togglePreview() {
-  if (previewAudio && !previewAudio.paused) { stopPreview(); return; }
-  playSample();
-}
-
-// Pick a pleasant default preview voice (Roger, the catalog's first, isn't ideal).
-function defaultPreviewVoiceId() {
-  const prefer = ['Sarah', 'Charlotte', 'Brian', 'George', 'Daniel'];
-  for (const name of prefer) {
-    const v = studioVoices.find(x => (x.name || '').split(' - ')[0].trim() === name);
-    if (v) return v.id;
-  }
-  return studioVoices[0] && studioVoices[0].id;
-}
-
-// "Hear a sample": plays the free, cached canned clip for the selected (or a
-// default) Studio voice. Zero per-visitor character cost.
-async function playSample() {
-  const val = voiceSel.value;
-  const vid = val.startsWith('studio:') ? val.slice('studio:'.length) : defaultPreviewVoiceId();
-  if (!vid) return;
-  const btn = $('previewBtn');
-  stopPreview();
-  if (btn) { btn.disabled = true; btn.textContent = '… loading'; }
-
-  let url = null;
-  try {
-    const r = await fetch(`${BILLING_URL}/api/tts/premium/sample?voice_id=${encodeURIComponent(vid)}`);
-    if (!r.ok) throw new Error('sample ' + r.status);
-    url = URL.createObjectURL(await r.blob());
-    previewAudio = new Audio(url);
-    previewAudio.onended = () => {
-      URL.revokeObjectURL(url);
-      previewAudio = null;
-      if (btn) btn.textContent = previewBtnLabel();
-      // The sample just finished — the hottest moment in the funnel.
-      trackEvent('sample_done');
-      // Inline CTA only when the plans modal isn't already showing the offer.
-      const modal = $('upgradeModal');
-      if (modal && modal.hidden) showStudioNudge('after-sample');
-    };
-    previewAudio.onerror = () => {
-      previewAudio = null;
-      if (btn) { btn.disabled = false; btn.textContent = previewBtnLabel(); }
-    };
-    await previewAudio.play();
-    if (btn) { btn.disabled = false; btn.textContent = 'Stop sample'; }
-  } catch (e) {
-    if (url) URL.revokeObjectURL(url);
-    if (btn) { btn.disabled = false; btn.textContent = previewBtnLabel(); }
-  }
-}
-
-/* ========== STUDIO CONVERSION NUDGE ========== */
-// Shown after a free playback finishes, to unlicensed users. Offers a free
-// cached Studio sample (no per-visitor character cost) and the plans.
-function showStudioNudge(mode) {
-  const el = $('studioNudge');
-  if (!el) return;
-  const eligible = studioVoices.length && !(license && license.status === 'active');
-  if (!eligible) { el.hidden = true; return; }
-  // Three moments, one element:
-  //   'sample'       — visitor pressed Play on a Studio voice (sample now playing)
-  //   'after-sample' — the sample just finished: plans become the primary action
-  //   (default)      — a free playback ended; quiet invitation, shows often
-  let intro, sampleLabel = 'Hear a sample';
-  let plansPrimary = false;
-  if (mode === 'sample') {
-    intro = "<strong>That's a Studio voice, so here's a sample of it.</strong> "
-      + 'The free voices above will read your full text right now.';
-  } else if (mode === 'after-sample') {
-    intro = "<strong>Like that voice?</strong> That's Studio. $9 a month, "
-      + 'and the rest of the tool stays free.';
-    sampleLabel = 'Play it again';
-    plansPrimary = true;
-  } else {
-    intro = 'The Studio voices sound like an actual person reading.';
-    sampleLabel = 'Hear one';
-  }
-  el.innerHTML = intro + ' '
-    + '<button type="button" class="nudge-btn' + (plansPrimary ? ' nudge-btn--ghost' : '')
-    + '" id="nudgeSample">' + sampleLabel + '</button> '
-    + '<button type="button" class="nudge-btn' + (plansPrimary ? '' : ' nudge-btn--ghost')
-    + '" id="nudgePlans">See plans</button>';
-  el.hidden = false;
-  const s = $('nudgeSample'); if (s) s.onclick = playSample;
-  const p = $('nudgePlans'); if (p) p.onclick = openUpgrade;
-}
-
-/* ========== UPGRADE MODAL ========== */
-function openUpgrade() {
-  const m = $('upgradeModal');
-  if (!m) return;
-  trackEvent('upgrade_open');
-  m.hidden = false;
-  document.body.style.overflow = 'hidden';
-  const ki = $('keyInput');
-  if (ki) { try { ki.value = localStorage.getItem(LICENSE_KEY_LS) || ''; } catch (e) {} }
-  loadTiers();
-}
-
-function closeUpgrade() {
-  const m = $('upgradeModal');
-  if (!m) return;
-  m.hidden = true;
-  document.body.style.overflow = '';
-}
-
-async function loadTiers() {
-  const grid = $('tierGrid');
-  if (!grid) return;
-  grid.innerHTML = '<p class="muted">Loading plans…</p>';
-  try {
-    const r = await fetch(`${BILLING_URL}/api/billing/tiers`);
-    if (!r.ok) throw new Error('tiers ' + r.status);
-    const d = await r.json();
-    const tiers = d.tiers || [];
-    grid.innerHTML = '';
-    tiers.forEach(t => {
-      const price = t.amount_cents != null ? `$${(t.amount_cents / 100).toFixed(0)}` : '—';
-      const cap = t.cap || 0;
-      // ~900 characters ≈ one minute of spoken audio — frame the cap as a benefit.
-      const mins = Math.round(cap / 900);
-      const audio = mins >= 90 ? `~${(mins / 60).toFixed(1)} hrs of audio`
-                              : `~${Math.max(5, Math.round(mins / 5) * 5)} min of audio`;
-      const popular = t.plan === 'pro';
-      const card = document.createElement('div');
-      card.className = 'tier-card' + (popular ? ' tier-card--popular' : '');
-      card.innerHTML =
-        (popular ? '<span class="tier-flag">Most popular</span>' : '') +
-        `<p class="tier-name">${t.plan}</p>` +
-        `<p class="tier-price">${price}<span>/${t.interval}</span></p>` +
-        `<p class="tier-cap"><span class="tier-cap-big">${audio}</span>` +
-          `<span class="tier-cap-exact">${cap.toLocaleString()} characters / month</span></p>` +
-        `<button type="button" class="btn tier-btn">Choose ${t.plan}</button>`;
-      card.querySelector('button').onclick = (e) => startCheckout(t.price_id, e.currentTarget);
-      grid.appendChild(card);
-    });
-    if (!grid.children.length) grid.innerHTML = '<p class="muted">Plans unavailable right now.</p>';
-  } catch (e) {
-    grid.innerHTML = '<p class="muted">Couldn\'t load plans — try again in a moment.</p>';
-  }
-}
-
-async function startCheckout(priceId, btn) {
-  trackEvent('checkout_click');
-  if (btn) { btn.disabled = true; btn.textContent = 'Redirecting…'; }
-  try {
-    const r = await fetch(`${BILLING_URL}/api/billing/checkout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ price_id: priceId })
-    });
-    const d = await r.json().catch(() => ({}));
-    if (r.ok && d.url) { location.href = d.url; return; }
-    throw new Error(d.detail || `checkout failed (${r.status})`);
-  } catch (e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Try again'; }
-    const msg = $('keyMsg');
-    if (msg) msg.textContent = 'Could not start checkout: ' + e.message;
-  }
-}
-
-async function applyKey() {
-  const input = $('keyInput');
-  const msg = $('keyMsg');
-  if (!input || !msg) return;
-  const key = (input.value || '').trim();
-  if (!key) { msg.textContent = 'Paste your key first.'; return; }
-  msg.textContent = 'Checking…';
-  try {
-    const r = await fetch(`${BILLING_URL}/api/billing/status?key=${encodeURIComponent(key)}`);
-    if (!r.ok) {
-      msg.textContent = r.status === 404 ? "That key wasn't found." : 'Could not validate key.';
+    if (!text) {
+      showError(kind === 'pdf'
+        ? "This PDF has no selectable text — it's probably a scan. Run it through an OCR tool first, then upload the result."
+        : 'That file looks empty.');
+      setStatus('Ready');
       return;
     }
-    const lic = await r.json();
-    if (lic.status !== 'active') { msg.textContent = `That subscription is ${lic.status}.`; return; }
-    try { localStorage.setItem(LICENSE_KEY_LS, key); } catch (e) {}
-    license = lic;
-    await loadStudioVoices();
-    populateVoiceSel();
-    updateLicenseUI();
-    msg.textContent = `Unlocked — ${lic.char_remaining.toLocaleString()} chars on ${lic.plan}.`;
-    setTimeout(closeUpgrade, 1400);
+    const truncated = text.length > FILE_MAX_CHARS;
+    if (truncated) text = text.slice(0, FILE_MAX_CHARS);
+    txt.value = text;
+    buildDisplay();
+    updateWordCount();
+    autoSize();
+    const nameEl = $('fileName');
+    if (nameEl) nameEl.textContent = file.name;
+    setStatus(truncated
+      ? `Loaded the first ${FILE_MAX_CHARS.toLocaleString()} characters — split very long files into parts`
+      : 'Ready');
   } catch (e) {
-    msg.textContent = 'Network error — try again.';
-  }
-}
-
-async function recoverKey() {
-  const input = $('recoverEmail');
-  const msg = $('recoverMsg');
-  if (!input || !msg) return;
-  const email = (input.value || '').trim();
-  if (!email || !email.includes('@')) { msg.textContent = 'Enter the email you paid with.'; return; }
-  msg.textContent = 'Sending…';
-  try {
-    const r = await fetch(`${BILLING_URL}/api/billing/recover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const d = await r.json().catch(() => ({}));
-    msg.textContent = d.message || 'If that email has an active subscription, the key is on its way.';
-  } catch (e) {
-    msg.textContent = 'Network error — try again.';
+    showError(`Couldn't read ${file.name}: ${e && e.message ? e.message : e}`);
+    setStatus('Ready');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -2300,12 +1959,6 @@ function handleShortcuts(event) {
   }
 
   if (event.key === 'Escape') {
-    const modal = $('upgradeModal');
-    if (modal && !modal.hidden) {
-      event.preventDefault();
-      closeUpgrade();
-      return;
-    }
     if (isSpeaking) {
       event.preventDefault();
       stopAll();

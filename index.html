@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260704b">
+  <link rel="stylesheet" href="/styles.css?v=20260924a">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -75,8 +75,14 @@
             <h3 class="section-label"><span class="section-num">01</span> Composition
               <span class="word-count" id="wordcount" aria-live="polite"><span class="word-count-num" id="wordcount-num">0</span> <span class="word-count-label" id="wordcount-label">words</span></span>
             </h3>
-            <textarea id="txt" placeholder="Paste or type text here…"></textarea>
+            <textarea id="txt" placeholder="Paste or type text here — or upload a file below…"></textarea>
             <div id="disp" aria-live="polite"></div>
+            <div class="file-row">
+              <input type="file" id="fileInput" accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+              <button type="button" id="fileBtn" class="link-btn">Upload a file</button>
+              <span class="file-hint">.txt · .pdf · .docx — or drop one onto the text box. It stays on your device.</span>
+              <span id="fileName" class="file-name" aria-live="polite"></span>
+            </div>
           </div>
 
           <div class="controls">
@@ -87,10 +93,6 @@
                 <label>Voice
                   <select id="voice"><option value="-1">Default (free)</option></select>
                 </label>
-              </div>
-              <div class="voice-premium-row">
-                <button type="button" id="previewBtn" class="preview-btn" hidden>Hear a Studio sample</button>
-                <span id="licenseStatus" class="license-status" hidden></span>
               </div>
               <p class="free-flag"><span class="free-dot"></span>The tool &amp; all 40+ voices here are free — no account.</p>
             </div>
@@ -129,7 +131,6 @@
 
             <progress id="bar" value="0" max="100"></progress>
             <div id="meter" class="meter"><strong>0 %</strong> · <span id="ela">00:00:00</span> · <span id="rem">00:00:00</span></div>
-            <div id="studioNudge" class="studio-nudge" hidden></div>
           </div>
         </div>
       </section>
@@ -314,40 +315,6 @@
   </form>
 </section>
 
-<!-- premium upgrade modal -->
-<div id="upgradeModal" class="modal-overlay" hidden>
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="upgradeTitle">
-    <button type="button" class="modal-close" id="upgradeClose" aria-label="Close">×</button>
-    <p class="panel-eyebrow">Optional upgrade</p>
-    <h2 id="upgradeTitle" class="modal-title">Voices that sound like <em>people.</em></h2>
-    <p class="reassure-banner"><span class="free-dot"></span><span><strong>Read-Aloud stays free.</strong> The tool and every Edge voice cost nothing. These plans only add our most lifelike &ldquo;Studio&rdquo; narration. Cancel anytime.</span></p>
-    <p class="modal-lede">
-      Studio voices are close enough to a real narrator that you stop noticing it's a machine.
-    </p>
-    <button type="button" id="modalSampleBtn" class="modal-sample-btn">Play a sample</button>
-    <div class="tier-grid" id="tierGrid"><p class="muted">Loading plans…</p></div>
-    <div class="key-paste">
-      <label for="keyInput">Already subscribed? Paste your license key</label>
-      <div class="key-paste-row">
-        <input type="text" id="keyInput" placeholder="ra_…" autocomplete="off" spellcheck="false">
-        <button type="button" id="keyApply" class="btn btn--secondary">Apply</button>
-      </div>
-      <p id="keyMsg" class="key-msg" role="status" aria-live="polite"></p>
-      <p class="modal-support">Questions or trouble? <a href="mailto:admin@read-aloud.com">admin@read-aloud.com</a></p>
-      <div class="key-recover">
-        <button type="button" id="recoverToggle" class="link-btn">Lost your key? Email it to me</button>
-        <div id="recoverBox" hidden>
-          <div class="key-paste-row">
-            <input type="email" id="recoverEmail" placeholder="you@example.com" autocomplete="email">
-            <button type="button" id="recoverBtn" class="btn btn--secondary">Send</button>
-          </div>
-          <p id="recoverMsg" class="key-msg" role="status" aria-live="polite"></p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div id="adsense-slot" class="ad-slot" data-ad-client="ca-pub-4003447295960802" data-ad-slot="8374615023" data-ad-format="auto" data-full-width-responsive="true">
   Ads load after accepting cookies.
 </div>
@@ -396,7 +363,7 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260826a"></script>
+<script src="readaloud.js?v=20260924a"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>

@@ -120,22 +120,6 @@ app.add_middleware(
 
 ALLOWED_ORIGIN_PREFIXES = tuple(ALLOWED_ORIGINS)
 
-# ----------------------------------------------------------------------
-# Premium billing/licensing (Phase 1). Fully ENV-GATED — the router's
-# endpoints 404 unless Stripe + LICENSE_DB env vars are configured, so this
-# import + include is a no-op on the current free deployment. The free
-# /api/tts path below is untouched.
-# ----------------------------------------------------------------------
-try:
-    try:
-        from . import billing as _billing      # loaded as the `api` package (uvicorn api.tts_server:app)
-    except ImportError:
-        import billing as _billing              # run directly from the api/ dir
-    app.include_router(_billing.router)
-except Exception as _be:  # never let billing break the core TTS service
-    print(f"[tts] billing module not loaded: {_be}")
-
-
 def _origin_allowed(request: Request) -> bool:
     """Allow only browser callers from a known site (Origin or Referer)."""
     origin = request.headers.get("origin", "")
@@ -606,15 +590,6 @@ async def admin_stats(request: Request, token: Optional[str] = None):
     )
     conn.close()
 
-    # Live financials section, embedded from the billing module (admin-only page).
-    finance_html = ""
-    _b = globals().get("_billing")
-    if _b is not None:
-        try:
-            finance_html = await run_in_threadpool(_b.finance_section_or_empty)
-        except Exception as _fe:
-            finance_html = f"<p class='muted'>Finance section error: {_fe}</p>"
-
     hit_pct = (today["hits"] / today["reqs"] * 100) if today["reqs"] else 0
     max_daily = max((d["n"] for d in daily), default=1) or 1
     max_hourly = max((h["n"] for h in hourly), default=1) or 1
@@ -695,7 +670,6 @@ table td {{padding:6px 10px;border-bottom:1px dotted var(--rule-soft);}}
   <div class="card"><p class="lbl">Avg latency</p><p class="val">{int(today['avg_ms']):,}<span style="font-size:.5em">ms</span></p><p class="sub">end to end</p></div>
 </div>
 
-{finance_html}
 
 <h2>Daily, last 14 days</h2>
 <table><tbody>{daily_rows}</tbody></table>
