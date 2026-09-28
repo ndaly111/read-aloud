@@ -593,7 +593,11 @@ async function fetchTimedSegment(seg, voiceId, label) {
         const r = await fetch(`${url}/api/tts/timed`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: seg.text, voice: voiceId }),
+          // A premium selection must remain that exact voice for the whole
+          // reading. Asking explicitly for Edge lets the client try the same
+          // voice on the other server instead of accepting a different local
+          // backup voice for just one segment.
+          body: JSON.stringify({ text: seg.text, voice: voiceId, engine: 'edge' }),
           signal: controller.signal
         });
         if (r.status === 404) {
@@ -607,6 +611,9 @@ async function fetchTimedSegment(seg, voiceId, label) {
           throw new Error(err.detail || `API error ${r.status}`);
         }
         const d = await r.json();
+        if (d.engine && d.engine !== 'edge') {
+          throw new Error('voice server substituted a different voice');
+        }
         const bin = atob(d.audio || '');
         const bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -778,11 +785,9 @@ async function useTimedNeuralSpeech(voiceId) {
         try {
           await (seg.fetching || fetchTimedSegment(seg, voiceId, `${timed.i + 1}/${segments.length}`));
         } catch (e) {
-          if (e.legacy) { // server not updated yet — old chunked path still works
-            timed = null;
-            useNeuralSpeechLegacy(voiceId);
-            return;
-          }
+          // Older servers without the timed endpoint must stop cleanly too:
+          // the legacy player can skip failed chunks and substitute a browser
+          // voice, violating the selected voice's consistency guarantee.
           throw e;
         } finally {
           seg.fetching = null;
@@ -841,11 +846,23 @@ async function useTimedNeuralSpeech(voiceId) {
     if (timed) savePosition(timed.posKey, progChar);
     timed = null;
     if (!isSpeaking) return; // the user pressed Stop during the failure
-    // Keep the reader's place: continue with a browser voice FROM HERE —
-    // the old player restarted the whole text from the top.
-    showError(`Premium voice error: ${error.message}. Continuing with a browser voice.`);
-    setTimeout(clearError, 4000);
-    useBrowserSpeech('-1', Math.floor(progChar));
+    // Never silently swap accents in the middle of a premium reading. Keep the
+    // saved position and let the reader retry the same selected voice.
+    if (audioResolve) {
+      audioResolve();
+      audioResolve = null;
+    }
+    isSpeaking = false;
+    isPaused = false;
+    downloadBlobs = [];
+    $('download').disabled = !lastRead;
+    $('subtitles').disabled = !lastRead;
+    stopKeepAlive();
+    stopSilentKeepAlive();
+    setMediaPlaybackState('none');
+    setStatus('Voice unavailable — press Start to retry.');
+    showError('The selected premium voice is temporarily unavailable. Your place is saved.');
+    updateControls();
   }
 }
 

@@ -1,6 +1,7 @@
-// E2E regression test for the MP3 download (reader feedback 2026-07-18:
-// "The download doesnt work"). Scenario: paste a 3-segment text, Listen with a
-// premium voice, Stop mid-first-segment, click MP3.
+// E2E regressions for premium playback and MP3 downloads. The mock primary
+// server tries to substitute a backup voice; the reader must reject it, request
+// the selected premium voice from the second server, and never change accents.
+// The test also covers Stop -> MP3 and stale exports after a text edit.
 //   Expected: button stays enabled and the file assembles on demand, fetching
 //   the segments playback never reached.
 //   Pre-2026-07-19 behavior (the bug): Stop disabled the button until a full
@@ -24,6 +25,8 @@ const EDGE = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/App
 const PORT = 8931;
 const OLD = process.argv.includes('--old');
 const payload = fs.readFileSync(path.join(__dirname, 'timed_payload.json'), 'utf8');
+const edgePayload = JSON.stringify({ ...JSON.parse(payload), engine: 'edge' });
+const backupPayload = JSON.stringify({ ...JSON.parse(payload), engine: 'backup' });
 const oldJs = OLD ? execSync('git show HEAD:readaloud.js', { cwd: REPO }).toString() : null;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.ico': 'image/x-icon', '.svg': 'image/svg+xml' };
 
@@ -50,6 +53,10 @@ const server = http.createServer((req, res) => {
   const page = await browser.newPage();
 
   let timedCalls = 0;
+  let substitutedResponses = 0;
+  let renderEdgeResponses = 0;
+  let forceBackupOnly = false;
+  const requestedEngines = [];
   await page.setRequestInterception(true);
   page.on('request', req => {
     const u = req.url();
@@ -63,8 +70,14 @@ const server = http.createServer((req, res) => {
       }
       if (u.endsWith('/api/tts/timed')) {
         timedCalls++;
+        const body = JSON.parse(req.postData() || '{}');
+        requestedEngines.push(body.engine);
+        const isPrimary = u.startsWith('https://tts.read-aloud.com');
+        const substitute = forceBackupOnly || isPrimary;
+        if (substitute) substitutedResponses++; else renderEdgeResponses++;
         return req.respond({ status: 200, contentType: 'application/json',
-          headers: { 'Access-Control-Allow-Origin': '*' }, body: payload });
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: substitute ? backupPayload : edgePayload });
       }
       if (u.match(/\/$/)) return req.respond({ status: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'ok' });
       return req.respond({ status: 200, contentType: 'application/json',
@@ -92,12 +105,13 @@ const server = http.createServer((req, res) => {
 
   const voice = await page.evaluate(() => {
     const sel = document.getElementById('voice');
-    const opt = [...sel.options].find(o => o.value.startsWith('neural:'));
+    const opt = [...sel.options].find(o => o.value === 'neural:en-GB-SoniaNeural') ||
+      [...sel.options].find(o => o.value.startsWith('neural:'));
     if (opt) { sel.value = opt.value; sel.dispatchEvent(new Event('change', { bubbles: true })); }
     return sel.value;
   });
   console.log('voice selected:', voice);
-  if (!voice.startsWith('neural:')) throw new Error('no neural voice available in test');
+  if (voice !== 'neural:en-GB-SoniaNeural') throw new Error('UK Sonia voice unavailable in test');
 
   await page.evaluate(() => document.getElementById('start').click());
   await page.waitForFunction(() => /Playing/.test(document.getElementById('status').textContent), { timeout: 20000 });
@@ -140,10 +154,31 @@ const server = http.createServer((req, res) => {
   }));
   console.log('after text edit:', JSON.stringify(afterEdit));
 
+  const failoverConfirmed = substitutedResponses >= 2 && renderEdgeResponses >= 3 &&
+    requestedEngines.every(engine => engine === 'edge');
+  console.log('voice consistency:', JSON.stringify({
+    substitutedResponses, renderEdgeResponses, requestedEngines,
+  }));
+
+  // If both servers try to substitute another voice, stop with the position
+  // saved instead of dropping to a browser voice or changing accents.
+  forceBackupOnly = true;
+  await page.evaluate(() => document.getElementById('start').click());
+  await page.waitForFunction(() => /Voice unavailable/.test(document.getElementById('status').textContent),
+    { timeout: 20000 });
+  const afterOutage = await page.evaluate(() => ({
+    status: document.getElementById('status').textContent,
+    error: document.getElementById('error').textContent,
+    startDisabled: document.getElementById('start').disabled,
+  }));
+  console.log('after exact voice unavailable:', JSON.stringify(afterOutage));
+
   const pass = !final.dlDisabled && /MP3 ready/.test(final.status) && timedCalls >= 3 &&
-    !final.error.trim() && afterEdit.dlDisabled && afterEdit.subtitlesDisabled;
-  console.log(pass ? 'PASS: MP3 assembled after Stop and stale exports cleared after edit'
-                   : 'FAIL: MP3 lifecycle regression');
+    !final.error.trim() && afterEdit.dlDisabled && afterEdit.subtitlesDisabled &&
+    failoverConfirmed && /selected premium voice is temporarily unavailable/i.test(afterOutage.error) &&
+    !afterOutage.startDisabled;
+  console.log(pass ? 'PASS: selected voice stayed consistent and MP3 lifecycle is sound'
+                   : 'FAIL: premium voice or MP3 lifecycle regression');
   await browser.close(); server.close();
   process.exit(pass ? 0 : 1);
 })().catch(e => { console.error('TEST ERROR:', e.message); process.exit(2); });
