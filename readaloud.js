@@ -168,7 +168,10 @@ let isSpeaking = false;
 let boundarySeen = false;
 let isPaused = false;
 let useNeuralTTS = true; // Prefer neural voices
-let apiAvailable = false;
+// Premium voices are the optimistic default. The background health check can
+// remove them if every endpoint is actually unreachable, but a slow browser
+// voice-discovery event must never make the page fall back to its placeholder.
+let apiAvailable = true;
 let downloadBlobs = []; // Collect MP3 chunks for download
 let keepAliveTimer = null; // Chrome speech synthesis keep-alive
 let currentVoiceIndex = '-1'; // Saved so keep-alive can restart stalled browser TTS
@@ -299,12 +302,13 @@ let preparedDownload = null; // {key, blobs} — cached rate-baked MP3 so re-cli
   window.addEventListener('resize', autoSize);
   window.addEventListener('keydown', handleShortcuts);
 
-  // Load browser voices, then show premium voices optimistically while
-  // the API check runs in the background. Render free tier can take 30-60s
-  // to cold-start, so we don't block the UI waiting for it.
+  // Show the premium default immediately. Browser voice discovery is flaky on
+  // iOS and must be supplemental rather than a gate in front of the reader.
   setStatus('Loading voices...');
+  populateVoiceSel();
+
+  // Add any device voices that arrive promptly, preserving the premium pick.
   await loadBrowserVoices();
-  apiAvailable = true; // optimistic — removed if background check fails
   populateVoiceSel();
 
   buildDisplay();
@@ -367,24 +371,36 @@ async function loadBrowserVoices() {
   browserVoices = speechSynthesis.getVoices();
   if (browserVoices.length) return;
 
-  // Kick iOS with a silent utterance
+  // Do not "kick" iOS with a silent utterance here. Mobile Safari can leave
+  // that utterance pending until a user gesture; the real reading then queues
+  // behind it and appears frozen, while init never replaces the HTML fallback
+  // option. Wait briefly for voiceschanged without putting speech in the queue.
   await new Promise((resolve) => {
-    const u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0;
-    u.onend = resolve;
-    u.onerror = resolve;
-    speechSynthesis.speak(u);
-  });
-
-  // Wait for voiceschanged event
-  await new Promise((resolve) => {
-    const timeout = setTimeout(resolve, 2000);
-    speechSynthesis.onvoiceschanged = () => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timeout);
-      browserVoices = speechSynthesis.getVoices();
+      if (speechSynthesis.removeEventListener) {
+        speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+      } else if (speechSynthesis.onvoiceschanged === onVoicesChanged) {
+        speechSynthesis.onvoiceschanged = null;
+      }
       resolve();
     };
+    const onVoicesChanged = () => {
+      browserVoices = speechSynthesis.getVoices();
+      if (browserVoices.length) finish();
+    };
+    const timeout = setTimeout(finish, 1000);
+    if (speechSynthesis.addEventListener) {
+      speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+    } else {
+      speechSynthesis.onvoiceschanged = onVoicesChanged;
+    }
   });
+
+  browserVoices = speechSynthesis.getVoices();
 }
 
 function populateVoiceSel() {

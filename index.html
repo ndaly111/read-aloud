@@ -70,7 +70,7 @@
             <div class="control-row">
               <label>Language <select id="lang"></select></label>
               <label>Voice
-                <select id="voice"><option value="-1">Default (free)</option></select>
+                <select id="voice"><option value="neural:en-US-AriaNeural">Aria (US) - Female</option></select>
               </label>
             </div>
 
@@ -117,6 +117,10 @@
 <section class="updates-strip" aria-labelledby="updates-heading">
   <h2 id="updates-heading" class="updates-heading">Latest <em>updates.</em></h2>
   <ul class="updates-list">
+    <li>
+      <span class="upd-date">Sep 27, 2026</span>
+      <span class="upd-text">Premium voices now appear first, with Aria selected by default on phones. Starting a reading no longer gets stuck during voice setup. (Thanks to the reader who wrote in about this.)</span>
+    </li>
     <li>
       <span class="upd-date">Sep 24, 2026</span>
       <span class="upd-text">New: upload a file. Click &ldquo;Upload a file&rdquo; under the text box, or drop a .txt, .pdf, or .docx onto it, and the whole document loads at once instead of page-by-page pasting. Files are read on your device and never uploaded anywhere. (Thanks to the reader who wrote in about this.)</span>
@@ -244,7 +248,7 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260924b"></script>
+<script src="readaloud.js?v=20260927a"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
