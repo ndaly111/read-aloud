@@ -16,6 +16,15 @@ const TTS_ENDPOINTS = [
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
 
+// Do not let one hung connection turn failover into a multi-minute wait. The
+// always-on primary gets a tight ceiling; Render gets longer because its
+// standby instance may need to wake. A timeout moves to the next endpoint.
+const PRIMARY_REQUEST_TIMEOUT_MS = 30000;
+const BACKUP_REQUEST_TIMEOUT_MS = 60000;
+function ttsRequestTimeout(url) {
+  return url === TTS_ENDPOINTS[0] ? PRIMARY_REQUEST_TIMEOUT_MS : BACKUP_REQUEST_TIMEOUT_MS;
+}
+
 // Failover used to be sticky for the whole session: one blip pinned every later
 // request to Render, whose bandwidth is metered (5 GB cap blew in Aug 2026 at
 // ~2% leakage). Now a failed-over session re-tries the primary after a cooldown,
@@ -294,9 +303,11 @@ let preparedDownload = null; // {key, blobs} — cached rate-baked MP3 so re-cli
     // Editing the text mid-read desyncs every offset the player relies on —
     // stop cleanly instead of highlighting the wrong words.
     if (isSpeaking) stopAll();
+    invalidateSavedReading();
     clearError();
     buildDisplay();
     updateWordCount();
+    setStatus('Ready');
   });
   updateWordCount();
   window.addEventListener('resize', autoSize);
@@ -575,17 +586,16 @@ async function fetchTimedSegment(seg, voiceId, label) {
   for (const url of urlOrder) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       if (attempt > 1) await new Promise(r => setTimeout(r, 800 * attempt));
+      let timeout;
       try {
         const controller = new AbortController();
-        // 100s, not 45: the backup engine renders on a CPU slower than real time.
-        const timeout = setTimeout(() => controller.abort(), 100000);
+        timeout = setTimeout(() => controller.abort(), ttsRequestTimeout(url));
         const r = await fetch(`${url}/api/tts/timed`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: seg.text, voice: voiceId }),
           signal: controller.signal
         });
-        clearTimeout(timeout);
         if (r.status === 404) {
           lastErr = new Error('timed endpoint unavailable');
           noteTtsFailure(url); // don't re-probe a knowingly-stale primary every segment
@@ -620,6 +630,11 @@ async function fetchTimedSegment(seg, voiceId, label) {
         lastErr = e;
         noteTtsFailure(url);
         console.warn(`Timed segment ${label} via ${url} attempt ${attempt} failed:`, e.message);
+        // Retrying the same connection after a hard timeout recreated the exact
+        // multi-minute wait that failover is supposed to prevent.
+        if (e && e.name === 'AbortError') break;
+      } finally {
+        clearTimeout(timeout);
       }
     }
   }
@@ -780,8 +795,15 @@ async function useTimedNeuralSpeech(voiceId) {
       for (const k of [1, 2]) {
         const nxt = segments[timed.i + k];
         if (nxt && !nxt.blob && !nxt.fetching) {
-          nxt.fetching = fetchTimedSegment(nxt, voiceId, `${timed.i + k + 1}/${segments.length}`)
-            .catch(() => { nxt.fetching = null; }); // errors re-surface on demand
+          const request = fetchTimedSegment(nxt, voiceId, `${timed.i + k + 1}/${segments.length}`);
+          nxt.fetching = request;
+          // Mark a background rejection handled without replacing the stored
+          // promise with a resolved one. If playback is already awaiting it,
+          // the error propagates; otherwise clearing it permits a clean retry.
+          request.then(
+            () => { if (nxt.fetching === request) nxt.fetching = null; },
+            () => { if (nxt.fetching === request) nxt.fetching = null; }
+          );
         }
       }
 
@@ -923,9 +945,10 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
   for (const url of urlOrder) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       if (attempt > 1) await new Promise(r => setTimeout(r, 1000 * attempt));
+      let timeout;
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000);
+        timeout = setTimeout(() => controller.abort(), ttsRequestTimeout(url));
         console.log(`Fetching TTS chunk ${chunkIndex + 1} via ${url} (attempt ${attempt})`);
         const response = await fetch(`${url}/api/tts`, {
           method: 'POST',
@@ -938,7 +961,6 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
           }),
           signal: controller.signal
         });
-        clearTimeout(timeout);
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
           throw new Error(error.detail || `API error: ${response.status}`);
@@ -955,6 +977,9 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
         lastErr = e;
         noteTtsFailure(url);
         console.warn(`Chunk ${chunkIndex + 1} via ${url} attempt ${attempt} failed:`, e.message);
+        if (e && e.name === 'AbortError') break;
+      } finally {
+        clearTimeout(timeout);
       }
     }
   }
@@ -1645,6 +1670,18 @@ function stopAll() {
   updateControls();
 }
 
+// A saved MP3/subtitle belongs to the exact text that produced it. Once the
+// composition changes, leaving those buttons live can download the previous
+// document instead of the text now on screen.
+function invalidateSavedReading() {
+  lastRead = null;
+  preparedDownload = null;
+  timedCache = null;
+  downloadBlobs = [];
+  $('download').disabled = true;
+  $('subtitles').disabled = true;
+}
+
 function finish() {
   isSpeaking = false;
   isPaused = false;
@@ -1977,6 +2014,7 @@ async function loadFile(file) {
     }
     const truncated = text.length > FILE_MAX_CHARS;
     if (truncated) text = text.slice(0, FILE_MAX_CHARS);
+    invalidateSavedReading();
     txt.value = text;
     buildDisplay();
     updateWordCount();

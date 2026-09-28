@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260924c">
+  <link rel="stylesheet" href="/styles.css?v=20260928a">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -118,6 +118,18 @@
   <h2 id="updates-heading" class="updates-heading">Latest <em>updates.</em></h2>
   <ul class="updates-list">
     <li>
+      <span class="upd-date">Sep 28, 2026</span>
+      <span class="upd-text">Readings now recover much faster when a voice service stalls, and long readings retry cleanly if a later section has trouble loading. (Thanks to the reader who wrote in about this.)</span>
+    </li>
+    <li>
+      <span class="upd-date">Sep 28, 2026</span>
+      <span class="upd-text">Speed and volume sliders are now larger, full-width, and easier to adjust precisely. (Thanks to the reader who wrote in about this.)</span>
+    </li>
+    <li>
+      <span class="upd-date">Sep 28, 2026</span>
+      <span class="upd-text">Changing the text now clears the previous MP3 and subtitle options, so a download can&rsquo;t accidentally contain the earlier passage.</span>
+    </li>
+    <li>
       <span class="upd-date">Sep 27, 2026</span>
       <span class="upd-text">Premium voices now appear first, with Aria selected by default on phones. Starting a reading no longer gets stuck during voice setup. (Thanks to the reader who wrote in about this.)</span>
     </li>
@@ -206,13 +218,6 @@
 
 </main>
 
-<!-- meSpeak fallback -->
-<script src="https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak.min.js"></script>
-<script>
-mespeak.loadConfig("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/mespeak_config.json");
-mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json");
-</script>
-
 <!-- dyslexia-friendly font toggle -->
 <script>
 (function () {
@@ -248,7 +253,7 @@ mespeak.loadVoice("https://cdn.jsdelivr.net/npm/mespeak@2.0.2/voices/en/en.json"
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260927a"></script>
+<script src="readaloud.js?v=20260927b"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>

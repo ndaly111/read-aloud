@@ -27,8 +27,8 @@
   <header class="page-head">
     <p class="eyebrow"><span>Read‑Aloud</span><span class="sep">·</span><span>Privacy Policy</span></p>
     <h1>How <em>your text</em> is handled.</h1>
-    <p class="lead">Browser voices stay on your device. Premium neural voices stream through our TTS server and Microsoft Edge TTS, but text is not stored. Ads and analytics run without cookies unless you accept; accepting allows personalized ads and analytics cookies.</p>
-    <p class="last-updated"><strong>Last updated</strong> January 28, 2026</p>
+    <p class="lead">Browser voices stay on your device. Premium neural voices stream through our TTS server and normally use Microsoft Edge TTS, with an on-server backup during outages. Text is not stored. Ads and analytics run without cookies unless you accept; accepting allows personalized ads and analytics cookies.</p>
+    <p class="last-updated"><strong>Last updated</strong> September 28, 2026</p>
   </header>
 
   <article class="content">
@@ -36,10 +36,9 @@
     <strong>Plain-English summary:</strong>
     <ul>
       <li><strong>Browser voices process text locally.</strong> When you use standard browser voices, your text stays on your device.</li>
-      <li><strong>Neural voices send text to our server.</strong> If you choose a premium neural voice, your text is sent to our TTS server and then to Microsoft Edge TTS to generate high-quality audio. Text is not stored.</li>
+      <li><strong>Neural voices send text to our server.</strong> If you choose a premium neural voice, your text is sent to our TTS server. It normally uses Microsoft Edge TTS and can switch to an on-server backup voice during outages. Text is not stored.</li>
       <li><strong>No accounts.</strong> You can use the tool without signing in.</li>
       <li><strong>Ads + Google Analytics run without cookies by default.</strong> Until you accept, ads are non-personalized and analytics is cookieless (Google Consent Mode). Accepting allows personalized ads and analytics cookies; you can reject and still use the core tool.</li>
-      <li><strong>One homepage service runs regardless of the cookie banner:</strong> a voice fallback loaded from a CDN (meSpeak via jsDelivr).</li>
     </ul>
   </div>
 
@@ -64,15 +63,11 @@
 
     <p><strong>Neural voices (server processing)</strong></p>
     <p style="margin-bottom:0">
-      When you select a premium neural voice (marked with accent labels like "US", "UK", "AU"), your text is sent to our TTS server hosted on Render.com, which then forwards it to Microsoft Edge TTS to generate high-quality audio.
+      When you select a premium neural voice, your text is sent to our TTS server, which normally forwards it to Microsoft Edge TTS to generate high-quality audio. During an Edge outage, the primary server can generate audio with its own backup voice engine instead.
       <strong>Text is processed in real-time and is not stored on our server or logged.</strong>
       The audio is streamed back to your browser and played.
     </p>
   </div>
-
-  <p>
-    On the homepage, we also load an optional offline fallback voice engine (meSpeak).
-  </p>
 
   <h2>3) Information we collect</h2>
   <div class="box">
@@ -87,9 +82,6 @@
     <ul>
       <li>
         <strong>Basic server logs:</strong> like most websites, our hosting provider may process standard logs (requested page, date/time, and basic device/network information) for security and reliability.
-      </li>
-      <li>
-        <strong>CDN requests for voice fallback:</strong> the homepage loads meSpeak files from a third-party CDN (jsDelivr). The CDN may receive standard request data (such as IP address and user agent).
       </li>
     </ul>
 
@@ -121,9 +113,6 @@
       </li>
       <li>
         If you <strong>reject</strong>, consent stays denied — analytics remains cookieless and ads remain non-personalized.
-      </li>
-      <li>
-        <strong>Note:</strong> the meSpeak CDN files (jsDelivr) load regardless of this choice.
       </li>
     </ul>
   </div>
@@ -157,13 +146,13 @@
     </p>
   </div>
 
-  <h3>Neural voice service (Microsoft Edge TTS via Render.com)</h3>
+  <h3>Neural voice service (our TTS server + Microsoft Edge TTS)</h3>
   <p>
-    If you select a premium neural voice, your text is sent to our TTS server (hosted on Render.com) which forwards it to Microsoft Edge TTS to generate audio.
+    If you select a premium neural voice, your text is sent to our TTS server, which normally forwards it to Microsoft Edge TTS to generate audio. A local backup engine on the primary server may process it instead during an outage.
   </p>
   <ul>
     <li><strong>Text is not stored:</strong> Our server processes text in real-time to generate audio and does not log or retain your text.</li>
-    <li><strong>Microsoft processing:</strong> Microsoft Edge TTS receives your text to generate speech. Microsoft's data practices apply to this processing.</li>
+    <li><strong>Microsoft processing:</strong> Microsoft Edge TTS normally receives your text to generate speech. Microsoft's data practices apply when that service is used.</li>
     <li><strong>You can avoid this:</strong> Select a standard browser voice instead of a neural voice to keep text processing local.</li>
   </ul>
 
@@ -174,12 +163,6 @@
     message content, the page you sent it from, and your approximate country. The form is protected by Cloudflare
     Turnstile, a privacy-preserving bot check that does not track you across sites; Cloudflare's processing is governed
     by their own privacy policy.
-  </p>
-
-  <h3>Voice fallback files (jsDelivr + meSpeak)</h3>
-  <p>
-    The homepage loads meSpeak JavaScript and voice configuration files from jsDelivr (a third-party CDN).
-    This improves reliability and provides an optional fallback voice engine, and the CDN may receive standard request data.
   </p>
 
   <h3>Donations (Buy Me a Coffee link)</h3>

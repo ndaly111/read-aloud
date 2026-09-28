@@ -824,18 +824,19 @@ progress::-moz-progress-bar {
 }
 .control-row label { margin-bottom: 0; }
 
-/* Speed + volume on one line: name, slider, value. */
+/* Give each continuous control a full row. Two half-width sliders left too
+   little usable track between the label and value, especially in Firefox. */
 .slider-row {
   display: grid;
-  gap: 10px 16px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  grid-template-columns: minmax(0, 1fr);
 }
-@media (max-width: 480px) { .slider-row { grid-template-columns: 1fr; } }
 .slider {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 10px;
   align-items: center;
+  min-height: 44px;
   margin: 0;
 }
 .slider-name { font-size: 0.64rem; letter-spacing: 0.12em; }
@@ -867,31 +868,34 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
+  height: 44px;
   background: transparent;
   padding: 0;
   border: none;
+  cursor: pointer;
 }
 input[type="range"]::-webkit-slider-runnable-track {
-  height: 2px;
+  height: 4px;
   background: var(--ink);
-  border-radius: 0;
+  border-radius: 999px;
 }
 input[type="range"]::-moz-range-track {
-  height: 2px;
+  height: 4px;
   background: var(--ink);
+  border-radius: 999px;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px; height: 16px;
+  width: 24px; height: 24px;
   background: var(--vermilion);
   border: 1px solid var(--ink);
   border-radius: 50%;
-  margin-top: -7px;
+  margin-top: -10px;
   cursor: pointer;
   box-shadow: 1px 1px 0 0 var(--ink);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 16px; height: 16px;
+  width: 24px; height: 24px;
   background: var(--vermilion);
   border: 1px solid var(--ink);
   border-radius: 50%;

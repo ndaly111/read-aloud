@@ -75,13 +75,6 @@ const server = http.createServer((req, res) => {
   });
   page.on('console', m => { if (m.type() === 'error') console.log('  [page error]', m.text().slice(0, 120)); });
 
-  // Headless Edge never fires onend for the silent iOS-kick utterance, which
-  // hangs the site's init. Stub speak() so init proceeds (real browsers fire it).
-  await page.evaluateOnNewDocument(() => {
-    const ss = window.speechSynthesis;
-    if (ss) ss.speak = u => setTimeout(() => { if (u.onend) u.onend(); }, 10);
-  });
-
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => {
     const sel = document.getElementById('voice');
@@ -136,8 +129,21 @@ const server = http.createServer((req, res) => {
   }));
   console.log('after MP3 click:', JSON.stringify(final), '| total timed fetches:', timedCalls);
 
-  const pass = !final.dlDisabled && /MP3 ready/.test(final.status) && timedCalls >= 3 && !final.error.trim();
-  console.log(pass ? 'PASS: MP3 assembled on demand after Stop' : 'FAIL: on-demand MP3 did not complete');
+  await page.evaluate(() => {
+    const el = document.getElementById('txt');
+    el.value += ' New text.';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const afterEdit = await page.evaluate(() => ({
+    dlDisabled: document.getElementById('download').disabled,
+    subtitlesDisabled: document.getElementById('subtitles').disabled,
+  }));
+  console.log('after text edit:', JSON.stringify(afterEdit));
+
+  const pass = !final.dlDisabled && /MP3 ready/.test(final.status) && timedCalls >= 3 &&
+    !final.error.trim() && afterEdit.dlDisabled && afterEdit.subtitlesDisabled;
+  console.log(pass ? 'PASS: MP3 assembled after Stop and stale exports cleared after edit'
+                   : 'FAIL: MP3 lifecycle regression');
   await browser.close(); server.close();
   process.exit(pass ? 0 : 1);
 })().catch(e => { console.error('TEST ERROR:', e.message); process.exit(2); });

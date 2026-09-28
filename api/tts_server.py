@@ -336,9 +336,10 @@ def _note_edge_success() -> None:
 # WordBoundary offsets/durations arrive in 100-nanosecond ticks.
 TICKS_PER_MS = 10_000
 
-# Cap on a single Edge TTS synthesis. A hung upstream websocket otherwise holds
-# the request open until the client's own abort, leaking the server-side task.
-SYNTH_TIMEOUT_S = 60
+# Healthy 1,200-character segments normally finish in a few seconds. After 20
+# seconds the local Piper backup is more useful than waiting on a wedged Edge
+# websocket, and still fits inside the client's 30-second primary ceiling.
+SYNTH_TIMEOUT_S = 20
 
 
 def _map_word_offsets(text: str, boundaries: list) -> list:
