@@ -839,6 +839,7 @@ progress::-moz-progress-bar {
   min-height: 44px;
   margin: 0;
 }
+.slider[hidden] { display: none; }
 .slider-name { font-size: 0.64rem; letter-spacing: 0.12em; }
 .slider-val {
   font-family: var(--font-display);

@@ -1,5 +1,32 @@
 # Reader audit — September 28, 2026
 
+## Active playback timer follow-up
+
+The live retest found elapsed and remaining time included loading and pauses.
+The pending timer fix accumulates only active playback, using media playing,
+waiting, pause, and completion events and the equivalent device-speech events.
+It preserves active time across segments and resets the remaining-time sample
+after a seek, saved-position restore, or speed change. No-boundary device speech
+also estimates progress from active time rather than time since Start.
+
+The lifecycle suite now contains 38 passing checks, including initial loading,
+buffering, a two-minute pause, inter-segment waiting, resume, saved positions,
+speed changes, seeks, and stale device callbacks.
+
+A local Chromium browser test used real fixture MP3s with a four-second response
+delay. The elapsed label stayed at zero during loading, held at four seconds
+through a 36-second pause, resumed at five seconds, and finished all three clips
+at 13 seconds of active time. No browser errors were logged.
+
+The iPhone/iPad volume fallback now uses explicit platform detection, including
+iPadOS in desktop-site mode. Safari accepts and echoes programmatic media-volume
+writes while ignoring them during playback, so property probing could not detect
+the limitation. Apple mobile devices now hide the ineffective slider and point
+readers to the device volume buttons; desktop and Android browsers retain it.
+An iPadOS-mode browser fixture confirmed the slider is absent from the accessible
+interface and the device-button guidance is present; a desktop fixture confirmed
+the ordinary volume slider remains available.
+
 ## Follow-up fixes
 
 All eight confirmed issues below now have fixes in the working implementation.

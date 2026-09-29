@@ -5,6 +5,7 @@ const vm = require('vm');
 const path = require('path');
 const assert = require('assert/strict');
 const source = fs.readFileSync(path.join(__dirname, '..', 'readaloud.js'), 'utf8');
+const styles = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
 function section(from, to) { return source.slice(source.indexOf(from), source.indexOf(to, source.indexOf(from))); }
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
@@ -21,7 +22,9 @@ function context() {
     isSpeaking:false, isPaused:false, currentAudio:null, sharedAudio:null,
     timed:null, timedCache:null, lastRead:null, preparedDownload:null,
     mp3Export:null, subtitleExport:null, preferredVoices:new Map(), browserSession:0,
-    downloadBlobs:[], progChar:0, totalChars:0, startTime:0,
+    downloadBlobs:[], progChar:0, totalChars:0,
+    playbackElapsedMs:0, playbackStartedAt:null, estimateStartChar:0, estimateStartSeconds:0,
+    chunkStartSeconds:0, currentChunkStart:0,
     audioResolve:null, boundarySeen:false, lastPosSaveAt:0, progressLooping:false,
     SEGMENT_CHARS:1200, POSITION_LS_PREFIX:'ra_pos_',
     status:'', error:'', played:[], saved:[], fetches:[], downloads:[], rates:[],
@@ -40,6 +43,7 @@ function context() {
     playTimedSegment(seg){ctx.played.push({text:seg.text,paused:ctx.isPaused,voice:ctx.timed.voiceId}); return new Promise(()=>{});},
   };
   vm.createContext(ctx);
+  vm.runInContext(section('function playbackSeconds()', '/* ========== INIT'),ctx);
   vm.runInContext(section('async function useTimedNeuralSpeech(', '// Play one fetched segment'),ctx);
   vm.runInContext(section('async function downloadMp3()', '/* ========== SUBTITLE EXPORT'),ctx);
   vm.runInContext(section('function progressLoop()', 'function buildDisplay()'),ctx);
@@ -78,7 +82,7 @@ function result(name,evidence){
   result('Old failure cancels new reading',{bug:!c.isSpeaking,newSession:c.timed,status:c.status});
 
   c=context();c.isSpeaking=true;c.timed={curSeg:null};c.totalChars=1000;
-  c.startTime=Date.now()-10000;c.progressLoop();
+  c.progressLoop();
   result('Progress while still loading',{bug:c.progChar>0,unspokenCharsMarkedRead:c.progChar});
 
   c=context();c.lastRead={key:'old',voiceId:'Sonia',segments:[{text:'Old export',start:0,end:10}]};
@@ -120,7 +124,7 @@ function result(name,evidence){
   const subtitleMetadataTask=c.downloadSubtitles();c.lastRead=null;duration.resolve(1);await subtitleMetadataTask;
   result('Subtitle invalidation while reading audio metadata',{pass:c.downloads.length===0&&c.$('subtitles').disabled});
 
-  c=context();c.isSpeaking=true;c.isPaused=true;c.progChar=10;c.startTime=Date.now()-60000;
+  c=context();c.isSpeaking=true;c.isPaused=true;c.progChar=10;
   c.progressLoop();result('Paused progress is frozen',{pass:c.progChar===10});
 
   c=context();c.queue=['Device speech'];c.currentVoiceIndex='-1';c.browserVoices=[];
@@ -152,6 +156,55 @@ function result(name,evidence){
   result('User Pause never trips stall watchdog',{pass:!resolved&&!rejected});
   c.isPaused=false;watchdog();now+=46000;watchdog();await stalledPlayback;
   result('Stall fails without skipping unspoken text',{pass:rejected&&!resolved});
+
+  // Drive the real media callbacks with a deterministic clock. Waiting,
+  // user pauses, and between-segment synthesis must not count as listening.
+  c=context();now=0;c.Date={now:()=>now};
+  c.setInterval=()=>1;c.clearInterval=()=>{};c.detachChunkHandlers=()=>{};
+  c.timed={curSeg:null};c.isSpeaking=true;c.totalChars=1000;
+  c.progressBar={};c.meterPercent={};c.elapsedLabel={};c.remainingLabel={};c.highlight=()=>{};
+  c.sharedAudio={currentTime:0,paused:true,ended:false,pause(){this.paused=true;},play(){return Promise.resolve();}};
+  vm.runInContext(section('function playTimedSegment(', '/* ========== NEURAL TTS'),c);
+  vm.runInContext(section('function updateMeter(', 'let lastHlEl'),c);
+  vm.runInContext(section('function formatTime(', '/* ========== PAUSE'),c);
+  c.resetPlaybackClock();const clip=c.playTimedSegment({blob:new Blob(['audio'])},0);
+  now=30000;c.updateMeter(0);
+  result('Loading does not advance elapsed time',{pass:c.elapsedLabel.textContent==='00:00:00'});
+  c.currentAudio.onplaying();now+=5000;c.updateMeter(250);
+  result('Active playback drives elapsed and estimate',{pass:c.elapsedLabel.textContent==='00:00:05'&&c.remainingLabel.textContent==='00:00:15'});
+  c.currentAudio.onwaiting();now+=60000;c.updateMeter(250);
+  result('Buffering freezes both timers',{pass:c.elapsedLabel.textContent==='00:00:05'&&c.remainingLabel.textContent==='00:00:15'});
+  c.currentAudio.onplaying();now+=5000;c.isPaused=true;c.currentAudio.onpause();now+=120000;c.updateMeter(500);
+  result('User pause excludes two minutes',{pass:c.elapsedLabel.textContent==='00:00:10'&&c.remainingLabel.textContent==='00:00:10'});
+  c.currentAudio.onplaying();now+=1000;
+  result('Late playing event cannot restart paused clock',{pass:c.playbackSeconds()===10});
+  c.isPaused=false;c.currentAudio.onplaying();now+=5000;c.currentAudio.onended();await clip;
+  now+=30000;c.updateMeter(750);
+  result('Inter-segment loading preserves accumulated time',{pass:c.elapsedLabel.textContent==='00:00:15'&&c.remainingLabel.textContent==='00:00:05'});
+  c.resetPlaybackClock(900);c.updateMeter(900);
+  result('Saved position does not distort initial estimate',{pass:c.elapsedLabel.textContent==='00:00:00'&&c.remainingLabel.textContent==='00:00:07'});
+  c.rateSlider.value='2';c.resetTimeEstimate(900);c.updateMeter(900);
+  result('Speed change resets remaining-time sample',{pass:c.remainingLabel.textContent==='00:00:03'});
+  c.startPlaybackClock();now+=2000;c.resetTimeEstimate(500);c.updateMeter(500);
+  result('Seek excludes skipped text from estimate',{pass:c.remainingLabel.textContent==='00:00:17'});
+
+  c=context();now=0;c.Date={now:()=>now};c.queue=['Device speech'];c.currentVoiceIndex='-1';c.browserVoices=[];
+  c.SpeechSynthesisUtterance=function(text){this.text=text;};c.speechSynthesis={speak(){}};
+  vm.runInContext(section('function speakNextChunk(', '/* ========== PROGRESS'),c);
+  c.isSpeaking=true;c.speakNextChunk('-1');now=30000;
+  result('Device queue wait is not listening time',{pass:c.playbackSeconds()===0});
+  c.utter.onstart();now+=3000;c.utter.onpause();now+=60000;
+  result('Device pause freezes clock',{pass:c.playbackSeconds()===3});
+  c.utter.onresume();now+=2000;c.utter.onend();
+  result('Device resume and completion preserve active time',{pass:c.playbackSeconds()===5});
+  const oldStart=c.utter.onstart;c.resetPlaybackClock();c.browserSession++;c.isSpeaking=true;oldStart();now+=5000;
+  result('Stale device callback cannot start a new clock',{pass:c.playbackSeconds()===0});
+
+  c=context();
+  result('iPhone hides ineffective web volume control',{pass:c.usesDeviceVolumeButtons({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',platform:'iPhone',maxTouchPoints:5})});
+  result('Desktop-mode iPad hides ineffective web volume control',{pass:c.usesDeviceVolumeButtons({userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)',platform:'MacIntel',maxTouchPoints:5})});
+  result('Desktop keeps adjustable web volume control',{pass:!c.usesDeviceVolumeButtons({userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',platform:'Win32',maxTouchPoints:0})});
+  result('Hidden iOS volume slider stays hidden',{pass:/\.slider\[hidden\]\s*\{\s*display:\s*none/.test(styles)});
 
   c=context();c.legacyCalls=0;c.useNeuralSpeechLegacy=()=>{c.legacyCalls++;};
   const compatibilityTask=c.useTimedNeuralSpeech('Sonia');

@@ -70,6 +70,8 @@ function detachChunkHandlers(a) {
   a.onerror = null;
   a.onstalled = null;
   a.onwaiting = null;
+  a.onplaying = null;
+  a.onpause = null;
   a.oncanplaythrough = null;
 }
 
@@ -172,7 +174,11 @@ let queue = [];
 let utter = null;
 let progChar = 0;
 let totalChars = 0;
-let startTime = 0;
+let playbackElapsedMs = 0;
+let playbackStartedAt = null;
+let estimateStartChar = 0;
+let estimateStartSeconds = 0;
+let chunkStartSeconds = 0;
 let isSpeaking = false;
 let boundarySeen = false;
 let isPaused = false;
@@ -205,6 +211,43 @@ let subtitleExport = null;
 const preferredVoices = new Map();
 let browserSession = 0;
 
+/* ========== ACTIVE PLAYBACK CLOCK ========== */
+// Start only when audio/speech actually plays, not when synthesis is requested.
+// Keep the accumulated time across chunks, but exclude pauses and buffering.
+function playbackSeconds() {
+  return (playbackElapsedMs + (playbackStartedAt === null ? 0 :
+    Math.max(0, Date.now() - playbackStartedAt))) / 1000;
+}
+
+function startPlaybackClock() {
+  if (isSpeaking && !isPaused && playbackStartedAt === null) playbackStartedAt = Date.now();
+}
+
+function pausePlaybackClock() {
+  playbackElapsedMs = playbackSeconds() * 1000;
+  playbackStartedAt = null;
+}
+
+function resetTimeEstimate(chars = progChar) {
+  estimateStartChar = chars;
+  estimateStartSeconds = playbackSeconds();
+}
+
+function resetPlaybackClock(chars = 0) {
+  playbackElapsedMs = 0;
+  playbackStartedAt = null;
+  chunkStartSeconds = 0;
+  resetTimeEstimate(chars);
+}
+
+function usesDeviceVolumeButtons(nav = navigator) {
+  const ua = nav.userAgent || '';
+  const platform = nav.platform || '';
+  // iPadOS may request the desktop site and identify itself as MacIntel.
+  return /iPad|iPhone|iPod/.test(ua) ||
+    (platform === 'MacIntel' && Number(nav.maxTouchPoints || 0) > 1);
+}
+
 /* ========== INIT ========== */
 (async function init() {
   // Populate language dropdown
@@ -215,6 +258,7 @@ let browserSession = 0;
   langSel.onchange = () => populateVoiceSel();
   rateSlider.oninput = () => {
     rateValue.textContent = rateSlider.value;
+    resetTimeEstimate();
     // Timed neural playback: tempo is a live playbackRate change (pitch is
     // preserved by the browser) — takes effect mid-word, no re-synthesis.
     if (timed && currentAudio) currentAudio.playbackRate = +rateSlider.value;
@@ -239,14 +283,11 @@ let browserSession = 0;
       volChangeTimer = setTimeout(restartBrowserSpeech, 150);
     }
   };
-  // iOS/iPadOS ignore writes to HTMLMediaElement.volume (Apple reserves
-  // loudness for the hardware buttons), so the slider silently does nothing
-  // there. Detect it by writing and reading back, and swap the dead control
-  // for an honest note.
-  (function checkVolumeAdjustable() {
-    const probe = document.createElement('audio');
-    probe.volume = 0.5;
-    if (Math.abs(probe.volume - 0.5) > 0.01) {
+  // iOS/iPadOS ignore HTMLMediaElement.volume in actual playback even though
+  // assigning and reading the property appears to work. Detect the platform
+  // directly and swap the dead control for an honest hardware-button note.
+  (function configureVolumeControl() {
+    if (usesDeviceVolumeButtons()) {
       const ctl = $('volControl');
       const note = $('volNote');
       if (ctl) ctl.hidden = true;
@@ -708,6 +749,7 @@ function seekToChar(ch) {
   const idx = segIndexForChar(ch);
   if (idx === -1) return;
   progChar = ch;
+  resetTimeEstimate(ch);
   updateMeter(progChar); // instant visual feedback even while audio catches up
   const seg = timed.segments[idx];
   if (idx === timed.i && timed.curSeg === seg && currentAudio) {
@@ -748,7 +790,7 @@ async function useTimedNeuralSpeech(voiceId) {
   const text = txt.value;
   totalChars = text.length;
   progChar = 0;
-  startTime = Date.now();
+  resetPlaybackClock();
 
   const key = hashText(text) + '|' + voiceId;
   let segments;
@@ -774,6 +816,7 @@ async function useTimedNeuralSpeech(voiceId) {
   if (Number.isFinite(saved) && saved > 0 && saved < totalChars) {
     timed.seekChar = saved;
     progChar = saved;
+    resetTimeEstimate(saved);
     setStatus('Resuming where you left off — click the first word to start over.');
   }
 
@@ -846,6 +889,7 @@ async function useTimedNeuralSpeech(voiceId) {
     // A stopped reading's success OR failure must not touch a newer session.
     if (!ownsSession()) return;
     console.error('Timed TTS error:', error);
+    pausePlaybackClock();
     if (currentAudio) {
       try { currentAudio.pause(); } catch (e) {}
       currentAudio = null;
@@ -894,6 +938,7 @@ function playTimedSegment(seg, startAtSec) {
     function settle(fn, arg) {
       if (done) return;
       done = true;
+      pausePlaybackClock();
       clearInterval(watchdog);
       audioResolve = null;
       detachChunkHandlers(audio);
@@ -923,6 +968,8 @@ function playTimedSegment(seg, startAtSec) {
     audioResolve = () => settle(resolve); // stopAll()/seek unblock instantly
 
     audio.onended = () => settle(resolve);
+    audio.onplaying = () => { if (!done && currentAudio === audio) startPlaybackClock(); };
+    audio.onpause = () => { if (!done && currentAudio === audio) pausePlaybackClock(); };
     audio.onerror = () => {
       const code = audio.error ? audio.error.code : 'unknown';
       settle(reject, new Error('Audio error (code ' + code + ')'));
@@ -941,7 +988,11 @@ function playTimedSegment(seg, startAtSec) {
       audio.play().catch(() => {});
     };
     audio.onstalled = retryPlay;
-    audio.onwaiting = retryPlay;
+    audio.onwaiting = () => {
+      if (done || currentAudio !== audio) return;
+      pausePlaybackClock();
+      retryPlay();
+    };
 
     if (startAtSec > 0) {
       try { audio.currentTime = startAtSec; } catch (e) {}
@@ -1025,7 +1076,7 @@ async function useNeuralSpeechLegacy(voiceId) {
 
   const chunks = chunkText(txt.value, 1500); // ~3s TTFB vs ~9s at 4500; pipelined
   progChar = 0;
-  startTime = Date.now();
+  resetPlaybackClock();
   totalChars = txt.value.length;
 
   const MAX_ERRORS = 3;
@@ -1093,6 +1144,7 @@ async function useNeuralSpeechLegacy(voiceId) {
 
   } catch (error) {
     console.error('Neural TTS error:', error);
+    pausePlaybackClock();
 
     if (currentAudio) {
       currentAudio.pause();
@@ -1143,6 +1195,7 @@ function playAudioBlob(blob, chunkLength) {
     let done = false;
 
     function cleanup() {
+      pausePlaybackClock();
       clearTimeout(safetyTimer);
       // Detach this chunk's handlers immediately so a late stall/waiting/error
       // event (e.g. from the about-to-be-revoked blob URL) can't fire a retry
@@ -1179,6 +1232,9 @@ function playAudioBlob(blob, chunkLength) {
         updateMeter(currentChar);
       }
     };
+
+    audio.onplaying = () => { if (!done && currentAudio === audio) startPlaybackClock(); };
+    audio.onpause = () => { if (!done && currentAudio === audio) pausePlaybackClock(); };
 
     audio.onended = () => {
       if (done) return;
@@ -1218,7 +1274,11 @@ function playAudioBlob(blob, chunkLength) {
       audio.play().catch(() => {}); // silent — onerror handles a real failure
     };
     audio.onstalled = retryPlay;
-    audio.onwaiting = retryPlay;
+    audio.onwaiting = () => {
+      if (done || currentAudio !== audio) return;
+      pausePlaybackClock();
+      retryPlay();
+    };
 
     audio.playbackRate = 1; // Rate is handled by API
     audio.oncanplaythrough = () => {
@@ -1322,7 +1382,7 @@ function useBrowserSpeech(voiceIndex, fromChar = 0) {
   fromChar = Math.max(0, Math.min(fromChar || 0, txt.value.length));
   queue = chunkForSpeech(txt.value.slice(fromChar));
   progChar = fromChar;
-  startTime = Date.now();
+  resetPlaybackClock(fromChar);
   boundarySeen = false;
   isSpeaking = true;
   isPaused = false;
@@ -1450,6 +1510,7 @@ function restartBrowserSpeech() {
 
 function speakNextChunk(voiceIndex) {
   if (!isSpeaking || timed) return;
+  pausePlaybackClock();
   if (!queue.length) {
     finish();
     return;
@@ -1465,6 +1526,7 @@ function speakNextChunk(voiceIndex) {
   }
 
   const chunkStart = progChar;
+  chunkStartSeconds = playbackSeconds();
   currentChunkStart = chunkStart;
   chunkSpokenAt = Date.now();
   lastBoundaryAt = 0;
@@ -1481,8 +1543,12 @@ function speakNextChunk(voiceIndex) {
   // stop advancing once playback has ended.
   const thisUtter = utter;
   const session = browserSession;
+  const ownsUtterance = () => utter === thisUtter && session === browserSession && isSpeaking && !timed;
+  utter.onstart = utter.onresume = () => { if (ownsUtterance()) startPlaybackClock(); };
+  utter.onpause = () => { if (ownsUtterance()) pausePlaybackClock(); };
   utter.onend = () => {
     if (utter !== thisUtter || session !== browserSession || !isSpeaking || timed) return;
+    pausePlaybackClock();
     progChar = chunkStart + chunk.length;
     speakNextChunk(voiceIndex);
   };
@@ -1535,8 +1601,8 @@ function progressLoop() {
     progChar = Math.min(totalChars,
       neuralChunkStart + Math.floor(frac * neuralChunkLen) + HIGHLIGHT_LEAD_CHARS);
   } else if (!timed && !boundarySeen && !currentAudio) {
-    const elapsed = (Date.now() - startTime) / 1000;
-    progChar = Math.min(totalChars, Math.round(elapsed * (180 / 60) * 5 * rateSlider.value));
+    const elapsed = Math.max(0, playbackSeconds() - chunkStartSeconds);
+    progChar = Math.min(totalChars, currentChunkStart + Math.round(elapsed * 15 * rateSlider.value));
   }
   updateMeter(progChar);
   requestAnimationFrame(progressLoop);
@@ -1563,8 +1629,12 @@ function updateMeter(chars) {
   progressBar.value = percent;
   meterPercent.textContent = percent + ' %';
 
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  const avgCharsPerSec = chars > 0 ? chars / elapsed : 15;
+  const seconds = playbackSeconds();
+  const elapsed = Math.floor(seconds);
+  const sampleSeconds = seconds - estimateStartSeconds;
+  const sampleChars = chars - estimateStartChar;
+  const avgCharsPerSec = sampleSeconds > 0 && sampleChars > 0
+    ? sampleChars / sampleSeconds : 15 * (+rateSlider.value || 1);
   const remaining = chars < totalChars ? Math.round((totalChars - chars) / avgCharsPerSec) : 0;
 
   elapsedLabel.textContent = formatTime(elapsed);
@@ -1629,6 +1699,7 @@ function formatTime(s) {
 /* ========== PAUSE / RESUME / STOP ========== */
 function pauseSpeak() {
   if (!isSpeaking || isPaused) return;
+  pausePlaybackClock();
 
   if (currentAudio) {
     currentAudio.pause();
@@ -1671,6 +1742,7 @@ function resumeSpeak() {
 }
 
 function stopAll() {
+  pausePlaybackClock();
   browserSession++;
   clearTimeout(rateChangeTimer);
   clearTimeout(volChangeTimer);
@@ -1728,6 +1800,7 @@ function updateExportControls() {
 }
 
 function finish() {
+  pausePlaybackClock();
   isSpeaking = false;
   isPaused = false;
   currentAudio = null;

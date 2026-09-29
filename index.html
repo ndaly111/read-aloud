@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260928a">
+  <link rel="stylesheet" href="/styles.css?v=20260929a">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -117,6 +117,10 @@
 <section class="updates-strip" aria-labelledby="updates-heading">
   <h2 id="updates-heading" class="updates-heading">Latest <em>updates.</em></h2>
   <ul class="updates-list">
+    <li>
+      <span class="upd-date">Sep 29, 2026</span>
+      <span class="upd-text">Reading timers now exclude pauses and loading time, so the elapsed time and time-left estimate stay useful when you pause and resume.</span>
+    </li>
     <li>
       <span class="upd-date">Sep 28, 2026</span>
       <span class="upd-text">Pause now holds while audio loads, and stopping and restarting no longer lets an earlier reading interrupt the new one.</span>
@@ -273,7 +277,7 @@
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260928b"></script>
+<script src="readaloud.js?v=20260929a"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
