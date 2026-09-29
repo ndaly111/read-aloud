@@ -119,6 +119,22 @@
   <ul class="updates-list">
     <li>
       <span class="upd-date">Sep 28, 2026</span>
+      <span class="upd-text">Pause now holds while audio loads, and stopping and restarting no longer lets an earlier reading interrupt the new one.</span>
+    </li>
+    <li>
+      <span class="upd-date">Sep 28, 2026</span>
+      <span class="upd-text">Reading progress stays put while loading or paused, and interrupted readings resume even near the beginning or end.</span>
+    </li>
+    <li>
+      <span class="upd-date">Sep 28, 2026</span>
+      <span class="upd-text">Changing the text cancels outdated MP3 and subtitle exports. MP3 downloads keep one consistent speed throughout.</span>
+    </li>
+    <li>
+      <span class="upd-date">Sep 28, 2026</span>
+      <span class="upd-text">Premium voices return after service recovers unless you chose an offline voice. Device voice errors now release the controls so you can retry.</span>
+    </li>
+    <li>
+      <span class="upd-date">Sep 28, 2026</span>
       <span class="upd-text">Premium readings now keep the same selected voice from beginning to end. If that exact voice is temporarily unavailable, the reader saves your place instead of switching accents mid-passage. (Thanks to the reader who wrote in about this.)</span>
     </li>
     <li>
@@ -257,7 +273,7 @@
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260928a"></script>
+<script src="readaloud.js?v=20260928b"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>

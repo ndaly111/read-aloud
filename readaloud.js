@@ -198,6 +198,12 @@ let timedCache = null;   // {key, segments} — fetched audio survives Stop for 
 let lastPosSaveAt = 0;   // throttle for saving the reading position
 let lastRead = null;     // {key, segments, voiceId} of the last timed read — for MP3 export
 let preparedDownload = null; // {key, blobs} — cached rate-baked MP3 so re-clicks are instant
+let mp3Export = null;
+let subtitleExport = null;
+// A health probe may temporarily change the displayed choice; it must not
+// overwrite the reader's preference (including an explicit offline choice).
+const preferredVoices = new Map();
+let browserSession = 0;
 
 /* ========== INIT ========== */
 (async function init() {
@@ -416,7 +422,7 @@ async function loadBrowserVoices() {
 
 function populateVoiceSel() {
   const lang = langSel.value;
-  const prevPick = voiceSel.value; // restore below if it survives the rebuild
+  const preferred = preferredVoices.get(lang);
   voiceSel.innerHTML = '';
 
   const neuralVoices = NEURAL_VOICES[lang] || NEURAL_VOICES['en'];
@@ -460,8 +466,8 @@ function populateVoiceSel() {
   // Keep the user's explicit pick when this rebuild was a background refresh
   // (5-min health probe) — those used to yank the
   // selection back to the default mid-session.
-  if (prevPick && [...voiceSel.options].some(o => o.value === prevPick)) {
-    voiceSel.value = prevPick;
+  if (preferred && [...voiceSel.options].some(o => o.value === preferred)) {
+    voiceSel.value = preferred;
     updateVoiceStatus();
     return;
   }
@@ -492,7 +498,10 @@ function updateVoiceStatus() {
 }
 
 // Update indicator when voice changes.
-if (voiceSel) voiceSel.addEventListener('change', updateVoiceStatus);
+if (voiceSel) voiceSel.addEventListener('change', () => {
+  preferredVoices.set(langSel.value, voiceSel.value);
+  updateVoiceStatus();
+});
 
 /* ========== START SPEAK ========== */
 function startSpeak() {
@@ -572,14 +581,11 @@ function segmentTextWithOffsets(text, maxLen) {
   return out;
 }
 
-// Fetch one timed segment: audio (base64 MP3) + word anchors. Throws with
-// .legacy=true on 404 so the caller can fall back to the old endpoint while
-// a fresh server deploy is still rolling out.
+// Fetch one complete timed segment: audio (base64 MP3) + word anchors.
 async function fetchTimedSegment(seg, voiceId, label) {
   // Try the last-known-good endpoint first, then any other configured endpoint —
   // so a mini-PC outage fails over to Render instead of dropping to a browser voice
-  // (which can't be downloaded). Only if EVERY endpoint 404s do we fall back to the
-  // legacy chunked player (means the servers are up but too old for /api/tts/timed).
+  // (which can't be downloaded). Missing endpoints fail cleanly as well.
   const urlOrder = ttsUrlOrder();
   let lastErr;
   let all404 = true;
@@ -618,13 +624,10 @@ async function fetchTimedSegment(seg, voiceId, label) {
         const bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
         if (bytes.length < 100) throw new Error('audio too small');
+        const spoken = d.spoken_chars != null ? d.spoken_chars : seg.text.length;
+        if (spoken !== seg.text.length) throw new Error('voice server returned incomplete audio');
         seg.blob = new Blob([bytes], { type: 'audio/mpeg' });
         seg.engine = d.engine || 'edge';
-        // The backup engine may have spoken only a prefix of this segment (it is
-        // slower than real time, so it answers in sentence-sized pieces). Keep
-        // what was spoken here and hand the remainder to a new segment after it.
-        const spoken = d.spoken_chars != null ? d.spoken_chars : seg.text.length;
-        if (spoken > 0 && spoken < seg.text.length) splitSegmentAt(seg, spoken);
         seg.words = (d.words || []).map(w => [w[0] / 1000, w[1] + seg.start]);
         if (activeTtsUrl !== url) {
           console.log(`Switched active TTS endpoint to ${url}`);
@@ -645,14 +648,25 @@ async function fetchTimedSegment(seg, voiceId, label) {
       }
     }
   }
-  // Every reachable server returned 404 → the endpoint doesn't exist yet; let the
-  // caller drop to the legacy chunked player (which has its own endpoint failover).
+  // Retain the error classification for diagnostics; the player stops cleanly.
   if (all404) {
     const e = lastErr || new Error('timed endpoint unavailable');
     e.legacy = true;
     throw e;
   }
   throw lastErr || new Error('segment fetch failed');
+}
+
+// Playback and exports can share the same in-flight segment. A completed old
+// request only updates its own segment, never a newer document's session.
+function ensureTimedSegment(seg, voiceId, label) {
+  if (seg.blob) return Promise.resolve(seg);
+  if (seg.fetching) return seg.fetching;
+  const request = fetchTimedSegment(seg, voiceId, label);
+  seg.fetching = request;
+  const clear = () => { if (seg.fetching === request) seg.fetching = null; };
+  request.then(clear, clear); // handle background failures without swallowing them
+  return request;
 }
 
 // Split `seg` so it covers only its first `n` chars; the rest becomes a new,
@@ -746,25 +760,27 @@ async function useTimedNeuralSpeech(voiceId) {
   }
   if (!segments.length) { finish(); return; }
 
-  timed = {
+  const session = timed = {
     voiceId, segments, i: 0, seekChar: null, curSeg: null,
     posKey: POSITION_LS_PREFIX + hashText(text),
   };
+  const ownsSession = () => isSpeaking && timed === session;
   lastRead = { key, segments, voiceId };
-  $('download').disabled = false; // MP3 assembles on demand from here on
-  $('subtitles').disabled = false;
+  updateExportControls();
 
-  // Resume where the reader left off, unless they were nearly done.
+  // Only actual completion clears a saved position; short readings and the
+  // final few words must resume too.
   const saved = loadPosition(timed.posKey);
-  if (saved > 200 && saved < totalChars * 0.9) {
+  if (Number.isFinite(saved) && saved > 0 && saved < totalChars) {
     timed.seekChar = saved;
+    progChar = saved;
     setStatus('Resuming where you left off — click the first word to start over.');
   }
 
   startProgressLoop();
 
   try {
-    while (isSpeaking && timed) {
+    while (ownsSession()) {
       // A requested jump (word click / scrubber / resume) picks the segment.
       if (timed.seekChar != null) {
         const idx = segIndexForChar(timed.seekChar);
@@ -774,41 +790,30 @@ async function useTimedNeuralSpeech(voiceId) {
 
       // Respect Pause across segment boundaries (the old player didn't:
       // pausing in a gap let the next chunk start playing over "Paused").
-      while (isPaused && isSpeaking && timed) {
+      while (isPaused && ownsSession()) {
         await new Promise(r => setTimeout(r, 150));
       }
-      if (!isSpeaking || !timed) break;
+      if (!ownsSession()) return;
 
       const seg = segments[timed.i];
       if (!seg.blob) {
         setStatus(`Loading part ${timed.i + 1} of ${segments.length}...`);
-        try {
-          await (seg.fetching || fetchTimedSegment(seg, voiceId, `${timed.i + 1}/${segments.length}`));
-        } catch (e) {
-          // Older servers without the timed endpoint must stop cleanly too:
-          // the legacy player can skip failed chunks and substitute a browser
-          // voice, violating the selected voice's consistency guarantee.
-          throw e;
-        } finally {
-          seg.fetching = null;
-        }
-        if (!isSpeaking || !timed) break;
+        await ensureTimedSegment(seg, voiceId, `${timed.i + 1}/${segments.length}`);
+        if (!ownsSession()) return;
       }
+
+      // Pause may have arrived while the request was in flight.
+      while (isPaused && ownsSession()) {
+        await new Promise(r => setTimeout(r, 150));
+      }
+      if (!ownsSession()) return;
 
       // Keep the next TWO segments in flight while this one plays, so one
       // slow synthesis (or a backup-engine render) doesn't leave a gap.
       for (const k of [1, 2]) {
         const nxt = segments[timed.i + k];
         if (nxt && !nxt.blob && !nxt.fetching) {
-          const request = fetchTimedSegment(nxt, voiceId, `${timed.i + k + 1}/${segments.length}`);
-          nxt.fetching = request;
-          // Mark a background rejection handled without replacing the stored
-          // promise with a resolved one. If playback is already awaiting it,
-          // the error propagates; otherwise clearing it permits a clean retry.
-          request.then(
-            () => { if (nxt.fetching === request) nxt.fetching = null; },
-            () => { if (nxt.fetching === request) nxt.fetching = null; }
-          );
+          ensureTimedSegment(nxt, voiceId, `${timed.i + k + 1}/${segments.length}`);
         }
       }
 
@@ -824,20 +829,22 @@ async function useTimedNeuralSpeech(voiceId) {
       const via = seg.engine && seg.engine !== 'edge' ? ' · backup voice' : '';
       setStatus((segments.length > 1 ? `Playing (${timed.i + 1}/${segments.length})...` : 'Playing...') + via);
       await playTimedSegment(seg, startAt);
-      if (!isSpeaking || !timed) break;
+      if (!ownsSession()) return;
       if (timed.seekChar != null) continue; // a click interrupted playback — re-route
+      progChar = seg.end;
       timed.i++;
     }
 
-    if (isSpeaking && timed) {
+    if (ownsSession()) {
       clearPosition(timed.posKey);
       downloadBlobs = segments.map(s => s.blob).filter(Boolean);
       timed = null;
       finish();
-      $('download').disabled = false; // any missing parts are fetched on demand
-      $('subtitles').disabled = false;
+      updateExportControls();
     }
   } catch (error) {
+    // A stopped reading's success OR failure must not touch a newer session.
+    if (!ownsSession()) return;
     console.error('Timed TTS error:', error);
     if (currentAudio) {
       try { currentAudio.pause(); } catch (e) {}
@@ -855,8 +862,7 @@ async function useTimedNeuralSpeech(voiceId) {
     isSpeaking = false;
     isPaused = false;
     downloadBlobs = [];
-    $('download').disabled = !lastRead;
-    $('subtitles').disabled = !lastRead;
+    updateExportControls();
     stopKeepAlive();
     stopSilentKeepAlive();
     setMediaPlaybackState('none');
@@ -902,15 +908,15 @@ function playTimedSegment(seg, startAtSec) {
     // trips it (that timer silently un-paused and skipped ahead).
     const watchdog = setInterval(() => {
       if (done) return;
-      if (isPaused || audio.paused || audio.ended) { lastAdvanceAt = Date.now(); return; }
+      if (isPaused || audio.ended) { lastAdvanceAt = Date.now(); return; }
       if (audio.currentTime !== lastT) {
         lastT = audio.currentTime;
         lastAdvanceAt = Date.now();
         return;
       }
       if (Date.now() - lastAdvanceAt > 45000) {
-        console.warn('playTimedSegment: no progress for 45s — advancing');
-        settle(resolve);
+        audio.pause();
+        settle(reject, new Error('Audio playback stalled — retry from the saved position'));
       }
     }, 5000);
 
@@ -941,6 +947,7 @@ function playTimedSegment(seg, startAtSec) {
       try { audio.currentTime = startAtSec; } catch (e) {}
     }
     audio.play().then(() => {
+      if (done) return;
       // If the seek was requested before metadata loaded, apply it now.
       if (startAtSec > 0 && Math.abs(audio.currentTime - startAtSec) > 1) {
         try { audio.currentTime = startAtSec; } catch (e) {}
@@ -956,7 +963,7 @@ function playTimedSegment(seg, startAtSec) {
 // Fetch a single chunk with retry/backoff. Tries activeTtsUrl twice, then any other
 // configured endpoint twice. Updates activeTtsUrl when fallback succeeds so the next
 // chunk goes straight to the working URL. Returns an audio Blob or throws.
-async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
+async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider.value) {
   const urlOrder = ttsUrlOrder();
   let lastErr;
   for (const url of urlOrder) {
@@ -973,7 +980,7 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex) {
           body: JSON.stringify({
             text,
             voice: voiceId,
-            rate: rateToApiFormat(+rateSlider.value),
+            rate: rateToApiFormat(rate),
             pitch: '+0Hz'
           }),
           signal: controller.signal
@@ -1310,6 +1317,7 @@ function chunkForSpeech(text) {
 }
 
 function useBrowserSpeech(voiceIndex, fromChar = 0) {
+  browserSession++;
   currentVoiceIndex = voiceIndex;
   fromChar = Math.max(0, Math.min(fromChar || 0, txt.value.length));
   queue = chunkForSpeech(txt.value.slice(fromChar));
@@ -1374,7 +1382,7 @@ function startKeepAlive() {
         : now - chunkSpokenAt > Math.max(20000, expectedMs * 2.5); // platform fires no boundaries
       if (zombie && currentChunk) {
         console.warn('Speech engine zombie (speaking stuck true) — re-speaking current chunk');
-        if (utter) utter.onend = null; // keep cancel() from chaining into speakNextChunk
+        if (utter) { utter.onend = null; utter.onerror = null; utter.onboundary = null; }
         speechSynthesis.cancel();
         queue.unshift(currentChunk);
         // Roll the pointer back to the chunk start we're about to re-speak.
@@ -1382,14 +1390,17 @@ function startKeepAlive() {
         // portion, walking the bar and highlight far ahead of the voice.
         progChar = currentChunkStart;
         currentChunk = '';
-        setTimeout(() => speakNextChunk(currentVoiceIndex), 100);
+        const session = browserSession;
+        setTimeout(() => {
+          if (session === browserSession && isSpeaking && !timed) speakNextChunk(currentVoiceIndex);
+        }, 100);
       }
     } else if (!speechSynthesis.pending) {
       // Chrome silently killed speech — nothing is speaking or queued.
       // Neutralize the dead utterance's onend first so it can't also fire and
       // advance the queue a second time (mirrors the zombie branch above), then
       // re-speak. Put the current (interrupted) chunk back at the front.
-      if (utter) utter.onend = null;
+      if (utter) { utter.onend = null; utter.onerror = null; utter.onboundary = null; }
       if (currentChunk) {
         console.warn('Speech synthesis stalled, re-speaking current chunk...');
         queue.unshift(currentChunk);
@@ -1429,12 +1440,16 @@ function restartBrowserSpeech() {
   const remainder = currentChunk ? currentChunk.slice(charInChunk) : '';
   if (remainder.length > 0) queue.unshift(remainder);
   currentChunk = '';
-  if (utter) utter.onend = null; // prevent the cancel from chaining into speakNextChunk twice
+  if (utter) { utter.onend = null; utter.onerror = null; utter.onboundary = null; }
   speechSynthesis.cancel();
-  setTimeout(() => speakNextChunk(currentVoiceIndex), 60);
+  const session = browserSession;
+  setTimeout(() => {
+    if (session === browserSession && isSpeaking && !timed) speakNextChunk(currentVoiceIndex);
+  }, 60);
 }
 
 function speakNextChunk(voiceIndex) {
+  if (!isSpeaking || timed) return;
   if (!queue.length) {
     finish();
     return;
@@ -1454,6 +1469,7 @@ function speakNextChunk(voiceIndex) {
   chunkSpokenAt = Date.now();
   lastBoundaryAt = 0;
   utter.onboundary = (e) => {
+    if (utter !== thisUtter || session !== browserSession || !isSpeaking || timed) return;
     progChar = chunkStart + e.charIndex;
     boundarySeen = true;
     lastBoundaryAt = Date.now();
@@ -1464,16 +1480,17 @@ function speakNextChunk(voiceIndex) {
   // bail rather than shift the queue an extra time (double-speak/skip). Also
   // stop advancing once playback has ended.
   const thisUtter = utter;
+  const session = browserSession;
   utter.onend = () => {
-    if (utter !== thisUtter || !isSpeaking) return;
+    if (utter !== thisUtter || session !== browserSession || !isSpeaking || timed) return;
     progChar = chunkStart + chunk.length;
     speakNextChunk(voiceIndex);
   };
   utter.onerror = (e) => {
+    if (utter !== thisUtter || session !== browserSession || !isSpeaking || timed) return;
     console.error('Speech error:', e);
-    if (e.error !== 'canceled') {
-      showError(`Speech error: ${e.error}`);
-    }
+    stopAll();
+    showError(`This device voice stopped (${e.error}). Press Start to retry or choose another voice.`);
   };
   speechSynthesis.speak(utter);
 }
@@ -1493,6 +1510,7 @@ function startProgressLoop() {
 
 function progressLoop() {
   if (!isSpeaking) { progressLooping = false; return; }
+  if (isPaused) { requestAnimationFrame(progressLoop); return; }
   if (timed && timed.curSeg && currentAudio) {
     // Timed neural: the highlight IS the audio clock — snap to the word whose
     // spoken timestamp we're inside. Exact at any speed, no estimation.
@@ -1516,7 +1534,7 @@ function progressLoop() {
     const frac = Math.min(1, currentAudio.currentTime / currentAudio.duration);
     progChar = Math.min(totalChars,
       neuralChunkStart + Math.floor(frac * neuralChunkLen) + HIGHLIGHT_LEAD_CHARS);
-  } else if (!boundarySeen && !currentAudio) {
+  } else if (!timed && !boundarySeen && !currentAudio) {
     const elapsed = (Date.now() - startTime) / 1000;
     progChar = Math.min(totalChars, Math.round(elapsed * (180 / 60) * 5 * rateSlider.value));
   }
@@ -1614,7 +1632,7 @@ function pauseSpeak() {
 
   if (currentAudio) {
     currentAudio.pause();
-  } else {
+  } else if (!timed) {
     speechSynthesis.pause();
   }
 
@@ -1631,7 +1649,10 @@ function resumeSpeak() {
   if (currentAudio) {
     // play() can reject (iOS after a long pause revokes the gesture unlock);
     // without the catch the UI said "Playing..." over silence.
-    currentAudio.play().catch((err) => {
+    const audio = currentAudio;
+    const session = timed;
+    audio.play().catch((err) => {
+      if (!isSpeaking || currentAudio !== audio || timed !== session) return;
       console.warn('resume play() rejected:', err.message);
       showError('Tap Play again to continue.');
       isPaused = true;
@@ -1639,7 +1660,7 @@ function resumeSpeak() {
       setMediaPlaybackState('paused');
       updateControls();
     });
-  } else {
+  } else if (!timed) {
     speechSynthesis.resume();
   }
 
@@ -1650,6 +1671,10 @@ function resumeSpeak() {
 }
 
 function stopAll() {
+  browserSession++;
+  clearTimeout(rateChangeTimer);
+  clearTimeout(volChangeTimer);
+  if (utter) { utter.onend = null; utter.onerror = null; utter.onboundary = null; }
   // Remember the spot for resume before tearing the session down.
   if (timed) {
     savePosition(timed.posKey, progChar);
@@ -1679,8 +1704,7 @@ function stopAll() {
   downloadBlobs = [];
   // Stop no longer kills the MP3 button: the last premium reading stays
   // downloadable (missing parts are fetched on demand in downloadMp3).
-  $('download').disabled = !lastRead;
-  $('subtitles').disabled = !lastRead;
+  updateExportControls();
   resetMeter();
   setStatus('Ready');
   setMediaPlaybackState('none');
@@ -1695,8 +1719,12 @@ function invalidateSavedReading() {
   preparedDownload = null;
   timedCache = null;
   downloadBlobs = [];
-  $('download').disabled = true;
-  $('subtitles').disabled = true;
+  updateExportControls();
+}
+
+function updateExportControls() {
+  $('download').disabled = !lastRead || (mp3Export !== null && mp3Export.reading === lastRead);
+  $('subtitles').disabled = !lastRead || (subtitleExport !== null && subtitleExport.reading === lastRead);
 }
 
 function finish() {
@@ -1710,71 +1738,59 @@ function finish() {
   updateMeter(totalChars);
   setStatus('Finished');
   updateControls();
-  if (downloadBlobs.length) {
-    $('download').disabled = false;
-  }
-  if (lastRead) $('subtitles').disabled = false;
+  updateExportControls();
 }
 
 async function downloadMp3() {
+  const reading = lastRead;
+  if (!reading || !reading.segments.length || (mp3Export && mp3Export.reading === reading)) return;
+  const job = mp3Export = { reading };
+  const isCurrent = () => lastRead === reading && mp3Export === job;
   const rate = +rateSlider.value;
-  const btn = $('download');
-  let blobs = downloadBlobs;
-
-  // The MP3 no longer waits for a completed playback (user report: the button
-  // looked broken after Stop, after a mid-document resume, or before the end).
-  // Assemble it on demand from the last premium reading, fetching any parts
-  // the reader never listened to.
-  if (lastRead && lastRead.segments.length) {
-    const key = `${lastRead.key}|${rate}`;
+  updateExportControls();
+  try {
+    let blobs;
+    const key = `${reading.key}|${rate}`;
     if (preparedDownload && preparedDownload.key === key) {
       blobs = preparedDownload.blobs;
     } else {
-      const segs = lastRead.segments;
-      btn.disabled = true;
-      try {
-        if (Math.abs(rate - 1) > 0.01) {
-          // Timed playback keeps natural-speed audio (the tempo slider works
-          // live via playbackRate), so a non-1x MP3 must be re-fetched with the
-          // speed baked in (fetchChunkWithRetry reads the slider itself).
-          const out = [];
-          for (let i = 0; i < segs.length; i++) {
-            setStatus(`Preparing MP3 at ${rate}x — part ${i + 1} of ${segs.length}...`);
-            out.push(await fetchChunkWithRetry(segs[i].text, lastRead.voiceId, i));
-          }
-          blobs = out;
-        } else {
-          for (let i = 0; i < segs.length; i++) {
-            const seg = segs[i];
-            if (seg.blob) continue;
-            setStatus(`Preparing MP3 — part ${i + 1} of ${segs.length}...`);
-            // A playback prefetch may already be in flight for this segment.
-            if (seg.fetching) { try { await seg.fetching; } catch (e) {} }
-            if (!seg.blob) await fetchTimedSegment(seg, lastRead.voiceId, `${i + 1}/${segs.length} (download)`);
-          }
-          blobs = segs.map(s => s.blob);
-          if (blobs.some(b => !b)) throw new Error('missing audio parts');
+      const segs = reading.segments;
+      if (Math.abs(rate - 1) > 0.01) {
+        blobs = [];
+        for (let i = 0; i < segs.length; i++) {
+          if (!isSpeaking) setStatus(`Preparing MP3 at ${rate}x — part ${i + 1} of ${segs.length}...`);
+          blobs.push(await fetchChunkWithRetry(segs[i].text, reading.voiceId, i, rate));
+          if (!isCurrent()) return;
         }
-        preparedDownload = { key, blobs };
-        setStatus('MP3 ready');
-      } catch (e) {
-        showError(`Couldn't prepare the MP3 — try again in a moment.`);
-        setStatus(isSpeaking ? 'Playing...' : 'Ready');
-        return;
-      } finally {
-        btn.disabled = false;
+      } else {
+        for (let i = 0; i < segs.length; i++) {
+          if (!isSpeaking) setStatus(`Preparing MP3 — part ${i + 1} of ${segs.length}...`);
+          await ensureTimedSegment(segs[i], reading.voiceId, `${i + 1}/${segs.length} (download)`);
+          if (!isCurrent()) return;
+        }
+        blobs = segs.map(s => s.blob);
+        if (blobs.some(b => !b)) throw new Error('missing audio parts');
       }
+      preparedDownload = { key, blobs };
     }
+    if (!isCurrent()) return;
+    const combined = new Blob(blobs, { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(combined);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = Math.abs(rate - 1) > 0.01 ? `read-aloud-${rate}x.mp3` : 'read-aloud.mp3';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    if (!isSpeaking) setStatus('MP3 ready');
+  } catch (e) {
+    if (isCurrent()) {
+      showError(`Couldn't prepare the MP3 — try again in a moment.`);
+      if (!isSpeaking) setStatus('Ready');
+    }
+  } finally {
+    if (mp3Export === job) mp3Export = null;
+    updateExportControls();
   }
-  if (!blobs || !blobs.length) return;
-
-  const combined = new Blob(blobs, { type: 'audio/mpeg' });
-  const url = URL.createObjectURL(combined);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = Math.abs(rate - 1) > 0.01 ? `read-aloud-${rate}x.mp3` : 'read-aloud.mp3';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 /* ========== SUBTITLE EXPORT (.srt) ========== */
@@ -1844,24 +1860,27 @@ function cuesForSegment(seg, offset, segDur) {
 }
 
 async function downloadSubtitles() {
-  if (!lastRead || !lastRead.segments.length) return;
+  const reading = lastRead;
+  if (!reading || !reading.segments.length || (subtitleExport && subtitleExport.reading === reading)) return;
+  const job = subtitleExport = { reading };
+  const isCurrent = () => lastRead === reading && subtitleExport === job;
   const rate = +rateSlider.value;
-  const btn = $('subtitles');
-  btn.disabled = true;
+  updateExportControls();
   try {
-    const segs = lastRead.segments;
+    const segs = reading.segments;
     // Fetch any parts the reader never listened to (same on-demand model as the MP3).
     for (let i = 0; i < segs.length; i++) {
       const seg = segs[i];
       if (seg.blob && seg.words) continue;
-      setStatus(`Preparing subtitles — part ${i + 1} of ${segs.length}...`);
-      if (seg.fetching) { try { await seg.fetching; } catch (e) {} }
-      if (!seg.blob || !seg.words) await fetchTimedSegment(seg, lastRead.voiceId, `${i + 1}/${segs.length} (subtitles)`);
+      if (!isSpeaking) setStatus(`Preparing subtitles — part ${i + 1} of ${segs.length}...`);
+      await ensureTimedSegment(seg, reading.voiceId, `${i + 1}/${segs.length} (subtitles)`);
+      if (!isCurrent()) return;
     }
     let offset = 0;
     const cues = [];
     for (const seg of segs) {
       let dur = await blobDuration(seg.blob);
+      if (!isCurrent()) return;
       if (!isFinite(dur) || dur <= 0) dur = (seg.words && seg.words.length ? seg.words[seg.words.length - 1][0] : 0) + 3;
       cues.push(...cuesForSegment(seg, offset, dur));
       offset += dur;
@@ -1881,13 +1900,16 @@ async function downloadSubtitles() {
     a.download = scale !== 1 ? `read-aloud-${rate}x.srt` : 'read-aloud.srt';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    setStatus(isSpeaking ? 'Playing...' : 'Subtitles ready');
+    if (!isSpeaking) setStatus('Subtitles ready');
   } catch (e) {
-    console.error('Subtitle export error:', e);
-    showError(`Couldn't prepare the subtitles — try again in a moment.`);
-    setStatus(isSpeaking ? 'Playing...' : 'Ready');
+    if (isCurrent()) {
+      console.error('Subtitle export error:', e);
+      showError(`Couldn't prepare the subtitles — try again in a moment.`);
+      if (!isSpeaking) setStatus('Ready');
+    }
   } finally {
-    btn.disabled = false;
+    if (subtitleExport === job) subtitleExport = null;
+    updateExportControls();
   }
 }
 

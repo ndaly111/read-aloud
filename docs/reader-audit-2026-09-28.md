@@ -1,5 +1,20 @@
 # Reader audit — September 28, 2026
 
+## Follow-up fixes
+
+All eight confirmed issues below now have fixes in the working implementation.
+Reading continuations check session identity, loading respects Pause, exports
+check document identity and capture speed, premium recovery preserves explicit
+preferences, all valid interrupted positions resume, and device errors stop the
+reader cleanly. The regression harness now asserts these behaviors (including
+subtitle invalidation and stale error callbacks) and fails on a regression.
+The browser regression also verifies Pause while MP3 bytes are arriving.
+
+The stalled-playback watchdog additionally stops with a saved position instead
+of treating a stall as successful completion and skipping text. The remaining
+code-review concerns about subtitle timing at changed speeds, delayed imports,
+and origin validation are not part of these eight fixes.
+
 ## Scope and evidence
 
 Reviewed the reader, export, file-loading, and API code. Exercised the production
@@ -34,7 +49,7 @@ it does not establish the upstream cause. The initiating browser-speech error
 could depend on the host's speech support, but failing to exit the Playing state
 after that error is directly visible in the error handler.
 
-## Confirmed issues to fix next
+## Original confirmed findings (addressed by the follow-up)
 
 ### P1 — Old requests can affect a new reading
 
@@ -123,5 +138,5 @@ also closed the older-server compatibility route that could still substitute a
 browser voice. The existing mocked browser regression passed for Sonia; the VM
 confirmed that timed-endpoint 404s no longer enter the legacy player.
 
-The issues above remain separate follow-up work; this review does not claim they
-were fixed by the accent change.
+The issues above were not fixed by the accent change itself; they are addressed
+in the later lifecycle fixes described at the top of this report.

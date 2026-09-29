@@ -113,7 +113,22 @@ const server = http.createServer((req, res) => {
   console.log('voice selected:', voice);
   if (voice !== 'neural:en-GB-SoniaNeural') throw new Error('UK Sonia voice unavailable in test');
 
-  await page.evaluate(() => document.getElementById('start').click());
+  await page.evaluate(() => {
+    document.getElementById('start').click();
+    document.getElementById('pause').click();
+  });
+  await page.waitForFunction(() => timed && timed.segments[0].blob, { timeout: 20000 });
+  const pausedLoad = await page.evaluate(() => ({
+    status: document.getElementById('status').textContent,
+    paused: isPaused,
+    audioStarted: !!currentAudio && !currentAudio.paused,
+    progress: progChar,
+  }));
+  console.log('paused through loading:', JSON.stringify(pausedLoad));
+  if (!pausedLoad.paused || pausedLoad.audioStarted || pausedLoad.progress !== 0 || pausedLoad.status !== 'Paused') {
+    throw new Error('Pause during loading was not respected');
+  }
+  await page.evaluate(() => document.getElementById('resume').click());
   await page.waitForFunction(() => /Playing/.test(document.getElementById('status').textContent), { timeout: 20000 });
   await new Promise(r => setTimeout(r, 1200)); // mid-segment-1
 
@@ -177,7 +192,7 @@ const server = http.createServer((req, res) => {
     !final.error.trim() && afterEdit.dlDisabled && afterEdit.subtitlesDisabled &&
     failoverConfirmed && /selected premium voice is temporarily unavailable/i.test(afterOutage.error) &&
     !afterOutage.startDisabled;
-  console.log(pass ? 'PASS: selected voice stayed consistent and MP3 lifecycle is sound'
+  console.log(pass ? 'PASS: loading pause, selected voice consistency, and MP3 lifecycle are sound'
                    : 'FAIL: premium voice or MP3 lifecycle regression');
   await browser.close(); server.close();
   process.exit(pass ? 0 : 1);
