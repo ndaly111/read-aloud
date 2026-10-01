@@ -59,6 +59,8 @@ VOICE_MAP = {
     "pt-BR-AntonioNeural":   "pt_BR-faber-medium",
     "zh-CN-XiaoxiaoNeural":  "zh_CN-huayan-medium",
     "zh-CN-YunxiNeural":     "zh_CN-huayan-medium",
+    "vi-VN-HoaiMyNeural":    "vi_VN-vais1000-medium",
+    "vi-VN-NamMinhNeural":   "vi_VN-vais1000-medium",
 }
 
 _voices: dict = {}

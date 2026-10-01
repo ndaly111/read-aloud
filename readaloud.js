@@ -1,6 +1,6 @@
 /* ========== CONFIG ========== */
 const CHUNK_SIZE = 900; // Character slice size
-const LANGS = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean' };
+const LANGS = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean', vi: 'Vietnamese' };
 const $ = (id) => document.getElementById(id);
 
 // Edge TTS API endpoints, in priority order.
@@ -134,6 +134,10 @@ const NEURAL_VOICES = {
   ko: [
     { id: 'ko-KR-SunHiNeural', name: 'SunHi', gender: 'Female' },
     { id: 'ko-KR-InJoonNeural', name: 'InJoon', gender: 'Male' },
+  ],
+  vi: [
+    { id: 'vi-VN-HoaiMyNeural', name: 'HoaiMy', gender: 'Female' },
+    { id: 'vi-VN-NamMinhNeural', name: 'NamMinh', gender: 'Male' },
   ],
 };
 

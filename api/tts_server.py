@@ -275,6 +275,10 @@ VOICES = {
     # Korean
     "ko-KR-SunHiNeural": {"name": "SunHi", "gender": "Female", "locale": "ko-KR", "style": "standard"},
     "ko-KR-InJoonNeural": {"name": "InJoon", "gender": "Male", "locale": "ko-KR", "style": "standard"},
+
+    # Vietnamese
+    "vi-VN-HoaiMyNeural": {"name": "HoaiMy", "gender": "Female", "locale": "vi-VN", "style": "standard"},
+    "vi-VN-NamMinhNeural": {"name": "NamMinh", "gender": "Male", "locale": "vi-VN", "style": "standard"},
 }
 
 
