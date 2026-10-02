@@ -176,6 +176,8 @@ let browserVoices = [];
 let currentAudio = null;
 let queue = [];
 let loopOn = false; // Loop toggle: replay from the top when a reading finishes
+let loopGapSec = 0;       // seconds of silence before each replay (0 = none)
+let loopGapActive = false; // true while loopGapWait() is counting down
 let utter = null;
 let progChar = 0;
 let totalChars = 0;
@@ -311,6 +313,15 @@ function usesDeviceVolumeButtons(nav = navigator) {
     loopBtn.setAttribute('aria-pressed', loopOn ? 'true' : 'false');
     loopBtn.classList.toggle('is-on', loopOn);
     loopBtn.textContent = loopOn ? 'Loop: on' : 'Loop';
+    $('loopGapWrap').hidden = !loopOn;
+  };
+  const loopGapInput = $('loopGap');
+  const clampGap = v => Math.max(0, Math.min(600, Math.round(+v || 0)));
+  try { loopGapSec = clampGap(localStorage.getItem('ra_loop_gap')); } catch (e) {}
+  loopGapInput.value = loopGapSec;
+  loopGapInput.oninput = () => {
+    loopGapSec = clampGap(loopGapInput.value);
+    try { localStorage.setItem('ra_loop_gap', String(loopGapSec)); } catch (e) {}
   };
   applyLoop();
   loopBtn.onclick = () => {
@@ -851,6 +862,8 @@ async function useTimedNeuralSpeech(voiceId) {
         if (!loopOn) break;
         // Loop: every segment is already cached, so replaying is instant.
         clearPosition(timed.posKey);
+        await loopGapWait(ownsSession);
+        if (!ownsSession()) return;
         timed.i = 0;
         progChar = 0;
         resetPlaybackClock(0);
@@ -1496,6 +1509,8 @@ function startKeepAlive() {
       } else if (queue.length > 0) {
         console.warn('Speech synthesis stalled, resuming queue...');
         speakNextChunk(currentVoiceIndex);
+      } else if (loopGapActive) {
+        // Silence between loops — nothing to speak yet.
       } else {
         // Queue empty but finish() was never called — call it now.
         finish();
@@ -1542,10 +1557,16 @@ function speakNextChunk(voiceIndex) {
       finish();
       return;
     }
-    // Loop: start the whole text over.
-    queue = chunkForSpeech(txt.value);
-    progChar = 0;
-    resetPlaybackClock(0);
+    // Loop: start the whole text over (after the optional silence).
+    const restart = () => { queue = chunkForSpeech(txt.value); progChar = 0; resetPlaybackClock(0); };
+    if (loopGapSec > 0) {
+      const session = browserSession;
+      const alive = () => isSpeaking && !timed && session === browserSession;
+      currentChunk = '';
+      loopGapWait(alive).then(() => { if (alive()) { restart(); speakNextChunk(voiceIndex); } });
+      return;
+    }
+    restart();
   }
   currentChunk = queue.shift();
   const chunk = currentChunk;
@@ -1829,6 +1850,27 @@ function invalidateSavedReading() {
 function updateExportControls() {
   $('download').disabled = !lastRead || (mp3Export !== null && mp3Export.reading === lastRead);
   $('subtitles').disabled = !lastRead || (subtitleExport !== null && subtitleExport.reading === lastRead);
+}
+
+// Silence between loops. Counts down only while not paused; `alive` lets a
+// Stop (or a newer session) cut it short.
+async function loopGapWait(alive) {
+  let remaining = loopGapSec * 1000;
+  if (remaining <= 0) return;
+  loopGapActive = true;
+  pausePlaybackClock();
+  let last = Date.now();
+  try {
+    while (alive() && remaining > 0) {
+      if (!isPaused) setStatus(`Replaying in ${Math.ceil(remaining / 1000)}s...`);
+      await new Promise(r => setTimeout(r, 200));
+      const now = Date.now();
+      if (!isPaused) remaining -= now - last;
+      last = now;
+    }
+  } finally {
+    loopGapActive = false;
+  }
 }
 
 function finish() {

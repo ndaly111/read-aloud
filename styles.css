@@ -862,6 +862,11 @@ progress::-moz-progress-bar {
 .button-row .btn { padding: 9px 20px; }
 .btn--toggle.is-on,
 .btn--toggle.is-on:hover { background: var(--vermilion); color: var(--paper-bright); border-color: var(--vermilion-dark); }
+.loop-gap { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 0.62rem;
+            letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+.loop-gap[hidden] { display: none; }
+.loop-gap input { width: 3.8em; font-family: var(--font-mono); font-size: 0.8rem; padding: 4px 6px;
+                  border: 1px solid var(--ink); background: var(--paper-bright); color: var(--ink); }
 .btn[hidden] { display: none; }
 /* MP3 and subtitles only exist once there is a premium reading to save. */
 #download:disabled, #subtitles:disabled { display: none; }
