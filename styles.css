@@ -860,6 +860,8 @@ progress::-moz-progress-bar {
   gap: 8px;
 }
 .button-row .btn { padding: 9px 20px; }
+.btn--toggle.is-on,
+.btn--toggle.is-on:hover { background: var(--vermilion); color: var(--paper-bright); border-color: var(--vermilion-dark); }
 .btn[hidden] { display: none; }
 /* MP3 and subtitles only exist once there is a premium reading to save. */
 #download:disabled, #subtitles:disabled { display: none; }

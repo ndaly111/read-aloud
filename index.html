@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20260929a">
+  <link rel="stylesheet" href="/styles.css?v=20261002a">
   <script src="/cookie-consent.js" defer></script>
 </head>
 
@@ -95,6 +95,8 @@
               <button id="pause" class="btn btn--secondary" hidden>Pause</button>
               <button id="resume" class="btn btn--secondary" hidden>Resume</button>
               <button id="stop" class="btn btn--danger" hidden>Stop</button>
+              <button id="loop" class="btn btn--secondary btn--toggle" type="button" aria-pressed="false"
+                      title="Replay from the top when the reading finishes">Loop</button>
               <button id="download" class="btn btn--secondary" disabled title="Save this reading as an MP3">MP3</button>
               <button id="subtitles" class="btn btn--secondary" disabled title="Save time-synced subtitles (.srt) that line up with the MP3">Subtitles</button>
             </div>
@@ -277,7 +279,7 @@
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20260929a"></script>
+<script src="readaloud.js?v=20261002a"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>

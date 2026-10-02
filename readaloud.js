@@ -175,6 +175,7 @@ function updateWordCount() {
 let browserVoices = [];
 let currentAudio = null;
 let queue = [];
+let loopOn = false; // Loop toggle: replay from the top when a reading finishes
 let utter = null;
 let progChar = 0;
 let totalChars = 0;
@@ -304,6 +305,19 @@ function usesDeviceVolumeButtons(nav = navigator) {
   resumeBtn.onclick = resumeSpeak;
   stopBtn.onclick = stopAll;
   $('download').onclick = downloadMp3;
+  const loopBtn = $('loop');
+  try { loopOn = localStorage.getItem('ra_loop') === '1'; } catch (e) {}
+  const applyLoop = () => {
+    loopBtn.setAttribute('aria-pressed', loopOn ? 'true' : 'false');
+    loopBtn.classList.toggle('is-on', loopOn);
+    loopBtn.textContent = loopOn ? 'Loop: on' : 'Loop';
+  };
+  applyLoop();
+  loopBtn.onclick = () => {
+    loopOn = !loopOn;
+    try { localStorage.setItem('ra_loop', loopOn ? '1' : '0'); } catch (e) {}
+    applyLoop();
+  };
   $('subtitles').onclick = downloadSubtitles;
 
   // File upload (.txt / .md / .pdf / .docx) — button, picker, and drag-drop.
@@ -833,7 +847,15 @@ async function useTimedNeuralSpeech(voiceId) {
         const idx = segIndexForChar(timed.seekChar);
         if (idx === -1) timed.seekChar = null; else timed.i = idx;
       }
-      if (timed.i >= segments.length) break;
+      if (timed.i >= segments.length) {
+        if (!loopOn) break;
+        // Loop: every segment is already cached, so replaying is instant.
+        clearPosition(timed.posKey);
+        timed.i = 0;
+        progChar = 0;
+        resetPlaybackClock(0);
+        continue;
+      }
 
       // Respect Pause across segment boundaries (the old player didn't:
       // pausing in a gap let the next chunk start playing over "Paused").
@@ -1516,8 +1538,14 @@ function speakNextChunk(voiceIndex) {
   if (!isSpeaking || timed) return;
   pausePlaybackClock();
   if (!queue.length) {
-    finish();
-    return;
+    if (!loopOn || !txt.value.trim()) {
+      finish();
+      return;
+    }
+    // Loop: start the whole text over.
+    queue = chunkForSpeech(txt.value);
+    progChar = 0;
+    resetPlaybackClock(0);
   }
   currentChunk = queue.shift();
   const chunk = currentChunk;
