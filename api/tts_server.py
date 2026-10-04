@@ -671,6 +671,14 @@ async def text_to_speech_get(
 # ----------------------------------------------------------------------
 ADMIN_TOKEN = os.environ.get("TTS_ADMIN_TOKEN")
 
+try:
+    from .playback_diagnostics import install_diagnostics
+except ImportError:
+    from playback_diagnostics import install_diagnostics
+
+install_diagnostics(app, os.environ.get("TTS_DIAGNOSTICS_DB") or USAGE_DB_PATH,
+                    ALLOWED_ORIGINS, ADMIN_TOKEN)
+
 
 @app.get("/admin/stats")
 async def admin_stats(request: Request, token: Optional[str] = None):

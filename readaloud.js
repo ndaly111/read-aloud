@@ -218,6 +218,21 @@ let subtitleExport = null;
 const preferredVoices = new Map();
 let browserSession = 0;
 
+// Only numeric/media state goes to diagnostics. Never pass the document,
+// voice labels, audio URLs, error messages, or localStorage keys.
+function playbackDiagnosticState() {
+  const audio = currentAudio;
+  return {
+    position: progChar, total_chars: txt.value.length, segment: timed ? timed.i : -1,
+    media_time_ms: audio ? audio.currentTime * 1000 : 0,
+    media_duration_ms: audio ? audio.duration * 1000 : 0,
+    media_paused: audio ? audio.paused : false, media_muted: audio ? audio.muted : false,
+    speaking: isSpeaking, paused: isPaused,
+    speech_speaking: speechSynthesis.speaking, speech_pending: speechSynthesis.pending,
+    speech_paused: speechSynthesis.paused, rate: +rateSlider.value, volume: +volSlider.value,
+  };
+}
+
 /* ========== ACTIVE PLAYBACK CLOCK ========== */
 // Start only when audio/speech actually plays, not when synthesis is requested.
 // Keep the accumulated time across chunks, but exclude pauses and buffering.
@@ -588,6 +603,9 @@ function startSpeak() {
 
   const [voiceType, voiceId] = voiceSel.value.split(':');
 
+  globalThis.readerDiagnostics?.begin(voiceType === 'neural' && apiAvailable ? 'premium' : 'browser',
+    voiceId, langSel.value, playbackDiagnosticState);
+
   if (voiceType === 'neural' && apiAvailable) {
     useTimedNeuralSpeech(voiceId);
   } else {
@@ -657,6 +675,7 @@ async function fetchTimedSegment(seg, voiceId, label) {
   // so a mini-PC outage fails over to Render instead of dropping to a browser voice
   // (which can't be downloaded). Missing endpoints fail cleanly as well.
   const urlOrder = ttsUrlOrder();
+  const diagnosticHeaders = globalThis.readerDiagnostics?.headers() || {};
   let lastErr;
   let all404 = true;
   for (const url of urlOrder) {
@@ -668,7 +687,7 @@ async function fetchTimedSegment(seg, voiceId, label) {
         timeout = setTimeout(() => controller.abort(), ttsRequestTimeout(url));
         const r = await fetch(`${url}/api/tts/timed`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...diagnosticHeaders },
           // A premium selection must remain that exact voice for the whole
           // reading. Asking explicitly for Edge lets the client try the same
           // voice on the other server instead of accepting a different local
@@ -710,6 +729,10 @@ async function fetchTimedSegment(seg, voiceId, label) {
         lastErr = e;
         noteTtsFailure(url);
         console.warn(`Timed segment ${label} via ${url} attempt ${attempt} failed:`, e.message);
+        if (diagnosticHeaders['X-Reading-ID']) {
+          globalThis.readerDiagnostics?.record('fetch_error', e.name === 'AbortError' ? 'timeout' : 'unknown',
+            diagnosticHeaders['X-Reading-ID']);
+        }
         // Retrying the same connection after a hard timeout recreated the exact
         // multi-minute wait that failover is supposed to prevent.
         if (e && e.name === 'AbortError') break;
@@ -928,6 +951,8 @@ async function useTimedNeuralSpeech(voiceId) {
     // A stopped reading's success OR failure must not touch a newer session.
     if (!ownsSession()) return;
     console.error('Timed TTS error:', error);
+    globalThis.readerDiagnostics?.record('reading_error');
+    globalThis.readerDiagnostics?.end('stop');
     pausePlaybackClock();
     if (currentAudio) {
       try { currentAudio.pause(); } catch (e) {}
@@ -999,6 +1024,7 @@ function playTimedSegment(seg, startAtSec) {
         return;
       }
       if (Date.now() - lastAdvanceAt > 45000) {
+        globalThis.readerDiagnostics?.record('stalled', 'timeout');
         audio.pause();
         settle(reject, new Error('Audio playback stalled — retry from the saved position'));
       }
@@ -1007,10 +1033,21 @@ function playTimedSegment(seg, startAtSec) {
     audioResolve = () => settle(resolve); // stopAll()/seek unblock instantly
 
     audio.onended = () => settle(resolve);
-    audio.onplaying = () => { if (!done && currentAudio === audio) startPlaybackClock(); };
-    audio.onpause = () => { if (!done && currentAudio === audio) pausePlaybackClock(); };
+    audio.onplaying = () => {
+      if (!done && currentAudio === audio) {
+        startPlaybackClock();
+        globalThis.readerDiagnostics?.record('playing');
+      }
+    };
+    audio.onpause = () => {
+      if (!done && currentAudio === audio) {
+        pausePlaybackClock();
+        if (audio.paused && !audio.ended && !isPaused) globalThis.readerDiagnostics?.record('unexpected_pause');
+      }
+    };
     audio.onerror = () => {
       const code = audio.error ? audio.error.code : 'unknown';
+      globalThis.readerDiagnostics?.record('audio_error', 'audio-' + code);
       settle(reject, new Error('Audio error (code ' + code + ')'));
     };
 
@@ -1024,12 +1061,19 @@ function playTimedSegment(seg, startAtSec) {
       if (now - lastRetryAt < 1000) return;
       lastRetryAt = now;
       console.warn('Audio suspended mid-clip, resuming play...');
-      audio.play().catch(() => {});
+      audio.play().catch(err => {
+        if (!done && currentAudio === audio) globalThis.readerDiagnostics?.record('play_rejected',
+          err.name === 'NotAllowedError' ? 'not-allowed' : 'unknown');
+      });
     };
-    audio.onstalled = retryPlay;
+    audio.onstalled = () => {
+      if (!done && currentAudio === audio) globalThis.readerDiagnostics?.record('stalled');
+      retryPlay();
+    };
     audio.onwaiting = () => {
       if (done || currentAudio !== audio) return;
       pausePlaybackClock();
+      globalThis.readerDiagnostics?.record('waiting');
       retryPlay();
     };
 
@@ -1043,6 +1087,7 @@ function playTimedSegment(seg, startAtSec) {
         try { audio.currentTime = startAtSec; } catch (e) {}
       }
     }).catch((err) => {
+      if (!done) globalThis.readerDiagnostics?.record('play_rejected', err.name === 'NotAllowedError' ? 'not-allowed' : 'unknown');
       settle(reject, new Error('play() rejected: ' + err.message));
     });
   });
@@ -1054,6 +1099,7 @@ function playTimedSegment(seg, startAtSec) {
 // configured endpoint twice. Updates activeTtsUrl when fallback succeeds so the next
 // chunk goes straight to the working URL. Returns an audio Blob or throws.
 async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider.value) {
+  const diagnosticHeaders = globalThis.readerDiagnostics?.headers() || {};
   const urlOrder = ttsUrlOrder();
   let lastErr;
   for (const url of urlOrder) {
@@ -1066,7 +1112,7 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider
         console.log(`Fetching TTS chunk ${chunkIndex + 1} via ${url} (attempt ${attempt})`);
         const response = await fetch(`${url}/api/tts`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...diagnosticHeaders },
           body: JSON.stringify({
             text,
             voice: voiceId,
@@ -1091,6 +1137,10 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider
         lastErr = e;
         noteTtsFailure(url);
         console.warn(`Chunk ${chunkIndex + 1} via ${url} attempt ${attempt} failed:`, e.message);
+        if (diagnosticHeaders['X-Reading-ID']) {
+          globalThis.readerDiagnostics?.record('fetch_error', e.name === 'AbortError' ? 'timeout' : 'unknown',
+            diagnosticHeaders['X-Reading-ID']);
+        }
         if (e && e.name === 'AbortError') break;
       } finally {
         clearTimeout(timeout);
@@ -1481,6 +1531,7 @@ function startKeepAlive() {
         : now - chunkSpokenAt > Math.max(20000, expectedMs * 2.5); // platform fires no boundaries
       if (zombie && currentChunk) {
         console.warn('Speech engine zombie (speaking stuck true) — re-speaking current chunk');
+        globalThis.readerDiagnostics?.record('speech_restart', 'timeout');
         if (utter) { utter.onend = null; utter.onerror = null; utter.onboundary = null; }
         speechSynthesis.cancel();
         queue.unshift(currentChunk);
@@ -1502,6 +1553,7 @@ function startKeepAlive() {
       if (utter) { utter.onend = null; utter.onerror = null; utter.onboundary = null; }
       if (currentChunk) {
         console.warn('Speech synthesis stalled, re-speaking current chunk...');
+        globalThis.readerDiagnostics?.record('speech_restart');
         queue.unshift(currentChunk);
         progChar = currentChunkStart; // same rollback as the zombie branch
         currentChunk = '';
@@ -1608,6 +1660,7 @@ function speakNextChunk(voiceIndex) {
   utter.onerror = (e) => {
     if (utter !== thisUtter || session !== browserSession || !isSpeaking || timed) return;
     console.error('Speech error:', e);
+    globalThis.readerDiagnostics?.record('voice_error', e.error);
     stopAll();
     showError(`This device voice stopped (${e.error}). Press Start to retry or choose another voice.`);
   };
@@ -1752,6 +1805,7 @@ function formatTime(s) {
 /* ========== PAUSE / RESUME / STOP ========== */
 function pauseSpeak() {
   if (!isSpeaking || isPaused) return;
+  globalThis.readerDiagnostics?.record('user_pause');
   pausePlaybackClock();
 
   if (currentAudio) {
@@ -1769,6 +1823,7 @@ function pauseSpeak() {
 
 function resumeSpeak() {
   if (!isSpeaking || !isPaused) return;
+  globalThis.readerDiagnostics?.record('user_resume');
 
   if (currentAudio) {
     // play() can reject (iOS after a long pause revokes the gesture unlock);
@@ -1778,6 +1833,7 @@ function resumeSpeak() {
     audio.play().catch((err) => {
       if (!isSpeaking || currentAudio !== audio || timed !== session) return;
       console.warn('resume play() rejected:', err.message);
+      globalThis.readerDiagnostics?.record('play_rejected', err.name === 'NotAllowedError' ? 'not-allowed' : 'unknown');
       showError('Tap Play again to continue.');
       isPaused = true;
       setStatus('Paused');
@@ -1795,6 +1851,7 @@ function resumeSpeak() {
 }
 
 function stopAll() {
+  globalThis.readerDiagnostics?.end('stop');
   pausePlaybackClock();
   browserSession++;
   clearTimeout(rateChangeTimer);
@@ -1874,6 +1931,7 @@ async function loopGapWait(alive) {
 }
 
 function finish() {
+  globalThis.readerDiagnostics?.end('finish');
   pausePlaybackClock();
   isSpeaking = false;
   isPaused = false;

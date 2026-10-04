@@ -282,7 +282,8 @@
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20261002b"></script>
+<script src="playback-diagnostics.js?v=20261004diag1"></script>
+<script src="readaloud.js?v=20261004diag1"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -305,9 +306,12 @@
     status.textContent = '';
     status.className = 'feedback-status';
     try {
+      const feedbackData = new FormData(form);
+      const readingId = globalThis.readerDiagnostics?.readingId();
+      if (readingId) feedbackData.set('_reading_id', readingId);
       const resp = await fetch('https://read-aloud-feedback.ndaly111.workers.dev', {
         method: 'POST',
-        body: new FormData(form),
+        body: feedbackData,
         headers: { 'Accept': 'application/json' }
       });
       const data = await resp.json().catch(() => ({}));

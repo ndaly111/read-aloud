@@ -21,6 +21,7 @@ function context() {
     txt: {value:'Original passage.'}, rateSlider:{value:'1'}, volSlider:{value:'1'},
     isSpeaking:false, isPaused:false, currentAudio:null, sharedAudio:null,
     timed:null, timedCache:null, lastRead:null, preparedDownload:null,
+    loopOn:false, loopGapSec:0, loopGapActive:false,
     mp3Export:null, subtitleExport:null, preferredVoices:new Map(), browserSession:0,
     downloadBlobs:[], progChar:0, totalChars:0,
     playbackElapsedMs:0, playbackStartedAt:null, estimateStartChar:0, estimateStartSeconds:0,

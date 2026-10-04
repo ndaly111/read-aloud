@@ -108,6 +108,9 @@ export default {
     const name = (form.get("name") || "").toString().trim();
     const page = (form.get("_page") || "").toString().trim();
     const subject = (form.get("_subject") || "Feedback from read-aloud.com").toString();
+    const suppliedReadingId = (form.get("_reading_id") || "").toString();
+    const readingId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(suppliedReadingId)
+      ? suppliedReadingId : "";
 
     const text = [
       message,
@@ -116,6 +119,7 @@ export default {
       name ? `Name: ${name}` : null,
       `Email: ${replyTo || "(not given)"}`,
       page ? `Page: ${page}` : null,
+      readingId ? `Reading ID: ${readingId}` : null,
       `Referer: ${request.headers.get("Referer") || "(none)"}`,
       `Location: ${describeLocation(request.cf)}`,
       `UA: ${request.headers.get("User-Agent") || "?"}`,
