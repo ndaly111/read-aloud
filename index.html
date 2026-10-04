@@ -282,7 +282,8 @@
 </script>
 
 <!-- main logic -->
-<script src="readaloud.js?v=20261002b"></script>
+<script src="playback-diagnostics.js?v=20261004diag1"></script>
+<script src="readaloud.js?v=20261004diag1"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -305,9 +306,30 @@
     status.textContent = '';
     status.className = 'feedback-status';
     try {
+      const feedbackData = new FormData(form);
+      const readingId = globalThis.readerDiagnostics?.readingId();
+      if (readingId) feedbackData.set('_reading_id', readingId);
+      // Snapshot the controls now, even if they changed after the last reading.
+      const language = document.getElementById('lang');
+      const voice = document.getElementById('voice');
+      if (language) {
+        feedbackData.set('_voice_language', language.value);
+        feedbackData.set('_voice_language_name', language.selectedOptions[0]?.textContent || '');
+      }
+      if (voice) {
+        feedbackData.set('_voice_selection', voice.value);
+        feedbackData.set('_voice_name', voice.selectedOptions[0]?.textContent || '');
+      }
+      const rate = document.getElementById('rate');
+      const volume = document.getElementById('vol');
+      if (rate) feedbackData.set('_voice_speed', rate.value);
+      if (volume) {
+        feedbackData.set('_voice_volume', volume.value);
+        feedbackData.set('_voice_volume_control', globalThis.usesDeviceVolumeButtons?.() ? 'device' : 'web');
+      }
       const resp = await fetch('https://read-aloud-feedback.ndaly111.workers.dev', {
         method: 'POST',
-        body: new FormData(form),
+        body: feedbackData,
         headers: { 'Accept': 'application/json' }
       });
       const data = await resp.json().catch(() => ({}));

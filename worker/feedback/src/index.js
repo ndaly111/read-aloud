@@ -108,6 +108,26 @@ export default {
     const name = (form.get("name") || "").toString().trim();
     const page = (form.get("_page") || "").toString().trim();
     const subject = (form.get("_subject") || "Feedback from read-aloud.com").toString();
+    const suppliedReadingId = (form.get("_reading_id") || "").toString();
+    const readingId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(suppliedReadingId)
+      ? suppliedReadingId : "";
+    // Optional: old clients and the separate contact form have no voice fields.
+    const setting = key => (form.get(key) || "").toString().replace(/[\r\n\0]+/g, " ").trim().slice(0, 160);
+    const selection = setting('_voice_selection');
+    const validVoice = /^(neural:[a-z]{2,3}-[A-Z]{2}-[A-Za-z0-9]{1,50}Neural|browser:-?\d{1,4})$/.test(selection);
+    const language = setting('_voice_language');
+    const speedText = setting('_voice_speed');
+    const volumeText = setting('_voice_volume');
+    const speed = Number(speedText);
+    const volume = Number(volumeText);
+    const voiceSettings = [
+      /^[a-z]{2,3}$/.test(language) ? `Language: ${setting('_voice_language_name') || language} (${language})` : null,
+      validVoice ? `Voice: ${setting('_voice_name') || selection} [${selection}]` : null,
+      validVoice ? `Voice type: ${selection.startsWith('neural:') ? 'Premium' : 'Browser'}` : null,
+      speedText && Number.isFinite(speed) && speed >= 0.5 && speed <= 2 ? `Speed: ${speed}x` : null,
+      setting('_voice_volume_control') === 'device' ? 'Volume: Device buttons (level unavailable)' :
+        volumeText && Number.isFinite(volume) && volume >= 0 && volume <= 1 ? `Volume: ${Math.round(volume * 100)}%` : null,
+    ].filter(line => line !== null);
 
     const text = [
       message,
@@ -116,6 +136,8 @@ export default {
       name ? `Name: ${name}` : null,
       `Email: ${replyTo || "(not given)"}`,
       page ? `Page: ${page}` : null,
+      readingId ? `Reading ID: ${readingId}` : null,
+      ...(voiceSettings.length ? ['Voice settings at submission:', ...voiceSettings] : []),
       `Referer: ${request.headers.get("Referer") || "(none)"}`,
       `Location: ${describeLocation(request.cf)}`,
       `UA: ${request.headers.get("User-Agent") || "?"}`,
