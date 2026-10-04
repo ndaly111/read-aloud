@@ -63,6 +63,13 @@ text hash, full user agent, raw error message, document text or audio in these
 logs. Device voices are represented as `device`, without a potentially personal
 voice label. The full payload schema rejects unknown fields.
 
+Feedback emails also include the controls at the time of submission: language,
+voice name and selection ID, Premium/Browser type, speed, and volume. These are
+distinct from the logged reading's settings if the reader changed controls
+afterwards. On iPhone/iPad the email says volume uses device buttons rather than
+reporting the ineffective web slider as the actual device volume. The contact
+form and older clients continue to work without any of these optional fields.
+
 ## Investigating a report
 
 Use the reading ID in the feedback email, or filter by receipt time. Compare
