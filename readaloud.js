@@ -620,7 +620,15 @@ function startSpeak() {
 // let the tempo slider work live via playbackRate — audio is always
 // synthesized at natural speed, so one cached synthesis serves every speed.
 
-const SEGMENT_CHARS = 1200;         // ~75-90s of audio each; first sound in ~2-3s
+const SEGMENT_CHARS = 1200;         // ~75-90s of audio for fast-generating voices
+const SHORT_SEGMENT_CHARS = 400;
+// These voices can keep streaming valid audio beyond the server's 20-second
+// synthesis ceiling. Shorter sections avoid timing out a healthy connection
+// and sending the rest of the reading to the metered Render backup.
+const SLOW_GENERATING_VOICES = new Set(['en-GB-SoniaNeural', 'vi-VN-HoaiMyNeural']);
+function segmentCharsForVoice(voiceId) {
+  return SLOW_GENERATING_VOICES.has(voiceId) ? SHORT_SEGMENT_CHARS : SEGMENT_CHARS;
+}
 const POSITION_LS_PREFIX = 'ra_pos_';
 
 function hashText(s) {
@@ -849,7 +857,7 @@ async function useTimedNeuralSpeech(voiceId) {
   if (timedCache && timedCache.key === key) {
     segments = timedCache.segments; // reuse already-fetched audio after a Stop
   } else {
-    segments = segmentTextWithOffsets(text, SEGMENT_CHARS);
+    segments = segmentTextWithOffsets(text, segmentCharsForVoice(voiceId));
     timedCache = { key, segments };
   }
   if (!segments.length) { finish(); return; }
