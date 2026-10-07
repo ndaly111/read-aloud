@@ -124,3 +124,9 @@ Activation checklist:
 ## Decision log
 2026-10-07 — staged implementation and conservative stopping rules.
 No public fundraiser progress or experiment exposure has been claimed.
+
+2026-10-07 — Basic isolated checks: the client preserved A, rendered B when a
+verified goal response was supplied, and left the page unassigned when the
+feed was disabled. The Worker returned ready:false while unverified and an
+aggregate response with a mock database when verified. These are MOCK checks,
+not a live webhook/payment or browser end-to-end test.
