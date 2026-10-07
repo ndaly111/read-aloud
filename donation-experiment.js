@@ -51,13 +51,12 @@
     }).format(cents / 100);
     const raised = Math.max(0, data.raised_cents);
     const target = data.goal_cents;
-    const pct = Math.min(100, Math.round(100 * raised / target));
     message.textContent = 'Help keep Read-Aloud free. Your support helps cover the cost of running the service.';
     const goal = document.createElement('div');
     goal.className = 'support-goal';
     const totals = document.createElement('span');
     totals.className = 'support-goal__totals';
-    totals.textContent = dollars(raised) + ' of ' + dollars(target) + ' ' + data.month_label + ' goal';
+    totals.textContent = dollars(raised) + ' of ' + dollars(target) + ' ' + data.month_label + ' goal (verified one-time USD gifts)';
     const progress = document.createElement('progress');
     progress.className = 'support-goal__progress';
     progress.max = target;
@@ -78,6 +77,7 @@
       if (!response.ok) return;
       const data = await response.json();
       if (data.ready !== true || data.currency !== 'USD' ||
+          data.data_scope !== 'verified_one_time_usd_donations' ||
           !Number.isSafeInteger(data.goal_cents) || data.goal_cents <= 0 ||
           !Number.isSafeInteger(data.raised_cents) || data.raised_cents < 0 ||
           !/^[A-Za-z]+ 20\d\d$/.test(data.month_label)) return;
