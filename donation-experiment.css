@@ -1,0 +1,26 @@
+/* Donation-goal challenger only; control retains the existing support bar. */
+#supportBar.support-bar--goal {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+#supportBar .support-goal {
+  display: grid;
+  gap: 4px;
+  flex: 0 1 220px;
+  min-width: 160px;
+  font: 0.72rem var(--font-mono);
+}
+#supportBar .support-goal__totals {
+  font-weight: 700;
+}
+#supportBar .support-goal__progress {
+  appearance: auto;
+  width: 100%;
+  height: 9px;
+  accent-color: var(--vermilion);
+}
+@media (max-width: 640px) {
+  #supportBar.support-bar--goal .support-goal {
+    flex-basis: 100%;
+  }
+}
