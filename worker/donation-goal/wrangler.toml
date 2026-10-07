@@ -1,0 +1,18 @@
+name = "read-aloud-donation-goal"
+main = "src/index.js"
+compatibility_date = "2026-10-07"
+
+# Intentionally disabled until actual monthly costs/goal, beginning balance,
+# webhook secret and D1 are configured AND reconciled.
+[vars]
+GOAL_USD = ""
+GOAL_DATA_VERIFIED = "false"
+BASELINE_MONTH = ""
+BASELINE_CENTS = "0"
+BASELINE_THROUGH_UNIX = "0"
+
+# After "npx wrangler d1 create read-aloud-donations", add the returned database ID:
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "read-aloud-donations"
+# database_id = "<real database ID>"
