@@ -15,6 +15,10 @@ index.html. This file is the permanent experiment record; do not rely on chat co
   original appeal, no enrollment or experiment tracking occurs.
 - Enrollment also requires an explicit launch timestamp, experiment enable
   switch and verified attribution switch. It ends automatically at day 42.
+- A verified winner can be rolled out at any formal review. The winner switch
+  stops random assignment and takes priority over previously saved variants;
+  it continues beyond the experiment's 42-day limit. Rollout view/click events
+  use separate names so they cannot contaminate experimental results.
 - Goal requests time out after four seconds. Responses must be current within
   five minutes and refer to the current UTC month. A new month requires a
   fresh ledger reconciliation before the progress display resumes.
@@ -82,6 +86,23 @@ index.html. This file is the permanent experiment record; do not rely on chat co
    Kill switches: EXPERIMENT_ENABLED=false stops allocation; GOAL_DATA_VERIFIED=false
    hides uncertain totals. Both require redeployment.
 
+### Applying an early winner
+After recording a valid decision from the review command and reviewing revenue
+and guardrails, set `SUPPORT_ROLLOUT_VARIANT` to the selected `A`, `B` or `C`
+and `EXPERIMENT_ENABLED=false` in `worker/donation-goal/wrangler.toml`, then
+redeploy the Worker. Confirm `/goal` returns `experiment_active:false` and
+the chosen `rollout_variant`, and check all visitors see that appeal regardless
+of a previously saved assignment. This does not require a homepage deployment
+or waiting until day 42. Keep the current-month ledger verified for B/C;
+stale/unverified totals still fall back to the original appeal.
+
+Monitor `donation_support_view` and `donation_support_click` for 14 days after
+rollout; those events carry the same experiment/variant dimensions but must not
+be included in the A/B/C test's exposure/click counts. The winner switch is an
+operator action after a verified review; the site does not invent a winner or
+fetch private analytics automatically. Leave it blank during the trial. To
+restore the original appeal immediately, disable the experiment and set it to A.
+
 Webhook contract: [official BMC specification](https://cdn.buymeacoffee.com/assets/integrations/bmc-webhooks-openapi.json).
 Amounts are original gross USD gifts less full refunds, **before platform and
 processing fees**; they are not net payouts. Memberships, non-USD gifts and partial
@@ -100,6 +121,10 @@ Report net USD per 1,000 unique exposed users separately for A, B and C. A Fishe
 test of donor conversion does not establish statistical significance for revenue.
 
 Secondary: donation-button clickthrough for A, B and C (diagnostic only).
+Buy Me a Coffee documents a GA4 integration for page traffic, but its setup guide
+does not promise completed-payment events or variant attribution. Connecting GA4
+alone does not resolve that requirement: validate an actual completed-payment join.
+Reference: [official GA4 setup guide](https://help.buymeacoffee.com/en/articles/3446099-how-do-i-add-google-analytics-to-buy-me-a-coffee).
 Guardrails: playback starts/failures, consent errors, mobile usability,
 reader feedback, and repeat visits.
 

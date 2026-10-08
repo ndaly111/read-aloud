@@ -120,6 +120,27 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
       assert.deepEqual(random.errors, []);
       await random.context.close();
     }
+    for (const variant of ['A', 'B', 'C']) {
+      const winner = await scenario({ variant: variant === 'B' ? 'C' : 'B', consent: 'accepted',
+        payload: { ...goal(), experiment_active: false, rollout_variant: variant,
+          launch_at: new Date(Date.now() - 50 * 86400000).toISOString() } });
+      await winner.page.waitForFunction(expected => {
+        const bar = document.querySelector('#supportBar');
+        return bar.dataset.donationMode === 'rollout' && bar.dataset.donationVariant === expected;
+      }, variant);
+      if (variant === 'A') {
+        assert.equal(await winner.page.locator('#supportBar .msg').textContent(), original);
+        assert.equal(await winner.page.locator('.support-goal').count(), 0);
+      } else {
+        assert.equal(await winner.page.locator('.support-goal__progress').getAttribute('max'), variant === 'B' ? '5000' : '10000');
+      }
+      await winner.page.locator('.coffeeBtn').dispatchEvent('click');
+      const events = await winner.page.evaluate(() => testEvents.filter(event => event[0] === 'event'));
+      assert.deepEqual(events.map(event => event[1]), ['donation_support_view', 'donation_support_click']);
+      assert(events.every(event => event[2].variant_id === variant));
+      assert.deepEqual(winner.errors, []);
+      await winner.context.close();
+    }
     for (const variant of ['B', 'C']) {
       const funded = await scenario({ variant, width: 375, payload: { ...goal(), raised_cents: 7500 } });
       await funded.page.waitForFunction(() => !!document.querySelector('.support-goal'));
@@ -138,6 +159,9 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
       await mobile.context.close();
     }
     for (const payload of [{ ready: false }, { ...goal(), experiment_active: false },
+      { ...goal(), rollout_variant: 'D' }, { ...goal(), rollout_variant: '' },
+      { ...goal(), rollout_variant: 'B', as_of: '2020-01-01T00:00:00Z' },
+      { ...goal(), launch_at: new Date(Date.now() - 42 * 86400000).toISOString() },
       { ...goal(), as_of: '2020-01-01T00:00:00Z' }, { ...goal(), month_label: 'January 2020' },
       { ...goal(), raised_cents: -1 }, { ...goal(), goals_cents: { B: 0, C: 10000 } },
       { ...goal(), goals_cents: { B: 5000 } }, { ...goal(), goals_cents: { B: 5000, C: 5000 } }, null]) {
@@ -161,7 +185,7 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
     assert.equal(await slow.page.locator('#supportBar .msg').textContent(), original);
     assert.deepEqual(slow.errors, []);
     await slow.context.close();
-    console.log('Homepage control/$50/$100, random allocation, consent changes, overfunding, mobile layouts and fallbacks passed.');
+    console.log('Homepage control/$50/$100, winner rollout, random allocation, consent changes, overfunding, mobile layouts and fallbacks passed.');
   } finally {
     if (browser) await browser.close();
     server.closeAllConnections();

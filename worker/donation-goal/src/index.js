@@ -24,6 +24,10 @@ async function validSignature(body, secret, hex) {
 async function currentGoal(env, request) {
   const headers = publicHeaders(request);
   const goals = { B: Number(env.GOAL_B_USD) * 100, C: Number(env.GOAL_C_USD) * 100 };
+  const rollout = env.SUPPORT_ROLLOUT_VARIANT || '';
+  if (rollout && !['A', 'B', 'C'].includes(rollout)) {
+    return json({ ready: false }, 200, headers);
+  }
   // Fixed owner-selected targets; changing them mid-test invalidates the design.
   if (env.GOAL_DATA_VERIFIED !== 'true' || !env.DB || goals.B !== 5000 || goals.C !== 10000) {
     return json({ ready: false }, 200, headers);
@@ -47,7 +51,7 @@ async function currentGoal(env, request) {
   const raised = Number(row?.cents || 0);
   if (!Number.isSafeInteger(raised) || raised < 0) return json({ ready: false }, 200, headers);
   const launch = Date.parse(env.EXPERIMENT_LAUNCH_UTC || '');
-  const active = env.EXPERIMENT_ENABLED === 'true' && env.ATTRIBUTION_VERIFIED === 'true' &&
+  const active = !rollout && env.EXPERIMENT_ENABLED === 'true' && env.ATTRIBUTION_VERIFIED === 'true' &&
     Number.isFinite(launch) && launch <= today.getTime() && today.getTime() - launch < 42 * 86400000;
   return json({
     ready: true, currency: 'USD',
@@ -57,6 +61,7 @@ async function currentGoal(env, request) {
     data_scope: 'verified_one_time_usd_donations',
     experiment_id: 'support_goal_2026_10',
     experiment_active: active,
+    rollout_variant: rollout || null,
     launch_at: Number.isFinite(launch) ? new Date(launch).toISOString() : null,
     as_of: today.toISOString()
   }, 200, headers);

@@ -105,18 +105,34 @@
       const month = new Intl.DateTimeFormat('en-US', {
         month: 'long', year: 'numeric', timeZone: 'UTC'
       }).format(new Date(now));
-      if (data.ready !== true || data.experiment_active !== true ||
+      if (data.ready !== true ||
           data.experiment_id !== EXPERIMENT_ID || data.currency !== 'USD' ||
           data.data_scope !== 'verified_one_time_usd_donations' ||
           data.goals_cents?.B !== 5000 || data.goals_cents?.C !== 10000 ||
           !Number.isSafeInteger(data.raised_cents) || data.raised_cents < 0 ||
           data.month_label !== month || !Number.isFinite(asOf) ||
-          asOf > now + 60000 || now - asOf > 300000 ||
-          !Number.isFinite(launch) || launch > now || now - launch >= 42 * 86400000) return;
+          asOf > now + 60000 || now - asOf > 300000) return;
+
+      const rollout = data.rollout_variant;
+      // A winner takes priority over saved assignments and the experiment's time limit.
+      // Separate event names keep post-rollout visits out of experimental results.
+      if (rollout != null) {
+        if (!VARIANTS.includes(rollout)) return;
+        if (rollout !== 'A' && !showGoal(data, rollout)) return;
+        bar.dataset.donationVariant = rollout;
+        bar.dataset.donationMode = 'rollout';
+        track('donation_support_view', rollout);
+        const link = bar.querySelector('.coffeeBtn');
+        if (link) link.addEventListener('click', () => track('donation_support_click', rollout));
+        return;
+      }
+      if (data.experiment_active !== true || !Number.isFinite(launch) ||
+          launch > now || now - launch >= 42 * 86400000) return;
 
       const variant = pickVariant();
       if (variant !== 'A' && !showGoal(data, variant)) return;
       bar.dataset.donationVariant = variant;
+      bar.dataset.donationMode = 'experiment';
       track('donation_experiment_view', variant);
       const link = bar.querySelector('.coffeeBtn');
       if (link) link.addEventListener('click', () => track('donation_experiment_click', variant));

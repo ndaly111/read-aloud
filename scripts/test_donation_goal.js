@@ -61,13 +61,27 @@ const root = path.join(__dirname, '..');
   db.prepare('INSERT INTO donations VALUES (?, ?, ?, ?)').run('5', start, 125, 0);
   assert.equal((await (await goal()).json()).raised_cents, 650);
   for (const overrides of [{ GOAL_DATA_VERIFIED: 'false' }, { GOAL_B_USD: '0.001' },
-    { GOAL_B_USD: '100' }, { GOAL_C_USD: '50' }, { GOAL_C_USD: '' }, { GOAL_VERIFIED_MONTH: '2020-01' }, { DB: null }]) {
+    { GOAL_B_USD: '100' }, { GOAL_C_USD: '50' }, { GOAL_C_USD: '' },
+    { SUPPORT_ROLLOUT_VARIANT: 'D' }, { GOAL_VERIFIED_MONTH: '2020-01' }, { DB: null }]) {
     assert.equal((await (await goal(overrides)).json()).ready, false);
   }
   for (const overrides of [{ ATTRIBUTION_VERIFIED: 'false' }, { EXPERIMENT_ENABLED: 'false' },
     { EXPERIMENT_LAUNCH_UTC: new Date(Date.now() - 42 * 86400000).toISOString() }]) {
     assert.equal((await (await goal(overrides)).json()).experiment_active, false);
   }
+  assert.equal((await (await goal()).json()).rollout_variant, null);
+  for (const variant of ['A', 'B', 'C']) {
+    // Winner configuration ends allocation even if the old enable switch is on.
+    const early = await (await goal({ SUPPORT_ROLLOUT_VARIANT: variant })).json();
+    assert.equal(early.experiment_active, false);
+    assert.equal(early.rollout_variant, variant);
+    // The chosen appeal can remain in place after the six-week experiment expires.
+    const later = await (await goal({ SUPPORT_ROLLOUT_VARIANT: variant,
+      EXPERIMENT_LAUNCH_UTC: new Date(Date.now() - 50 * 86400000).toISOString() })).json();
+    assert.equal(later.rollout_variant, variant);
+    assert.equal(later.experiment_active, false);
+  }
+  assert.equal((await (await goal({ SUPPORT_ROLLOUT_VARIANT: 'C', GOAL_DATA_VERIFIED: 'false' })).json()).ready, false);
   const response = await goal();
   assert.equal(response.headers.get('access-control-allow-origin'), 'https://read-aloud.com');
   assert.equal((await goal({}, 'https://untrusted.invalid')).headers.get('access-control-allow-origin'), null);

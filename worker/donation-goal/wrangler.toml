@@ -12,6 +12,8 @@ GOAL_VERIFIED_MONTH = ""
 EXPERIMENT_ENABLED = "false"
 EXPERIMENT_LAUNCH_UTC = ""
 ATTRIBUTION_VERIFIED = "false"
+# After a verified decision: A, B or C shows that appeal to everyone and stops allocation.
+SUPPORT_ROLLOUT_VARIANT = ""
 
 # After "npx wrangler d1 create read-aloud-donations", add the returned database ID:
 # [[d1_databases]]
