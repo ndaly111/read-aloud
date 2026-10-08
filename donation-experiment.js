@@ -2,10 +2,17 @@
 (() => {
   'use strict';
   const EXPERIMENT_ID = 'support_goal_2026_10';
-  const ENDPOINT = 'https://read-aloud-donation-goal.ndaly111.workers.dev/goal';
+  const ORIGIN = 'https://read-aloud-donation-goal.ndaly111.workers.dev';
+  const ENDPOINT = ORIGIN + '/goal';
+  const EVENT_ENDPOINT = ORIGIN + '/event';
   const STORAGE_KEY = 'ra_support_exp_202610';
   const CONSENT_KEY = 'ra_cookie_consent';
   const VARIANTS = ['A', 'B', 'C'];
+  // GA4 event name -> the experiment's own counter name.
+  const COUNTERS = {
+    donation_experiment_view: 'view', donation_experiment_click: 'click',
+    donation_support_view: 'rollout_view', donation_support_click: 'rollout_click'
+  };
   let assignment = null;
   let consent = readStorage('localStorage', CONSENT_KEY);
   const bar = document.getElementById('supportBar');
@@ -40,6 +47,19 @@
         variant_id: variant
       });
     }
+    // The experiment's own aggregate counter. GA4 custom dimensions are not
+    // retroactive and ad blockers drop gtag entirely, so this is the measurement
+    // of record. It counts events only: no identifiers, cookies or page content.
+    const counter = COUNTERS[eventName];
+    if (!counter) return;
+    const body = JSON.stringify({ experiment_id: EXPERIMENT_ID, variant, event: counter });
+    try {
+      if (navigator.sendBeacon && navigator.sendBeacon(EVENT_ENDPOINT,
+        new Blob([body], { type: 'application/json' }))) return;
+      fetch(EVENT_ENDPOINT, { method: 'POST', body, mode: 'cors', credentials: 'omit',
+        keepalive: true, referrerPolicy: 'no-referrer',
+        headers: { 'content-type': 'application/json' } }).catch(() => {});
+    } catch (_) {}
   }
 
   function pickVariant() {
@@ -66,28 +86,36 @@
     const dollars = cents => new Intl.NumberFormat('en-US', {
       style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2
     }).format(cents / 100);
-    const raised = Math.max(0, data.raised_cents);
     const target = data.goals_cents[variant];
     message.textContent = 'Help keep Read-Aloud free. Your support helps cover the cost of running the service.';
     const goal = document.createElement('div');
     goal.className = 'support-goal';
     const totals = document.createElement('span');
     totals.className = 'support-goal__totals';
-    const progress = document.createElement('progress');
-    progress.className = 'support-goal__progress';
-    progress.max = target;
-    progress.value = Math.min(raised, target);
-    progress.setAttribute('aria-label', 'Verified monthly support progress');
-    const scope = document.createElement('small');
-    scope.className = 'support-goal__scope';
-    scope.textContent = 'Verified one-time USD gifts, less refunds';
-    totals.textContent = dollars(raised) + ' of ' + dollars(target) + ' · ' + data.month_label;
-    goal.append(totals, progress, scope);
+    if (data.totals_verified === true) {
+      // Reconciled ledger month: show real month-to-date progress.
+      const raised = Math.max(0, data.raised_cents);
+      const progress = document.createElement('progress');
+      progress.className = 'support-goal__progress';
+      progress.max = target;
+      progress.value = Math.min(raised, target);
+      progress.setAttribute('aria-label', 'Verified monthly support progress');
+      const scope = document.createElement('small');
+      scope.className = 'support-goal__scope';
+      scope.textContent = 'Verified one-time USD gifts, less refunds';
+      totals.textContent = dollars(raised) + ' of ' + dollars(target) + ' · ' + data.month_label;
+      goal.append(totals, progress, scope);
+    } else {
+      // No reconciled ledger: state the target only. No raised amount is shown or implied.
+      goal.classList.add('support-goal--target-only');
+      totals.textContent = 'Monthly goal: ' + dollars(target) + ' · ' + data.month_label;
+      goal.append(totals);
+    }
     link.textContent = 'Support Read-Aloud';
     link.setAttribute('aria-label', 'Support Read-Aloud on Buy Me a Coffee');
     bar.insertBefore(goal, link);
     bar.classList.add('support-bar--goal');
-    // The public value is aggregated and never includes supporter details.
+    // Any published value is aggregated and never includes supporter details.
     return true;
   }
 
@@ -109,9 +137,13 @@
           data.experiment_id !== EXPERIMENT_ID || data.currency !== 'USD' ||
           data.data_scope !== 'verified_one_time_usd_donations' ||
           data.goals_cents?.B !== 5000 || data.goals_cents?.C !== 10000 ||
-          !Number.isSafeInteger(data.raised_cents) || data.raised_cents < 0 ||
+          typeof data.totals_verified !== 'boolean' ||
           data.month_label !== month || !Number.isFinite(asOf) ||
           asOf > now + 60000 || now - asOf > 300000) return;
+      // A claimed total must be a real integer amount; otherwise no total is published.
+      if (data.totals_verified
+        ? !Number.isSafeInteger(data.raised_cents) || data.raised_cents < 0
+        : data.raised_cents != null) return;
 
       const rollout = data.rollout_variant;
       // A winner takes priority over saved assignments and the experiment's time limit.

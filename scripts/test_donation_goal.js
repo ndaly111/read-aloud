@@ -60,13 +60,28 @@ const root = path.join(__dirname, '..');
   db.prepare('INSERT INTO donations VALUES (?, ?, ?, ?)').run('4', start - 1, 10000, 0);
   db.prepare('INSERT INTO donations VALUES (?, ?, ?, ?)').run('5', start, 125, 0);
   assert.equal((await (await goal()).json()).raised_cents, 650);
-  for (const overrides of [{ GOAL_DATA_VERIFIED: 'false' }, { GOAL_B_USD: '0.001' },
+  assert.equal((await (await goal()).json()).totals_verified, true);
+  for (const overrides of [{ GOAL_B_USD: '0.001' },
     { GOAL_B_USD: '100' }, { GOAL_C_USD: '50' }, { GOAL_C_USD: '' },
-    { SUPPORT_ROLLOUT_VARIANT: 'D' }, { GOAL_VERIFIED_MONTH: '2020-01' }, { DB: null }]) {
+    { SUPPORT_ROLLOUT_VARIANT: 'D' }]) {
     assert.equal((await (await goal(overrides)).json()).ready, false);
   }
-  for (const overrides of [{ ATTRIBUTION_VERIFIED: 'false' }, { EXPERIMENT_ENABLED: 'false' },
-    { EXPERIMENT_LAUNCH_UTC: new Date(Date.now() - 42 * 86400000).toISOString() }]) {
+  // An unreconciled ledger publishes the TARGET only: no raised figure, test still runs.
+  for (const overrides of [{ GOAL_DATA_VERIFIED: 'false' }, { GOAL_VERIFIED_MONTH: '2020-01' },
+    { GOAL_VERIFIED_MONTH: '' }, { DB: null }]) {
+    const unverified = await (await goal(overrides)).json();
+    assert.equal(unverified.ready, true);
+    assert.equal(unverified.totals_verified, false);
+    assert.equal(unverified.raised_cents, null);
+    assert.equal(unverified.experiment_active, true);
+    assert.deepEqual(unverified.goals_cents, { B: 5000, C: 10000 });
+  }
+  // Donation attribution is a reporting label, never a launch gate.
+  assert.equal((await (await goal({ ATTRIBUTION_VERIFIED: 'false' })).json()).experiment_active, true);
+  for (const overrides of [{ EXPERIMENT_ENABLED: 'false' },
+    { EXPERIMENT_LAUNCH_UTC: new Date(Date.now() - 42 * 86400000).toISOString() },
+    { EXPERIMENT_LAUNCH_UTC: '' },
+    { EXPERIMENT_LAUNCH_UTC: new Date(Date.now() + 86400000).toISOString() }]) {
     assert.equal((await (await goal(overrides)).json()).experiment_active, false);
   }
   assert.equal((await (await goal()).json()).rollout_variant, null);
@@ -81,12 +96,45 @@ const root = path.join(__dirname, '..');
     assert.equal(later.rollout_variant, variant);
     assert.equal(later.experiment_active, false);
   }
-  assert.equal((await (await goal({ SUPPORT_ROLLOUT_VARIANT: 'C', GOAL_DATA_VERIFIED: 'false' })).json()).ready, false);
+  const rolledOutUnverified = await (await goal({ SUPPORT_ROLLOUT_VARIANT: 'C', GOAL_DATA_VERIFIED: 'false' })).json();
+  assert.equal(rolledOutUnverified.ready, true);
+  assert.equal(rolledOutUnverified.totals_verified, false);
+  assert.equal(rolledOutUnverified.raised_cents, null);
   const response = await goal();
   assert.equal(response.headers.get('access-control-allow-origin'), 'https://read-aloud.com');
   assert.equal((await goal({}, 'https://untrusted.invalid')).headers.get('access-control-allow-origin'), null);
   assert(!JSON.stringify(db.prepare('SELECT * FROM donations').all()).includes('private'));
   assert(!JSON.stringify(await response.json()).includes('private'));
+  // Own aggregate counter: only known experiment/variant/event triples are recorded.
+  const post = (body, origin = 'https://read-aloud.com', overrides = {}) => worker.fetch(
+    new Request('https://test.invalid/event', { method: 'POST',
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+      headers: { Origin: origin, 'content-type': 'application/json' } }), { ...env, ...overrides });
+  const counted = (variant, event) => db.prepare(
+    'SELECT count FROM experiment_events WHERE variant = ? AND event = ?').get(variant, event)?.count ?? 0;
+  assert.equal((await post({ experiment_id: 'support_goal_2026_10', variant: 'B', event: 'view' })).status, 204);
+  assert.equal((await post({ experiment_id: 'support_goal_2026_10', variant: 'B', event: 'view' })).status, 204);
+  assert.equal((await post({ experiment_id: 'support_goal_2026_10', variant: 'B', event: 'click' })).status, 204);
+  assert.equal(counted('B', 'view'), 2);
+  assert.equal(counted('B', 'click'), 1);
+  for (const bad of [{ experiment_id: 'other', variant: 'B', event: 'view' },
+    { experiment_id: 'support_goal_2026_10', variant: 'D', event: 'view' },
+    { experiment_id: 'support_goal_2026_10', variant: 'B', event: 'donate' },
+    { experiment_id: 'support_goal_2026_10', variant: 'B' }, null, []]) {
+    assert.equal((await post(bad)).status, 400);
+  }
+  assert.equal((await post('{')).status, 400);
+  assert.equal((await post({ experiment_id: 'support_goal_2026_10', variant: 'B', event: 'view' },
+    'https://untrusted.invalid')).status, 403);
+  assert.equal((await post({ experiment_id: 'support_goal_2026_10', variant: 'B', event: 'view' },
+    'https://read-aloud.com', { DB: null })).status, 503);
+  assert.equal((await worker.fetch(new Request('https://test.invalid/event',
+    { headers: { Origin: 'https://read-aloud.com' } }), env)).status, 405);
+  assert.equal(counted('B', 'view'), 2);
+  assert.equal(counted('D', 'view'), 0);
+  // Counters hold no identifiers of any kind.
+  assert.deepEqual(Object.keys(db.prepare('SELECT * FROM experiment_events LIMIT 1').get()),
+    ['day', 'variant', 'event', 'count']);
   assert(Math.abs(fisherExact(1, 9, 11, 3) - 0.0027594561852200836) < 1e-9);
   const input = { launch_at: '2026-10-01T12:00:00Z', review_at: '2026-10-15T12:00:00Z',
     attribution_verified: true, unique_counts_verified: true, guardrails_ok: true,
@@ -103,6 +151,28 @@ const root = path.join(__dirname, '..');
   assert.equal(review({ ...input, variants: { ...input.variants, C: input.variants.B } }).winner, null);
   assert.throws(() => review({ ...input, variants: { A: input.variants.A, B: input.variants.B } }), /C:/);
   assert.equal(review({ ...input, attribution_verified: false }).winner, null);
+  // Click rate is the primary decision metric because BMC cannot attribute payments.
+  const clicky = { ...input, attribution_verified: false,
+    variants: { A: { exposed: 5000, clicks: 100, donors: null, net_cents: null },
+      B: { exposed: 5000, clicks: 300, donors: null, net_cents: null },
+      C: { exposed: 5000, clicks: 150, donors: null, net_cents: null } } };
+  assert.equal(review(clicky).decision, 'click_rate_winner');
+  assert.equal(review(clicky).winner, 'B');
+  assert.equal(Object.keys(review(clicky).click_comparisons).length, 3);
+  // Only a formal day 7/14/28/42 review can choose a winner.
+  assert.equal(review({ ...clicky, review_at: '2026-10-16T12:00:00Z' }).winner, null);
+  // Below the per-arm click floor nothing is decided, however large the ratio.
+  assert.equal(review({ ...clicky, variants: { A: { exposed: 300, clicks: 6, donors: null, net_cents: null },
+    B: { exposed: 300, clicks: 29, donors: null, net_cents: null },
+    C: { exposed: 300, clicks: 7, donors: null, net_cents: null } } }).winner, null);
+  // Impossible counts are reported, not silently compared.
+  const broken = review({ ...clicky, variants: { ...clicky.variants, B: { exposed: 5000, clicks: 5001, donors: null, net_cents: null } } });
+  assert.equal(broken.winner, null);
+  assert.deepEqual(broken.click_comparisons, {});
+  assert(broken.reasons.some(reason => reason.includes('exceed exposure events')));
+  // A verified donation winner still takes precedence over the click result.
+  assert.equal(review({ ...input, variants: { ...input.variants, B: { ...input.variants.B, clicks: 100 },
+    C: { ...input.variants.C, clicks: 300 } } }).decision, 'donation_conversion_winner');
   assert.equal(review({ ...input, review_at: '2026-10-16T12:00:00Z' }).winner, null);
   assert.equal(review({ ...input, guardrails_ok: false }).decision, 'stop_for_guardrail');
   assert.equal(review({ ...input, attribution_verified: false, review_at: '2026-11-12T12:00:00Z' }).decision, 'inconclusive');

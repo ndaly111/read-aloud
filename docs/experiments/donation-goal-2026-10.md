@@ -1,7 +1,11 @@
 # Monthly support goal test — operating record
 
-**Status: NOT LIVE / pending verification and approval (October 7, 2026).**
-Cloudflare backend deployed in disabled state; the public A/B/C trial has not started.
+**Status: READY TO LAUNCH, not yet live (October 8, 2026).** Every external dependency has
+been removed: the Worker counts exposures and clicks itself, and the two goal arms run in
+target-only mode without a reconciled ledger. Donation-level attribution is impossible at
+Buy Me a Coffee and is NOT claimed. Launch is two commands, listed under "Launch record".
+Kill switch after launch: set EXPERIMENT_ENABLED = "false" in
+worker/donation-goal/wrangler.toml and redeploy; everyone immediately sees appeal A.
 Experiment: support_goal_2026_10. Owner: Read-Aloud operator.
 Source: donation-experiment.js, donation-experiment.css, worker/donation-goal/,
 index.html. This file is the permanent experiment record; do not rely on chat context.
@@ -12,8 +16,13 @@ index.html. This file is the permanent experiment record; do not rely on chat co
 - C: same position, verified USD month-to-date progress toward a $100 goal.
 - Equal 1/3 random assignment across A/B/C. It persists for a tab session; only consenting
   visitors also retain the assignment in localStorage across visits.
-- Fail closed: if the verified goal API is unavailable, EVERYONE sees the
+- Fail closed: if the goal API is unavailable, malformed or stale, EVERYONE sees the
   original appeal, no enrollment or experiment tracking occurs.
+- Two display modes for B/C. With a reconciled ledger month the strip shows real
+  month-to-date progress toward the target. Without one it states the target only
+  ("Monthly goal: $50 - October 2026") and shows NO raised figure and no progress bar.
+  A missing ledger therefore delays the progress meter, not the experiment. No amount
+  is ever guessed, and `totals_verified` in the API response says which mode is live.
 - Enrollment also requires an explicit launch timestamp, experiment enable
   switch and verified attribution switch. It ends automatically at day 42.
 - A verified winner can be rolled out at any formal review. The winner switch
@@ -33,23 +42,43 @@ index.html. This file is the permanent experiment record; do not rely on chat co
   not claims that monthly expenses equal $50 or $100.
 
 ## Mandatory pre-launch tasks
-- [ ] Owner approves the final visitor-facing words and Latest updates entry,
-      as required by CLAUDE.md. Branch/PR is not a live launch.
+- [ ] Owner launches with the two commands in "Launch record" and reviews the deployed
+      copy under "Draft release wording" below. The Latest updates entry has NOT been
+      published; any copy change needs a homepage deploy.
 - [x] Owner selected two fundraising targets, $50 and $100, on October 7, 2026.
       Do not claim either is an exact expense amount or invent separate balances.
-- [ ] Check wording/privacy (including existing "no tracking" claim).
+- [x] Wording/privacy checked. The control strip's "No ads, no tracking" claim was FALSE
+      (AdSense and GA4 both run on the homepage) and was removed on October 8, 2026; the
+      control now reads "Free for everyone - there's just a server bill...". privacy.html
+      documents the experiment, the own-server counters and the two goal display modes.
 - [x] Create Cloudflare D1 database, initialize schema and deploy disabled Worker.
-- [ ] Connect signed BMC webhook and verify deliveries; see below.
+- [ ] Connect signed BMC webhook and verify deliveries; see below. NOT a launch blocker
+      any more - it only switches B/C from target-only to a progress meter.
 - [ ] Reconcile this month's successful USD one-time gifts and refunds to
-      a known cutoff before enabling the public goal. Audit after each refund.
-- [ ] Validate completed-donation attribution by variant. Buy Me a Coffee
-      webhook documentation does NOT include experiment variant data.
-      A click or overall donations total is not an attributed conversion.
-- [ ] Add GA4 event-scoped custom dimensions experiment_id and variant_id;
-      verify both donation_experiment_view and donation_experiment_click.
-- [ ] QA desktop/mobile, keyboard, consent/no consent, offline goal endpoint,
-      ad blockers, slow network, real donation, refund and TTS playback.
-- [ ] Record LIVE launch timestamp and populate ledger below.
+      a known cutoff before showing a progress meter. Audit after each refund.
+- [x] RESOLVED as impossible, October 8, 2026. Every field in BMC's published webhook
+      schema was enumerated from
+      https://cdn.buymeacoffee.com/assets/integrations/bmc-webhooks-openapi.json:
+      DonationData carries id, object, transaction_id, status, refunded, amount,
+      coffee_count, coffee_price, currency, total_amount_charged, application_fee,
+      support_type, message, created_at, refunded_at plus supporter fields. There is NO
+      referrer, source, campaign or UTM field, so a payment cannot be joined to a variant.
+      Donation-level results are therefore reported as NA, permanently, unless BMC adds
+      such a field. A click is intent, not revenue - see Metrics.
+- [x] Replaced by the experiment's own counters, October 8, 2026. GA4 event-scoped custom
+      dimensions are not retroactive and need console access, and ad blockers drop gtag
+      outright, so GA4 could not be the measurement of record. The page now also POSTs
+      each exposure/click to the Worker's /event endpoint, which keeps one aggregate row
+      per day/variant/event in D1. The gtag events still fire; register the two custom
+      dimensions in GA4 any time for a second, partial read.
+- [x] Automated QA green on October 8, 2026: scripts/test_donation_goal.js and
+      scripts/e2e_donation_experiment.js (control/$50/$100, target-only mode, winner
+      rollout, random allocation, blocked storage, consent changes, 320/375/768px,
+      stale/malformed payloads, 4s timeout, own-counter beacons), plus the existing
+      reader lifecycle, speech segment, playback diagnostics and feedback suites.
+      A real donation and refund still need to be observed once the webhook is connected.
+- [ ] Record the LIVE launch timestamp under "Launch record" and populate the ledger
+      table at each formal look.
 
 ## Verified live-goal setup
 1. D1 `read-aloud-donations` is provisioned and bound in wrangler.toml:
@@ -117,13 +146,19 @@ BMC automatically disables delivery after repeated failures; inspect its deliver
 history regularly. A dashboard test cannot change the public total.
 
 ## Metrics and decision rules
-Primary outcome, ONLY when an actual BMC completed-payment -> variant join
-has been independently validated: unique completed donors per unique exposed user.
-Count a donor once in each arm; multiple payments are not independent conversions.
-Report net USD per 1,000 unique exposed users separately for A, B and C. A Fisher
-test of donor conversion does not establish statistical significance for revenue.
+**Primary outcome (the one that decides this test): support-link click rate**, measured
+as /event `click` counts divided by /event `view` counts, per variant. Numerator and
+denominator come from the same event stream under equal 1/3 random allocation, so the
+comparison is like-for-like. Repeat visits make these events non-independent, which makes
+the Fisher p-value anti-conservative; the Bonferroni threshold plus a required 20% minimum
+lift and a 30-click-per-arm floor stand in for that. A click is measured intent to support,
+NOT revenue - before any rollout, check that the account's monthly total did not fall.
 
-Secondary: donation-button clickthrough for A, B and C (diagnostic only).
+Secondary outcome, available ONLY if BMC ever exposes a completed-payment -> variant join:
+unique completed donors per unique exposed user. Count a donor once in each arm; multiple
+payments are not independent conversions. Report net USD per 1,000 unique exposed users
+separately for A, B and C. A Fisher test of donor conversion does not establish
+statistical significance for revenue. A verified donation winner outranks the click result.
 Buy Me a Coffee documents a GA4 integration for page traffic, but its setup guide
 does not promise completed-payment events or variant attribution. Connecting GA4
 alone does not resolve that requirement: validate an actual completed-payment join.
@@ -140,13 +175,12 @@ events, clicks, modeled users or unrelated site traffic. Compare
 consistent denominators and exclude tests; never send pasted text,
 filenames or donor personal details.
 
-**Attribution blocker:** The BMC webhook goal is the aggregate of ALL
-eligible account donations, regardless of site variant or outside source.
-It cannot prove which appeal caused any payment. Explore BMC's GA4
-integration and test end-to-end campaign attribution through a real
-completed purchase before drawing donation efficacy conclusions. If
-unavailable, the test can compare clicks but donation result is
-INCONCLUSIVE, not a winner for any variant.
+**Attribution blocker, now closed as impossible:** The BMC webhook total is the aggregate
+of ALL eligible account donations, regardless of site variant or outside source, and the
+published webhook schema has no referrer/source/campaign/UTM field (every field enumerated
+in the pre-launch checklist above). No payment can be joined to a variant. The donation
+result is therefore permanently NA for this test, and the decision runs on click rate.
+Do not re-litigate this without a new BMC field or a different payment processor.
 
 Fixed formal looks after launch: day 7, 14, 28, and 42. Check basic
 health on day 1 and review payment reconciliation every 2–3 days.
@@ -161,7 +195,16 @@ do not treat the end of six calendar reminders as six weeks of experiment data.
 
 Stop immediately for false published totals, privacy issues,
 misleading claims, consent regressions or playback failures.
-For an early DONATION winner on a formal look, require all of:
+For an early CLICK-RATE winner on a formal look (the live decision rule), require all of:
+- At least 30 click events IN EACH arm.
+- The candidate beats BOTH other variants by at least 20% in click rate.
+- Two-sided Fisher exact p < 0.05/12 (approximately 0.004167) for BOTH candidate
+  comparisons, with no material guardrail regressions.
+- Both weekday/weekend traffic represented.
+- The account's month-to-date donation total has not fallen versus the prior period.
+  This is a sanity check on the click metric, not an attributed measurement.
+
+For an early DONATION winner on a formal look (only if BMC attribution ever exists):
 - Verified per-variant completed payment attribution and comparable
   unique exposure denominators.
 - At least 15 unique completed donors IN EACH arm.
@@ -172,7 +215,7 @@ For an early DONATION winner on a formal look, require all of:
 - Both weekday/weekend traffic represented.
 
 If criteria are unmet: continue to next scheduled checkpoint; don't
-stop on clicks or an exciting graph. At 42 days declare inconclusive
+stop on a partial look or an exciting graph. At 42 days declare inconclusive
 if underpowered or attribution unavailable; default to the existing
 less intrusive version and design the next smaller test. If a winner
 is genuinely verified, roll it out, remove experiment allocation, preserve
@@ -213,7 +256,7 @@ for both arms. `clicks` counts click events and can exceed exposed users.
 
 ```json
 {
-  "launch_at": "ACTUAL ISO UTC LAUNCH TIMESTAMP",
+  "launch_at": "THE EXPERIMENT_LAUNCH_UTC VALUE ACTUALLY DEPLOYED",
   "review_at": "ACTUAL ISO UTC REVIEW TIMESTAMP",
   "attribution_verified": false,
   "unique_counts_verified": false,
@@ -227,12 +270,25 @@ for both arms. `clicks` counts click events and can exceed exposed users.
 }
 ```
 
+Pull the counts straight from the experiment's own counters (operator machine, Cloudflare
+login required). `exposed` is the `view` count and `clicks` is the `click` count per variant:
+
+```powershell
+cd C:/Users/ndaly/read-aloud-work/worker/donation-goal
+npx wrangler d1 execute read-aloud-donations --remote --command "SELECT variant, event, SUM(count) AS n FROM experiment_events GROUP BY variant, event ORDER BY variant, event"
+```
+
+Use `rollout_view`/`rollout_click` rows only for post-rollout monitoring; never mix them
+into the A/B/C counts. Leave `donors` and `net_cents` null - BMC cannot attribute payments.
+
 Run `node scripts/review_donation_experiment.js <aggregate-review.json>`.
-The command validates counts, calculates a two-sided Fisher exact p-value,
-applies all three-comparison/four-look stopping criteria, and prints a decision and next review
-timestamp calculated from the actual launch. It refuses invalid denominators,
-never chooses a winner on clicks and returns inconclusive after day 42 when
-criteria remain unmet. A guardrail failure stops the experiment immediately.
+The command validates counts, calculates two-sided Fisher exact p-values for clicks and
+(when supplied) donations, applies all three-comparison/four-look stopping criteria, and
+prints a decision and next review timestamp calculated from the actual launch. It refuses
+invalid denominators, refuses click counts that exceed exposure counts, reports
+`click_rate_winner` only at a formal look under every criterion above, prefers a verified
+`donation_conversion_winner` when attribution exists, and returns inconclusive after
+day 42 when criteria remain unmet. A guardrail failure stops the experiment immediately.
 Only formal day 7/14/28/42 reviews can choose a winner that beats both other variants; other runs
 are health checks. Rollout still requires evaluating revenue and usability.
 
@@ -257,10 +313,11 @@ stale/malformed data and a request timeout.
 
 Activation checklist:
 - Approved targets: B=$50 and C=$100, October 7, 2026. A retains the existing appeal.
-- Verified ledger month, sum, reconciliation timestamp: TBD.
-- Attribution join mechanism/verification: TBD.
-- GA custom dimensions: TBD.
-- Live deployment date: TBD.
+- Verified ledger month, sum, reconciliation timestamp: NONE. B/C run in target-only mode.
+- Attribution join mechanism: NONE AND IMPOSSIBLE (BMC schema has no source field).
+- Measurement of record: Worker /event aggregate counters in D1 `experiment_events`.
+  GA4 dimensions optional and unregistered.
+- Live deployment date: PENDING (see Launch record).
 
 ## Draft release wording — approval pending
 
@@ -311,7 +368,56 @@ webhook delivery, opening ledger and completed-payment attribution remain pendin
 No homepage deployment or launch timestamp was set. BMC is signed out in both
 inspected browser sessions; a login tab was opened for the owner to continue.
 
+## Launch record
+
+Launch timestamp: NOT YET LAUNCHED.
+
+All code, tests, counters and documentation are complete on branch
+`experiment/monthly-support-goal-202610` (PR #51). Launching takes two owner actions,
+in this order. The site is safe in between: with the currently deployed Worker response
+the homepage shows appeal A to everyone, because the client requires the new
+`totals_verified` field.
+
+1. Deploy the homepage. Merge PR #51 into `main`; Cloudflare Pages deploys from `main`.
+   Confirm https://read-aloud.com/donation-experiment.js serves the new file and the
+   support strip still reads "Free for everyone".
+2. Start the experiment. In `worker/donation-goal/wrangler.toml` set
+   `EXPERIMENT_ENABLED = "true"` and `EXPERIMENT_LAUNCH_UTC` to the current ISO UTC
+   timestamp, then:
+
+   ```powershell
+   cd C:/Users/ndaly/read-aloud-work/worker/donation-goal
+   npx wrangler d1 execute read-aloud-donations --remote --file schema.sql
+   npx wrangler deploy
+   ```
+
+   The `d1 execute` line creates the new `experiment_events` counter table; it is safe to
+   re-run because every statement in schema.sql is `IF NOT EXISTS`. Then check that
+   `curl https://read-aloud-donation-goal.ndaly111.workers.dev/goal -H "Origin: https://read-aloud.com"`
+   returns `"ready":true`, `"experiment_active":true`, `"totals_verified":false` and
+   `"raised_cents":null`, load the homepage a few times to see all three appeals, and
+   record the deployed timestamp here plus in the Ledger table.
+
+Optional and independent of launch: install the BMC webhook secret and reconcile an
+opening ledger (steps 3-8 of "Verified live-goal setup") to upgrade B/C from
+target-only to a live progress meter. The experiment does not wait for it.
+
 ## Decision log
+2026-10-08 — Removed every blocker that could not be cleared. (1) BMC's published
+webhook schema was enumerated field by field: there is no referrer/source/campaign/UTM
+field, so the "validate completed-payment attribution" prerequisite was unsatisfiable and
+the test would never have launched. Donation results are now permanently NA and the PRIMARY
+metric is support-click rate. (2) GA4 event-scoped custom dimensions are not retroactive,
+need console access and are dropped by ad blockers, so the Worker now counts its own
+aggregate exposures and clicks in D1 `experiment_events` — no console task, no lost
+data, no identifiers. (3) B/C no longer need a reconciled ledger to run: without one they
+state the target amount only and publish no raised figure, so the webhook/ledger work
+upgrades the display later instead of blocking the launch. (4) The control strip's
+"No ads, no tracking" claim was false — AdSense and GA4 both run on the homepage — and
+was removed; privacy.html documents the counters and both goal display modes. Full unit,
+SQLite, signature, browser and existing reader suites pass. Launch remains an owner action
+(the two commands above).
+
 2026-10-07 — Owner selected $50 and $100 targets in addition to the original
 appeal. Updated allocation to equal thirds, the API and analytics variants,
 the ledger and review input to include C, and early-stop correction to twelve

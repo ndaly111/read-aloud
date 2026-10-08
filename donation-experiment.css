@@ -26,3 +26,8 @@
   }
 }
 #supportBar .support-goal__scope { font-size: 0.65rem; }
+/* Target-only mode: no verified ledger, so no progress element is rendered. */
+#supportBar .support-goal--target-only {
+  flex: 0 1 auto;
+  min-width: 0;
+}

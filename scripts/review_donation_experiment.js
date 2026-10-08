@@ -3,6 +3,8 @@ const fs = require('node:fs');
 const VARIANTS = ['A', 'B', 'C'];
 const PAIRS = [['A', 'B'], ['A', 'C'], ['B', 'C']];
 const ALPHA = 0.05 / (4 * PAIRS.length);
+// Floor per arm before a click-rate comparison can decide anything.
+const MIN_CLICKS = 30;
 
 function fisherExact(a, b, c, d) {
   const n = a + b + c + d;
@@ -33,7 +35,7 @@ function review(input) {
     experiment_id: 'support_goal_2026_10', day,
     formal_review: formal, decision: 'continue', winner: null,
     next_review_at: nextDay ? new Date(launch + nextDay * 86400000).toISOString() : null,
-    reasons: [], metrics: {}, comparisons: {}, significance_threshold: ALPHA,
+    reasons: [], metrics: {}, comparisons: {}, click_comparisons: {}, significance_threshold: ALPHA,
   };
   if (input.guardrails_ok === false) {
     result.decision = 'stop_for_guardrail';
@@ -58,8 +60,28 @@ function review(input) {
       net_usd_per_1000_exposed: arm.net_cents == null ? null : arm.net_cents * 10 / arm.exposed,
     };
   }
+  // Click rate is the PRIMARY decision metric: Buy Me a Coffee's webhook payload has no
+  // variant or referrer field, so a payment-to-variant join may never become available.
+  // Numerator and denominator are both experiment events from the same stream under equal
+  // random allocation. Repeat visits make these events non-independent, so the Bonferroni
+  // threshold plus a minimum lift stand in for that; a click is intent, not revenue.
+  const clickable = VARIANTS.every(variant => input.variants[variant].clicks <= input.variants[variant].exposed);
+  if (clickable) {
+    for (const [left, right] of PAIRS) {
+      const a = input.variants[left], b = input.variants[right];
+      const rateA = a.clicks / a.exposed, rateB = b.clicks / b.exposed;
+      const low = Math.min(rateA, rateB), high = Math.max(rateA, rateB);
+      result.click_comparisons[left + '_' + right] = {
+        p_value: fisherExact(a.clicks, a.exposed - a.clicks, b.clicks, b.exposed - b.clicks),
+        relative_lift: low === 0 ? null : high / low - 1,
+        higher_rate_variant: rateA === rateB ? null : rateB > rateA ? right : left,
+      };
+    }
+  } else {
+    result.reasons.push('Click events exceed exposure events in at least one arm; fix the event counts before any click comparison.');
+  }
   if (!complete || input.attribution_verified !== true || input.unique_counts_verified !== true) {
-    result.reasons.push('Completed-payment attribution or comparable unique-user counts are unverified. Clicks cannot establish a donation winner.');
+    result.reasons.push('Completed-payment attribution or comparable unique-user counts are unverified, so no DONATION winner can be declared; the click-rate test below decides instead.');
   } else {
     for (const [left, right] of PAIRS) {
       const a = input.variants[left], b = input.variants[right];
@@ -88,6 +110,27 @@ function review(input) {
       return result;
     }
     result.reasons.push('The complete set of planned early-stop criteria has not passed.');
+  }
+  // Click-rate decision. Runs whether or not donation attribution exists, and never
+  // overrides a verified donation winner decided above.
+  if (clickable) {
+    const best = VARIANTS.reduce((winner, variant) =>
+      result.metrics[variant].click_events_per_exposed > result.metrics[winner].click_events_per_exposed ? variant : winner);
+    const beatsEveryOtherArm = PAIRS.filter(pair => pair.includes(best)).every(pair => {
+      const comparison = result.click_comparisons[pair.join('_')];
+      return comparison.higher_rate_variant === best && comparison.relative_lift >= 0.20 &&
+        comparison.p_value < ALPHA;
+    });
+    const qualifies = formal && VARIANTS.every(variant => input.variants[variant].clicks >= MIN_CLICKS) &&
+      beatsEveryOtherArm && input.guardrails_ok === true && input.weekday_weekend_represented === true;
+    if (qualifies) {
+      result.decision = 'click_rate_winner';
+      result.winner = best;
+      result.reasons.push('The winner beat both other variants on support-click rate under the three-comparison, four-review criteria. This is measured intent, not verified donation revenue; check the account total did not fall before rollout.');
+      return result;
+    }
+    result.reasons.push('No variant has met the click-rate early-stop criteria (at least ' + MIN_CLICKS +
+      ' click events per arm, a 20% lift over BOTH other arms and p < ' + ALPHA.toFixed(6) + ' on both comparisons at a formal review).');
   }
   if (day >= 42) {
     result.decision = 'inconclusive';

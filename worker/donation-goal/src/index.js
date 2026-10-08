@@ -29,7 +29,7 @@ async function currentGoal(env, request) {
     return json({ ready: false }, 200, headers);
   }
   // Fixed owner-selected targets; changing them mid-test invalidates the design.
-  if (env.GOAL_DATA_VERIFIED !== 'true' || !env.DB || goals.B !== 5000 || goals.C !== 10000) {
+  if (goals.B !== 5000 || goals.C !== 10000) {
     return json({ ready: false }, 200, headers);
   }
   const today = new Date();
@@ -38,25 +38,30 @@ async function currentGoal(env, request) {
   const month = year + '-' + String(monthNum + 1).padStart(2, '0');
   const start = Date.UTC(year, monthNum, 1) / 1000;
   const end = Date.UTC(year, monthNum + 1, 1) / 1000;
-  // Each opening ledger must be reconciled. A new month fails closed until verified.
-  // Import individual payment facts rather than an aggregate balance so late refunds
-  // and webhook retries can update the same transaction without double counting.
-  if (env.GOAL_VERIFIED_MONTH !== month) {
-    return json({ ready: false }, 200, headers);
+  // A progress total is published ONLY for a reconciled ledger month. Import individual
+  // payment facts rather than an aggregate balance so late refunds and webhook retries
+  // can update the same transaction without double counting. Without a verified ledger
+  // the goal amount still shows, with no raised figure at all - never a guessed one.
+  let raised = null;
+  if (env.DB && env.GOAL_DATA_VERIFIED === 'true' && env.GOAL_VERIFIED_MONTH === month) {
+    const row = await env.DB.prepare(
+      'SELECT COALESCE(SUM(amount_cents), 0) AS cents FROM donations ' +
+      'WHERE created_at >= ? AND created_at < ? AND refunded = 0'
+    ).bind(start, Math.min(end, Math.floor(today.getTime() / 1000) + 1)).first();
+    raised = Number(row?.cents || 0);
+    if (!Number.isSafeInteger(raised) || raised < 0) return json({ ready: false }, 200, headers);
   }
-  const row = await env.DB.prepare(
-    'SELECT COALESCE(SUM(amount_cents), 0) AS cents FROM donations ' +
-    'WHERE created_at >= ? AND created_at < ? AND refunded = 0'
-  ).bind(start, Math.min(end, Math.floor(today.getTime() / 1000) + 1)).first();
-  const raised = Number(row?.cents || 0);
-  if (!Number.isSafeInteger(raised) || raised < 0) return json({ ready: false }, 200, headers);
   const launch = Date.parse(env.EXPERIMENT_LAUNCH_UTC || '');
-  const active = !rollout && env.EXPERIMENT_ENABLED === 'true' && env.ATTRIBUTION_VERIFIED === 'true' &&
+  // Donation-level ATTRIBUTION is a reporting label, not a launch gate: Buy Me a Coffee's
+  // webhook payload carries no variant/referrer field, so a payment join may never exist.
+  // The measurable per-variant outcome is the support click, so the test runs on that.
+  const active = !rollout && env.EXPERIMENT_ENABLED === 'true' &&
     Number.isFinite(launch) && launch <= today.getTime() && today.getTime() - launch < 42 * 86400000;
   return json({
     ready: true, currency: 'USD',
     month_label: new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(today),
     goals_cents: goals,
+    totals_verified: raised !== null,
     raised_cents: raised,
     data_scope: 'verified_one_time_usd_donations',
     experiment_id: 'support_goal_2026_10',
@@ -65,6 +70,30 @@ async function currentGoal(env, request) {
     launch_at: Number.isFinite(launch) ? new Date(launch).toISOString() : null,
     as_of: today.toISOString()
   }, 200, headers);
+}
+const EVENT_NAMES = new Set(['view', 'click', 'rollout_view', 'rollout_click']);
+const VARIANTS = new Set(['A', 'B', 'C']);
+// Own-counter exposure/click logging. GA4 event-scoped custom dimensions are not
+// retroactive and are blocked by ad blockers, so the experiment counts its own
+// aggregate events here. Stored per day/variant/event only - no identifiers at all.
+async function recordEvent(request, env) {
+  const headers = publicHeaders(request);
+  if (!headers['access-control-allow-origin']) return new Response('Forbidden', { status: 403 });
+  if (!env.DB) return new Response('Not configured', { status: 503 });
+  if (Number(request.headers.get('content-length')) > 256) return new Response('Too large', { status: 413 });
+  let body;
+  try { body = await request.json(); }
+  catch (_) { return new Response('Invalid JSON', { status: 400 }); }
+  if (!body || typeof body !== 'object' || body.experiment_id !== 'support_goal_2026_10' ||
+      !VARIANTS.has(body.variant) || !EVENT_NAMES.has(body.event)) {
+    return new Response('Invalid event', { status: 400, headers });
+  }
+  const day = new Date().toISOString().slice(0, 10);
+  await env.DB.prepare(
+    'INSERT INTO experiment_events (day, variant, event, count) VALUES (?, ?, ?, 1) ' +
+    'ON CONFLICT(day, variant, event) DO UPDATE SET count = experiment_events.count + 1'
+  ).bind(day, body.variant, body.event).run();
+  return new Response(null, { status: 204, headers });
 }
 async function processWebhook(request, env) {
   if (!env.DB || !env.BMC_WEBHOOK_SECRET) return new Response('Not configured', { status: 503 });
@@ -138,6 +167,17 @@ export default {
       if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
       try { return await currentGoal(env, request); }
       catch (_) { return json({ ready: false }, 503, publicHeaders(request)); }
+    }
+    if (url.pathname === '/event') {
+      if (request.method === 'OPTIONS') return new Response(null, {
+        status: 204,
+        headers: { ...publicHeaders(request), 'access-control-allow-methods': 'POST, OPTIONS',
+          'access-control-allow-headers': 'content-type' }
+      });
+      if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+      // A counter failure must never affect the page or the reading tool.
+      try { return await recordEvent(request, env); }
+      catch (_) { return new Response(null, { status: 204, headers: publicHeaders(request) }); }
     }
     if (url.pathname === '/webhook' && request.method === 'POST') {
       try { return await processWebhook(request, env); }

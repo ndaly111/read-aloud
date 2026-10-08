@@ -18,7 +18,7 @@ const server = http.createServer((req, res) => {
 });
 const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'support_goal_2026_10',
   currency: 'USD', data_scope: 'verified_one_time_usd_donations', goals_cents: { B: 5000, C: 10000 },
-  raised_cents: 4250, month_label: new Intl.DateTimeFormat('en-US', {
+  totals_verified: true, raised_cents: 4250, month_label: new Intl.DateTimeFormat('en-US', {
     month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date()),
   as_of: new Date().toISOString(), launch_at: new Date(Date.now() - 86400000).toISOString() });
 
@@ -33,6 +33,7 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
       const context = await browser.newContext({ viewport: { width, height: 900 } });
       const page = await context.newPage();
       const errors = [];
+      const beacons = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.addInitScript(({ variant, consent, blocked, seed, rejectByte }) => {
         window.testEvents = [];
@@ -55,6 +56,10 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
       await page.route('**/*', async route => {
         const host = new URL(route.request().url()).hostname;
         if (host === 'read-aloud-donation-goal.ndaly111.workers.dev') {
+          if (new URL(route.request().url()).pathname === '/event') {
+            try { beacons.push(JSON.parse(route.request().postData() || 'null')); } catch (_) { beacons.push('unparseable'); }
+            return route.fulfill({ status: 204, headers: { 'Access-Control-Allow-Origin': '*' }, body: '' });
+          }
           if (slow) { await new Promise(resolve => setTimeout(resolve, 4500)); return route.abort().catch(() => {}); }
           return route.fulfill({ contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(payload) });
         }
@@ -62,14 +67,16 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
         return route.continue();
       });
       await page.goto(url);
-      return { page, context, errors };
+      return { page, context, errors, beacons };
     }
     const a = await scenario({ variant: 'A' });
     await a.page.waitForFunction(() => document.querySelector('#supportBar').dataset.donationVariant === 'A');
     const original = await a.page.locator('#supportBar .msg').textContent();
-    assert(original.startsWith('No ads, no tracking'));
+    assert(original.startsWith('Free for everyone'));
     assert.equal(await a.page.locator('.support-goal').count(), 0);
     assert.equal(await a.page.locator('.coffeeBtn').textContent(), 'Buy me a coffee');
+    await a.page.waitForTimeout(250);
+    assert.deepEqual(a.beacons, [{ experiment_id: 'support_goal_2026_10', variant: 'A', event: 'view' }]);
     const b = await scenario({ consent: 'accepted' });
     await b.page.waitForFunction(() => document.querySelector('progress')?.value === 4250);
     assert((await b.page.locator('.support-goal__totals').textContent()).startsWith('$42.50 of $50'));
@@ -79,6 +86,13 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
     assert.equal((await b.page.evaluate(() => testEvents.filter(event => event[1] === 'donation_experiment_view'))).length, 1);
     await b.page.locator('.coffeeBtn').dispatchEvent('click');
     assert.equal((await b.page.evaluate(() => testEvents.filter(event => event[1] === 'donation_experiment_click'))).length, 1);
+    // The experiment's own aggregate counter receives one view and one click, no identifiers.
+    await b.page.waitForFunction(() => true);
+    await b.page.waitForTimeout(250);
+    assert.deepEqual(b.beacons, [
+      { experiment_id: 'support_goal_2026_10', variant: 'B', event: 'view' },
+      { experiment_id: 'support_goal_2026_10', variant: 'B', event: 'click' },
+    ]);
     await b.page.evaluate(() => {
       localStorage.setItem('ra_cookie_consent', 'rejected');
       window.dispatchEvent(new CustomEvent('ra-consent-change', { detail: 'rejected' }));
@@ -149,6 +163,24 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
       assert.equal(await funded.page.locator('#supportBar').evaluate(el => el.scrollWidth > el.clientWidth + 1), false);
       await funded.context.close();
     }
+    // No reconciled ledger: both goal arms state the target and show no progress bar.
+    for (const variant of ['B', 'C']) {
+      const targetOnly = await scenario({ variant, consent: 'accepted',
+        payload: { ...goal(), totals_verified: false, raised_cents: null } });
+      await targetOnly.page.waitForFunction(expected =>
+        document.querySelector('#supportBar').dataset.donationVariant === expected, variant);
+      assert.equal(await targetOnly.page.locator('.support-goal__progress').count(), 0);
+      assert.equal(await targetOnly.page.locator('.support-goal__scope').count(), 0);
+      assert.equal(await targetOnly.page.locator('.support-goal--target-only').count(), 1);
+      assert.equal(await targetOnly.page.locator('.support-goal__totals').textContent(),
+        'Monthly goal: ' + (variant === 'B' ? '$50' : '$100') + ' · ' + goal().month_label);
+      assert.equal(await targetOnly.page.locator('.coffeeBtn').textContent(), 'Support Read-Aloud');
+      assert.equal(await targetOnly.page.locator('.coffeeBtn').getAttribute('href'), 'https://coff.ee/readaloud');
+      assert.equal((await targetOnly.page.evaluate(() => testEvents.filter(event => event[1] === 'donation_experiment_view'))).length, 1);
+      assert.equal(await targetOnly.page.locator('#supportBar').evaluate(el => el.scrollWidth > el.clientWidth + 1), false);
+      assert.deepEqual(targetOnly.errors, []);
+      await targetOnly.context.close();
+    }
     for (const width of [320, 375, 768]) {
       const mobile = await scenario({ width });
       await mobile.page.waitForFunction(() => !!document.querySelector('.support-goal'));
@@ -164,12 +196,17 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
       { ...goal(), launch_at: new Date(Date.now() - 42 * 86400000).toISOString() },
       { ...goal(), as_of: '2020-01-01T00:00:00Z' }, { ...goal(), month_label: 'January 2020' },
       { ...goal(), raised_cents: -1 }, { ...goal(), goals_cents: { B: 0, C: 10000 } },
+      { ...goal(), totals_verified: false }, { ...goal(), totals_verified: 'yes' },
+      // The previously deployed Worker omitted totals_verified entirely.
+      (({ totals_verified, ...rest }) => rest)(goal()),
+      { ...goal(), totals_verified: true, raised_cents: null },
       { ...goal(), goals_cents: { B: 5000 } }, { ...goal(), goals_cents: { B: 5000, C: 5000 } }, null]) {
       const inactive = await scenario({ payload });
       await inactive.page.waitForLoadState('networkidle');
       assert.equal(await inactive.page.locator('#supportBar .msg').textContent(), original);
       assert.equal(await inactive.page.locator('#supportBar').getAttribute('data-donation-variant'), null);
       assert.equal((await inactive.page.evaluate(() => testEvents.filter(event => event[0] === 'event'))).length, 0);
+      assert.deepEqual(inactive.beacons, []);
       assert.deepEqual(inactive.errors, []);
       await inactive.context.close();
     }
