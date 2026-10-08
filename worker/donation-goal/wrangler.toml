@@ -7,9 +7,10 @@ compatibility_date = "2026-10-07"
 [vars]
 GOAL_USD = ""
 GOAL_DATA_VERIFIED = "false"
-BASELINE_MONTH = ""
-BASELINE_CENTS = "0"
-BASELINE_THROUGH_UNIX = "0"
+GOAL_VERIFIED_MONTH = ""
+EXPERIMENT_ENABLED = "false"
+EXPERIMENT_LAUNCH_UTC = ""
+ATTRIBUTION_VERIFIED = "false"
 
 # After "npx wrangler d1 create read-aloud-donations", add the returned database ID:
 # [[d1_databases]]

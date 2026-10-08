@@ -12,6 +12,13 @@ index.html. This file is the permanent experiment record; do not rely on chat co
   visitors also retain the assignment in localStorage across visits.
 - Fail closed: if the verified goal API is unavailable, EVERYONE sees the
   original appeal, no enrollment or experiment tracking occurs.
+- Enrollment also requires an explicit launch timestamp, experiment enable
+  switch and verified attribution switch. It ends automatically at day 42.
+- Goal requests time out after four seconds. Responses must be current within
+  five minutes and refer to the current UTC month. A new month requires a
+  fresh ledger reconciliation before the progress display resumes.
+- Accepting analytics consent retains the current assignment; rejecting or
+  resetting it removes the saved assignment, including changes in another tab.
 - No change to the text-to-speech tool, prices, donations flow or advertising.
 - Hypothesis: B increases completed eligible contributions per exposed user.
 
@@ -42,24 +49,50 @@ index.html. This file is the permanent experiment record; do not rely on chat co
    https://read-aloud-donation-goal.ndaly111.workers.dev/goal.
 5. Buy Me a Coffee -> Integrations -> Webhooks: register Worker /webhook,
    subscribe donation.created and donation.refunded; test event must not count.
-6. Verify dashboard paid one-time donations in USD, net of refunds.
-   Set BASELINE_MONTH (YYYY-MM), BASELINE_CENTS and
-   BASELINE_THROUGH_UNIX to the verified amount and cutoff, to avoid
-   counting earlier contributions twice. Record these values below.
-7. Set GOAL_USD to the approved actual target, GOAL_DATA_VERIFIED to true;
-   redeploy and verify GET /goal returns ready true and accurate total.
+6. Import this month's individual paid one-time USD payment facts into D1
+   (id, original created_at Unix seconds, amount_cents, refunded 0/1).
+   Include refunded payments; compare the sum of unrefunded payments with
+   the dashboard. Do not store names, emails, messages or raw webhook bodies.
+   Use the BMC payment data.id as the primary key, not the webhook event ID.
+   Importing a verified opening ledger uses the same rows as future webhooks;
+   a late refund therefore reduces the total and a retry adds nothing.
+   Do not use a lump-sum baseline: it cannot handle individual late refunds.
+7. Set GOAL_USD to the approved actual target, GOAL_VERIFIED_MONTH to the
+   reconciled UTC YYYY-MM and GOAL_DATA_VERIFIED to true. Redeploy and verify
+   GET /goal returns ready:true and an accurate total. The experiment remains
+   inactive until all other launch tasks are complete.
 8. Verify the next real donation/retry/refund matches the dashboard.
    Donations in non-USD currencies and recurring subscription activity are
    NOT yet included in the goal API. Reconcile those externally and label
    the claim accurately. The database stores no supporter names/emails.
-9. On each new UTC month, verify the opening amount and reconcile the
-   previous month's late refunds. Kill switch if totals become uncertain:
-   set GOAL_DATA_VERIFIED=false and redeploy.
+9. After completed-payment attribution is independently verified, set
+   ATTRIBUTION_VERIFIED=true, EXPERIMENT_ENABLED=true and
+   EXPERIMENT_LAUNCH_UTC to the actual launch timestamp, e.g. an ISO UTC value
+   ending in Z. Redeploy and verify experiment_active:true. Record launch below.
+   UTM parameters, link clicks and donation timestamps alone are not proof of
+   payment-to-variant attribution. No such attribution is invented by this code.
+10. On each new UTC month, import/reconcile the new opening ledger and set
+   GOAL_VERIFIED_MONTH accordingly. Until then the existing appeal appears.
+   Refunds remain attached to their original payment month, including late ones.
+   Kill switches: EXPERIMENT_ENABLED=false stops allocation; GOAL_DATA_VERIFIED=false
+   hides uncertain totals. Both require redeployment.
+
+Webhook contract: [official BMC specification](https://cdn.buymeacoffee.com/assets/integrations/bmc-webhooks-openapi.json).
+Amounts are original gross USD gifts less full refunds, **before platform and
+processing fees**; they are not net payouts. Memberships, non-USD gifts and partial
+refunds without a documented amount cannot be inferred. Reconcile such cases
+and disable the verified display if the supported aggregate becomes inaccurate.
+Unknown/invalid payment facts receive 400, conflicting amounts/timestamps 409,
+invalid signatures 401, oversize payloads 413 and temporary database failures 503.
+BMC automatically disables delivery after repeated failures; inspect its delivery
+history regularly. A dashboard test cannot change the public total.
 
 ## Metrics and decision rules
 Primary outcome, ONLY when an actual BMC completed-payment -> variant join
-has been independently validated: paid gifts per unique exposed user and
-net USD per 1,000 unique exposed users, A versus B.
+has been independently validated: unique completed donors per unique exposed user.
+Count a donor once in each arm; multiple payments are not independent conversions.
+Report net USD per 1,000 unique exposed users separately, A versus B. A Fisher
+test of donor conversion does not establish statistical significance for revenue.
 
 Secondary: donation-button clickthrough, A versus B (diagnostic only).
 Guardrails: playback starts/failures, consent errors, mobile usability,
@@ -67,7 +100,10 @@ reader feedback, and repeat visits.
 
 GA4 events: donation_experiment_view; donation_experiment_click.
 Properties: experiment_id; variant_id.
-GA modeled/cookieless data may not be accurate unique users. Compare
+GA modeled/cookieless data may not be accurate unique users. Restrict the primary
+analysis to verified comparable unique users (for example, consenting users with
+validated cross-domain attribution). Do not divide donation counts by impression
+events, clicks, modeled users or unrelated site traffic. Compare
 consistent denominators and exclude tests; never send pasted text,
 filenames or donor personal details.
 
@@ -83,12 +119,19 @@ Fixed formal looks after launch: day 7, 14, 28, and 42. Check basic
 health on day 1 and review payment reconciliation every 2–3 days.
 Start dates FROM ACTUAL DEPLOYMENT, not PR creation.
 
+An active Codex thread follow-up, `review-read-aloud-donation-experiment`,
+is scheduled for Wednesdays at 9 a.m. America/New_York for six runs.
+It checks launch prerequisites while inactive and reports available verified
+results after launch. The calendar schedule does not replace formal looks
+measured from actual launch. Extend/reschedule it if deployment is delayed;
+do not treat the end of six calendar reminders as six weeks of experiment data.
+
 Stop immediately for false published totals, privacy issues,
 misleading claims, consent regressions or playback failures.
 For an early DONATION winner on a formal look, require all of:
 - Verified per-variant completed payment attribution and comparable
   unique exposure denominators.
-- At least 15 completed donations IN EACH arm.
+- At least 15 unique completed donors IN EACH arm.
 - At least 20% practical improvement in donation conversion rate.
 - Two-sided Fisher exact test p < 0.0125 (four planned looks,
   Bonferroni adjustment), and no material guardrail regressions.
@@ -114,16 +157,92 @@ Only real verified amounts go here; NA means missing attribution
 | +28 days | TBD | NA | NA | NA | NA | NA | NA | NA | NA | Formal look 3 |
 | +42 days | TBD | NA | NA | NA | NA | NA | NA | NA | NA | Final look |
 
+The completed-gifts columns must include unique completed donor counts for
+conversion analysis. Record total payment count separately when donors give twice.
+
+## Reproducible review command
+
+Save an operator-only JSON file outside the public site with this structure.
+Replace timestamps and counts with verified data; null means missing, not zero.
+`net_cents` is attributable USD revenue after refunds, using the same fee basis
+for both arms. `clicks` counts click events and can exceed exposed users.
+
+```json
+{
+  "launch_at": "ACTUAL ISO UTC LAUNCH TIMESTAMP",
+  "review_at": "ACTUAL ISO UTC REVIEW TIMESTAMP",
+  "attribution_verified": false,
+  "unique_counts_verified": false,
+  "guardrails_ok": true,
+  "weekday_weekend_represented": false,
+  "variants": {
+    "A": { "exposed": null, "clicks": null, "donors": null, "net_cents": null },
+    "B": { "exposed": null, "clicks": null, "donors": null, "net_cents": null }
+  }
+}
+```
+
+Run `node scripts/review_donation_experiment.js <aggregate-review.json>`.
+The command validates counts, calculates a two-sided Fisher exact p-value,
+applies all four-look stopping criteria, and prints a decision and next review
+timestamp calculated from the actual launch. It refuses invalid denominators,
+never chooses a winner on clicks and returns inconclusive after day 42 when
+criteria remain unmet. A guardrail failure stops the experiment immediately.
+Only formal day 7/14/28/42 reviews can choose a conversion winner; other runs
+are health checks. Rollout still requires evaluating revenue and usability.
+
+## Validation
+
+Run with Node 24 (Worker tests use built-in SQLite):
+
+```
+node scripts/test_donation_goal.js
+node scripts/e2e_donation_experiment.js
+```
+
+The browser check requires Playwright and installed Chromium/Edge. `EDGE_PATH`
+can override the browser binary; `NODE_PATH` can point to bundled packages.
+`DONATION_SCREENSHOT_DIR` optionally saves desktop/mobile screenshots outside
+the site. All external service requests in these tests are intercepted.
+SQL/signature tests cover real SQLite aggregation, duplicate deliveries,
+imported-opening-payment refunds, refund-before-create, UTC month boundaries,
+activation gates and a known Fisher exact result. Browser checks cover A/B,
+fractional-dollar totals, blocked storage, consent changes, mobile widths,
+stale/malformed data and a request timeout.
+
 Activation checklist:
 - Approved goal: TBD.
-- Baseline month, amount, reconciliation timestamp: TBD.
+- Verified ledger month, sum, reconciliation timestamp: TBD.
 - Attribution join mechanism/verification: TBD.
 - GA custom dimensions: TBD.
 - Live deployment date: TBD.
 
+## Draft release wording — approval pending
+
+Appeal: “Help keep Read-Aloud free. Your support helps cover the cost of
+running the service.” Button: “Support Read-Aloud.” The display identifies
+the verified one-time USD scope and refunds.
+
+Latest updates: “We’re testing a clearer way to support Read-Aloud. Some
+visitors may see a monthly contribution goal; the tool remains free.”
+
+The wording has been submitted for owner approval. Do not insert/publish
+the Latest updates entry until approved under CLAUDE.md. The existing A
+appeal also needs review of its “no tracking” claim before a live launch,
+given the current cookieless analytics configuration.
+
 ## Decision log
 2026-10-07 — staged implementation and conservative stopping rules.
 No public fundraiser progress or experiment exposure has been claimed.
+
+2026-10-07 — Hardened the draft with individual-payment opening ledger,
+explicit activation/attribution gates, UTC month verification, automatic
+six-week cutoff, consent updates, a four-second fetch timeout, a reproducible
+review command and passing SQLite/signature/browser checks. Existing reader
+lifecycle, speech segments, diagnostics and browser playback checks also passed.
+Created six weekly follow-ups in the current Codex thread. Deployment
+still requires actual goal, signing secret, D1 ledger, attribution and approved
+release wording; mock fixture amounts are never public production values.
 
 2026-10-07 — Basic isolated checks: the client preserved A, rendered B when a
 verified goal response was supplied, and left the page unassigned when the

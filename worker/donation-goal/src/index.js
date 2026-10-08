@@ -26,7 +26,9 @@ async function currentGoal(env, request) {
   const targetDollars = Number(env.GOAL_USD);
   if (env.GOAL_DATA_VERIFIED !== 'true' || !env.DB ||
       !Number.isFinite(targetDollars) || targetDollars <= 0 ||
-      !Number.isSafeInteger(Math.round(targetDollars * 100))) {
+      !Number.isSafeInteger(Math.round(targetDollars * 100)) ||
+      Math.round(targetDollars * 100) <= 0 ||
+      Math.abs(targetDollars * 100 - Math.round(targetDollars * 100)) > 0.000001) {
     return json({ ready: false }, 200, headers);
   }
   const today = new Date();
@@ -35,33 +37,53 @@ async function currentGoal(env, request) {
   const month = year + '-' + String(monthNum + 1).padStart(2, '0');
   const start = Date.UTC(year, monthNum, 1) / 1000;
   const end = Date.UTC(year, monthNum + 1, 1) / 1000;
-  const useBaseline = env.BASELINE_MONTH === month;
-  const baselineCents = useBaseline ? Number(env.BASELINE_CENTS || '0') : 0;
-  const baselineThrough = useBaseline ? Number(env.BASELINE_THROUGH_UNIX || '0') : start - 1;
-  if (!Number.isSafeInteger(baselineCents) || baselineCents < 0 ||
-      !Number.isSafeInteger(baselineThrough) ||
-      (useBaseline && (baselineThrough < start - 1 || baselineThrough > Date.now() / 1000))) {
+  // Each opening ledger must be reconciled. A new month fails closed until verified.
+  // Import individual payment facts rather than an aggregate balance so late refunds
+  // and webhook retries can update the same transaction without double counting.
+  if (env.GOAL_VERIFIED_MONTH !== month) {
     return json({ ready: false }, 200, headers);
   }
-  const minEventTimestamp = Math.max(start - 1, baselineThrough);
   const row = await env.DB.prepare(
     'SELECT COALESCE(SUM(amount_cents), 0) AS cents FROM donations ' +
-    'WHERE created_at > ? AND created_at < ? AND refunded = 0'
-  ).bind(minEventTimestamp, end).first();
-  const raised = baselineCents + Number(row?.cents || 0);
+    'WHERE created_at >= ? AND created_at < ? AND refunded = 0'
+  ).bind(start, Math.min(end, Math.floor(today.getTime() / 1000) + 1)).first();
+  const raised = Number(row?.cents || 0);
   if (!Number.isSafeInteger(raised) || raised < 0) return json({ ready: false }, 200, headers);
+  const launch = Date.parse(env.EXPERIMENT_LAUNCH_UTC || '');
+  const active = env.EXPERIMENT_ENABLED === 'true' && env.ATTRIBUTION_VERIFIED === 'true' &&
+    Number.isFinite(launch) && launch <= today.getTime() && today.getTime() - launch < 42 * 86400000;
   return json({
     ready: true, currency: 'USD',
     month_label: new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(today),
     goal_cents: Math.round(targetDollars * 100),
     raised_cents: raised,
     data_scope: 'verified_one_time_usd_donations',
+    experiment_id: 'support_goal_2026_10',
+    experiment_active: active,
+    launch_at: Number.isFinite(launch) ? new Date(launch).toISOString() : null,
     as_of: today.toISOString()
   }, 200, headers);
 }
 async function processWebhook(request, env) {
   if (!env.DB || !env.BMC_WEBHOOK_SECRET) return new Response('Not configured', { status: 503 });
-  const body = await request.arrayBuffer();
+  if (Number(request.headers.get('content-length')) > 64000) return new Response('Too large', { status: 413 });
+  const reader = request.body?.getReader();
+  if (!reader) return new Response('Invalid body', { status: 400 });
+  const chunks = [];
+  let length = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.byteLength;
+    if (length > 64000) {
+      await reader.cancel();
+      return new Response('Too large', { status: 413 });
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
   if (body.byteLength > 64000) return new Response('Too large', { status: 413 });
   if (!await validSignature(body, env.BMC_WEBHOOK_SECRET, request.headers.get('x-signature-sha256'))) {
     return new Response('Invalid signature', { status: 401 });
@@ -70,6 +92,7 @@ async function processWebhook(request, env) {
   try { event = JSON.parse(new TextDecoder().decode(body)); }
   catch (_) { return new Response('Invalid JSON', { status: 400 }); }
   // Test events cannot affect public donation totals.
+  if (!event || typeof event !== 'object' || Array.isArray(event)) return new Response('Invalid event', { status: 400 });
   if (event.live_mode !== true) return new Response(null, { status: 204 });
   if (event.type !== 'donation.created' && event.type !== 'donation.refunded') {
     return new Response(null, { status: 204 });
@@ -80,24 +103,26 @@ async function processWebhook(request, env) {
     return new Response(null, { status: 204 });
   }
   const id = String(data.id ?? '');
-  const created = Number(data.created_at || event.created);
-  const cents = Math.round(Number(data.amount) * 100);
-  if (!id || id.length > 128 || !Number.isSafeInteger(created) || created <= 0 ||
-      !Number.isSafeInteger(cents) || cents < 0) {
+  const created = data.created_at;
+  const cents = Math.round(data.amount * 100);
+  if (!Number.isSafeInteger(data.id) || data.id <= 0 || !Number.isSafeInteger(created) || created <= 0 ||
+      created > Math.floor(Date.now() / 1000) + 60 || typeof data.amount !== 'number' ||
+      !Number.isSafeInteger(cents) || cents <= 0 ||
+      Math.abs(data.amount * 100 - cents) > 0.000001) {
     return new Response('Invalid donation', { status: 400 });
   }
   if (event.type === 'donation.created' && data.status !== 'succeeded') {
     return new Response(null, { status: 204 });
   }
-  const refunded = event.type === 'donation.refunded' ||
+  const refunded = event.type === 'donation.refunded' || data.status === 'refunded' ||
     data.refunded === true || data.refunded === 'true';
   // Upsert is idempotent on BMC transaction ID, including retries/refunds out of order.
-  await env.DB.prepare(
+  const result = await env.DB.prepare(
     'INSERT INTO donations (id, created_at, amount_cents, refunded) VALUES (?, ?, ?, ?) ' +
-    'ON CONFLICT(id) DO UPDATE SET created_at=excluded.created_at, ' +
-    'amount_cents=excluded.amount_cents, ' +
-    'refunded=MAX(donations.refunded, excluded.refunded)'
+    'ON CONFLICT(id) DO UPDATE SET refunded=MAX(donations.refunded, excluded.refunded) ' +
+    'WHERE donations.created_at=excluded.created_at AND donations.amount_cents=excluded.amount_cents'
   ).bind(id, created, cents, refunded ? 1 : 0).run();
+  if (result.meta?.changes === 0) return new Response('Payment conflict: reconcile ledger', { status: 409 });
   return new Response(null, { status: 204 });
 }
 export default {

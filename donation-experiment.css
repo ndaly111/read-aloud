@@ -6,8 +6,9 @@
 #supportBar .support-goal {
   display: grid;
   gap: 4px;
-  flex: 0 1 220px;
+  flex: 1 1 240px;
   min-width: 160px;
+  letter-spacing: 0.02em;
   font: 0.72rem var(--font-mono);
 }
 #supportBar .support-goal__totals {
@@ -24,3 +25,4 @@
     flex-basis: 100%;
   }
 }
+#supportBar .support-goal__scope { font-size: 0.65rem; }
