@@ -248,6 +248,25 @@ the Latest updates entry until approved under CLAUDE.md. The existing A
 appeal also needs review of its “no tracking” claim before a live launch,
 given the current cookieless analytics configuration.
 
+## Live site and payment-flow inspection
+
+October 7, 2026 — Inspected the rendered live homepage at
+https://read-aloud.com/ and its existing support link. The slim cream/red
+support strip sits below the navigation and above the reading tool. The
+current homepage shows the original appeal without monthly progress.
+The link https://coff.ee/readaloud resolves to the creator profile
+https://buymeacoffee.com/readaloud, which links back to Read-aloud.com.
+All three variants retain this existing payment destination. The $50/$100
+figures are monthly fundraising targets; visitors select their own gift amount
+on BMC. No checkout or payment was submitted during inspection.
+
+The public support page offers optional monthly gifts and a membership.
+These are outside the current one-time-USD meter's scope and require separate
+reconciliation before inclusion. Public supporter counts and messages are not
+a source of verified current-month dollar totals. The inspected public BMC
+session is signed out; the payment ledger, dashboard webhook configuration,
+account receipts and completed-donation attribution remain unverified.
+
 ## Decision log
 2026-10-07 — Owner selected $50 and $100 targets in addition to the original
 appeal. Updated allocation to equal thirds, the API and analytics variants,
