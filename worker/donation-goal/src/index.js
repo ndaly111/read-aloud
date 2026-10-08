@@ -23,12 +23,9 @@ async function validSignature(body, secret, hex) {
 }
 async function currentGoal(env, request) {
   const headers = publicHeaders(request);
-  const targetDollars = Number(env.GOAL_USD);
-  if (env.GOAL_DATA_VERIFIED !== 'true' || !env.DB ||
-      !Number.isFinite(targetDollars) || targetDollars <= 0 ||
-      !Number.isSafeInteger(Math.round(targetDollars * 100)) ||
-      Math.round(targetDollars * 100) <= 0 ||
-      Math.abs(targetDollars * 100 - Math.round(targetDollars * 100)) > 0.000001) {
+  const goals = { B: Number(env.GOAL_B_USD) * 100, C: Number(env.GOAL_C_USD) * 100 };
+  // Fixed owner-selected targets; changing them mid-test invalidates the design.
+  if (env.GOAL_DATA_VERIFIED !== 'true' || !env.DB || goals.B !== 5000 || goals.C !== 10000) {
     return json({ ready: false }, 200, headers);
   }
   const today = new Date();
@@ -55,7 +52,7 @@ async function currentGoal(env, request) {
   return json({
     ready: true, currency: 'USD',
     month_label: new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(today),
-    goal_cents: Math.round(targetDollars * 100),
+    goals_cents: goals,
     raised_cents: raised,
     data_scope: 'verified_one_time_usd_donations',
     experiment_id: 'support_goal_2026_10',

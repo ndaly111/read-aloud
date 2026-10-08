@@ -1,10 +1,11 @@
-/* Donation appeal A/B experiment. Defaults to existing appeal unless goal data is verified. */
+/* Donation appeal experiment: existing appeal, $50 goal, $100 goal. */
 (() => {
   'use strict';
   const EXPERIMENT_ID = 'support_goal_2026_10';
   const ENDPOINT = 'https://read-aloud-donation-goal.ndaly111.workers.dev/goal';
   const STORAGE_KEY = 'ra_support_exp_202610';
   const CONSENT_KEY = 'ra_cookie_consent';
+  const VARIANTS = ['A', 'B', 'C'];
   let assignment = null;
   let consent = readStorage('localStorage', CONSENT_KEY);
   const bar = document.getElementById('supportBar');
@@ -43,11 +44,12 @@
 
   function pickVariant() {
     let stored = consent === 'accepted' ? readStorage('localStorage', STORAGE_KEY) : null;
-    if (stored !== 'A' && stored !== 'B') stored = readStorage('sessionStorage', STORAGE_KEY);
-    if (stored !== 'A' && stored !== 'B') {
+    if (!VARIANTS.includes(stored)) stored = readStorage('sessionStorage', STORAGE_KEY);
+    if (!VARIANTS.includes(stored)) {
       const bytes = new Uint8Array(1);
-      window.crypto.getRandomValues(bytes);
-      stored = bytes[0] < 128 ? 'A' : 'B';
+      // Reject the last byte value so all three groups get exactly equal odds.
+      do { window.crypto.getRandomValues(bytes); } while (bytes[0] === 255);
+      stored = VARIANTS[bytes[0] % VARIANTS.length];
     }
     assignment = stored;
     writeStorage('sessionStorage', stored);
@@ -56,7 +58,7 @@
     return stored;
   }
 
-  function showGoal(data) {
+  function showGoal(data, variant) {
     const message = bar.querySelector('.msg');
     const link = bar.querySelector('.coffeeBtn');
     if (!message || !link) return false;
@@ -65,7 +67,7 @@
       style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2
     }).format(cents / 100);
     const raised = Math.max(0, data.raised_cents);
-    const target = data.goal_cents;
+    const target = data.goals_cents[variant];
     message.textContent = 'Help keep Read-Aloud free. Your support helps cover the cost of running the service.';
     const goal = document.createElement('div');
     goal.className = 'support-goal';
@@ -106,14 +108,14 @@
       if (data.ready !== true || data.experiment_active !== true ||
           data.experiment_id !== EXPERIMENT_ID || data.currency !== 'USD' ||
           data.data_scope !== 'verified_one_time_usd_donations' ||
-          !Number.isSafeInteger(data.goal_cents) || data.goal_cents <= 0 ||
+          data.goals_cents?.B !== 5000 || data.goals_cents?.C !== 10000 ||
           !Number.isSafeInteger(data.raised_cents) || data.raised_cents < 0 ||
           data.month_label !== month || !Number.isFinite(asOf) ||
           asOf > now + 60000 || now - asOf > 300000 ||
           !Number.isFinite(launch) || launch > now || now - launch >= 42 * 86400000) return;
 
       const variant = pickVariant();
-      if (variant === 'B' && !showGoal(data)) return;
+      if (variant !== 'A' && !showGoal(data, variant)) return;
       bar.dataset.donationVariant = variant;
       track('donation_experiment_view', variant);
       const link = bar.querySelector('.coffeeBtn');

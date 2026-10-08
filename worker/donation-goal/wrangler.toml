@@ -2,10 +2,11 @@ name = "read-aloud-donation-goal"
 main = "src/index.js"
 compatibility_date = "2026-10-07"
 
-# Intentionally disabled until actual monthly costs/goal, beginning balance,
+# Intentionally disabled until opening ledger,
 # webhook secret and D1 are configured AND reconciled.
 [vars]
-GOAL_USD = ""
+GOAL_B_USD = "50"
+GOAL_C_USD = "100"
 GOAL_DATA_VERIFIED = "false"
 GOAL_VERIFIED_MONTH = ""
 EXPERIMENT_ENABLED = "false"

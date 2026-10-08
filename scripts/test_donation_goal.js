@@ -17,7 +17,7 @@ const root = path.join(__dirname, '..');
     async run() { return { meta: db.prepare(sql).run(...args) }; },
   }; } }; } };
   const now = new Date(), created = Math.floor(Date.now() / 1000) - 60;
-  const env = { DB, BMC_WEBHOOK_SECRET: 'test-only-secret', GOAL_USD: '100',
+  const env = { DB, BMC_WEBHOOK_SECRET: 'test-only-secret', GOAL_B_USD: '50', GOAL_C_USD: '100',
     GOAL_DATA_VERIFIED: 'true', GOAL_VERIFIED_MONTH: now.toISOString().slice(0, 7),
     EXPERIMENT_ENABLED: 'true', ATTRIBUTION_VERIFIED: 'true',
     EXPERIMENT_LAUNCH_UTC: new Date(Date.now() - 86400000).toISOString() };
@@ -45,6 +45,7 @@ const root = path.join(__dirname, '..');
   assert.equal((await webhook(event(1))).status, 204);
   assert.equal((await webhook(event(1))).status, 204);
   assert.equal((await (await goal()).json()).raised_cents, 525);
+  assert.deepEqual((await (await goal()).json()).goals_cents, { B: 5000, C: 10000 });
   assert.equal((await webhook(event(1, { amount: 10 }))).status, 409);
   // An imported opening payment and its late refund use the same row.
   db.prepare('INSERT INTO donations VALUES (?, ?, ?, ?)').run('2', created, 1000, 0);
@@ -59,7 +60,8 @@ const root = path.join(__dirname, '..');
   db.prepare('INSERT INTO donations VALUES (?, ?, ?, ?)').run('4', start - 1, 10000, 0);
   db.prepare('INSERT INTO donations VALUES (?, ?, ?, ?)').run('5', start, 125, 0);
   assert.equal((await (await goal()).json()).raised_cents, 650);
-  for (const overrides of [{ GOAL_DATA_VERIFIED: 'false' }, { GOAL_USD: '0.001' }, { GOAL_VERIFIED_MONTH: '2020-01' }, { DB: null }]) {
+  for (const overrides of [{ GOAL_DATA_VERIFIED: 'false' }, { GOAL_B_USD: '0.001' },
+    { GOAL_B_USD: '100' }, { GOAL_C_USD: '50' }, { GOAL_C_USD: '' }, { GOAL_VERIFIED_MONTH: '2020-01' }, { DB: null }]) {
     assert.equal((await (await goal(overrides)).json()).ready, false);
   }
   for (const overrides of [{ ATTRIBUTION_VERIFIED: 'false' }, { EXPERIMENT_ENABLED: 'false' },
@@ -76,13 +78,22 @@ const root = path.join(__dirname, '..');
     attribution_verified: true, unique_counts_verified: true, guardrails_ok: true,
     weekday_weekend_represented: true,
     variants: { A: { exposed: 5000, clicks: 100, donors: 15, net_cents: 7500 },
-      B: { exposed: 5000, clicks: 200, donors: 60, net_cents: 30000 } } };
+      B: { exposed: 5000, clicks: 200, donors: 60, net_cents: 30000 },
+      C: { exposed: 5000, clicks: 150, donors: 20, net_cents: 10000 } } };
   assert.equal(review(input).winner, 'B');
+  assert.equal(review(input).significance_threshold, 0.05 / 12);
+  assert.equal(Object.keys(review(input).comparisons).length, 3);
+  assert.equal(review({ ...input, variants: { ...input.variants, B: input.variants.C, C: input.variants.B } }).winner, 'C');
+  assert.equal(review({ ...input, variants: { ...input.variants, A: input.variants.B, B: input.variants.A } }).winner, 'A');
+  // Both goals can beat the control without either goal being a clear overall winner.
+  assert.equal(review({ ...input, variants: { ...input.variants, C: input.variants.B } }).winner, null);
+  assert.throws(() => review({ ...input, variants: { A: input.variants.A, B: input.variants.B } }), /C:/);
   assert.equal(review({ ...input, attribution_verified: false }).winner, null);
   assert.equal(review({ ...input, review_at: '2026-10-16T12:00:00Z' }).winner, null);
   assert.equal(review({ ...input, guardrails_ok: false }).decision, 'stop_for_guardrail');
   assert.equal(review({ ...input, attribution_verified: false, review_at: '2026-11-12T12:00:00Z' }).decision, 'inconclusive');
   assert.equal(review({ ...input, variants: { ...input.variants, A: { ...input.variants.A, donors: null, net_cents: null } } }).winner, null);
+  assert.equal(review({ ...input, variants: { ...input.variants, C: { ...input.variants.C, donors: null, net_cents: null } } }).winner, null);
   db.close();
   console.log('Donation Worker, refund/retry ledger, activation gates and decision rules passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

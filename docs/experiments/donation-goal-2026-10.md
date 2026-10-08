@@ -1,4 +1,4 @@
-# Monthly support goal A/B test — operating record
+# Monthly support goal test — operating record
 
 **Status: NOT LIVE / pending verification and approval (October 7, 2026).**
 Experiment: support_goal_2026_10. Owner: Read-Aloud operator.
@@ -7,8 +7,9 @@ index.html. This file is the permanent experiment record; do not rely on chat co
 
 ## Design
 - A: existing support-strip wording and existing Buy Me a Coffee link.
-- B: same position, verified USD month-to-date progress/goal, revised appeal.
-- 50/50 random assignment. It persists for a tab session; only consenting
+- B: same position, verified USD month-to-date progress toward a $50 goal.
+- C: same position, verified USD month-to-date progress toward a $100 goal.
+- Equal 1/3 random assignment across A/B/C. It persists for a tab session; only consenting
   visitors also retain the assignment in localStorage across visits.
 - Fail closed: if the verified goal API is unavailable, EVERYONE sees the
   original appeal, no enrollment or experiment tracking occurs.
@@ -20,13 +21,17 @@ index.html. This file is the permanent experiment record; do not rely on chat co
 - Accepting analytics consent retains the current assignment; rejecting or
   resetting it removes the saved assignment, including changes in another tab.
 - No change to the text-to-speech tool, prices, donations flow or advertising.
-- Hypothesis: B increases completed eligible contributions per exposed user.
+- Hypothesis: goal-based appeals improve completed donation conversion; compare
+  each goal with the control and compare $50 with $100. Both goal variants use
+  the same verified account-wide total, month, wording, button and placement.
+  Freeze both targets throughout the test; these are fundraising targets,
+  not claims that monthly expenses equal $50 or $100.
 
 ## Mandatory pre-launch tasks
 - [ ] Owner approves the final visitor-facing words and Latest updates entry,
       as required by CLAUDE.md. Branch/PR is not a live launch.
-- [ ] Owner validates actual monthly costs and chooses an honest goal amount.
-      The earlier $100 example was illustrative, not a confirmed expense.
+- [x] Owner selected two fundraising targets, $50 and $100, on October 7, 2026.
+      Do not claim either is an exact expense amount or invent separate balances.
 - [ ] Check wording/privacy (including existing "no tracking" claim).
 - [ ] Create Cloudflare D1 database and signed BMC webhook; see below.
 - [ ] Reconcile this month's successful USD one-time gifts and refunds to
@@ -57,7 +62,7 @@ index.html. This file is the permanent experiment record; do not rely on chat co
    Importing a verified opening ledger uses the same rows as future webhooks;
    a late refund therefore reduces the total and a retry adds nothing.
    Do not use a lump-sum baseline: it cannot handle individual late refunds.
-7. Set GOAL_USD to the approved actual target, GOAL_VERIFIED_MONTH to the
+7. Keep GOAL_B_USD=50 and GOAL_C_USD=100 fixed. Set GOAL_VERIFIED_MONTH to the
    reconciled UTC YYYY-MM and GOAL_DATA_VERIFIED to true. Redeploy and verify
    GET /goal returns ready:true and an accurate total. The experiment remains
    inactive until all other launch tasks are complete.
@@ -91,10 +96,10 @@ history regularly. A dashboard test cannot change the public total.
 Primary outcome, ONLY when an actual BMC completed-payment -> variant join
 has been independently validated: unique completed donors per unique exposed user.
 Count a donor once in each arm; multiple payments are not independent conversions.
-Report net USD per 1,000 unique exposed users separately, A versus B. A Fisher
+Report net USD per 1,000 unique exposed users separately for A, B and C. A Fisher
 test of donor conversion does not establish statistical significance for revenue.
 
-Secondary: donation-button clickthrough, A versus B (diagnostic only).
+Secondary: donation-button clickthrough for A, B and C (diagnostic only).
 Guardrails: playback starts/failures, consent errors, mobile usability,
 reader feedback, and repeat visits.
 
@@ -113,7 +118,7 @@ It cannot prove which appeal caused any payment. Explore BMC's GA4
 integration and test end-to-end campaign attribution through a real
 completed purchase before drawing donation efficacy conclusions. If
 unavailable, the test can compare clicks but donation result is
-INCONCLUSIVE, not "A won" or "B won".
+INCONCLUSIVE, not a winner for any variant.
 
 Fixed formal looks after launch: day 7, 14, 28, and 42. Check basic
 health on day 1 and review payment reconciliation every 2–3 days.
@@ -132,33 +137,44 @@ For an early DONATION winner on a formal look, require all of:
 - Verified per-variant completed payment attribution and comparable
   unique exposure denominators.
 - At least 15 unique completed donors IN EACH arm.
-- At least 20% practical improvement in donation conversion rate.
-- Two-sided Fisher exact test p < 0.0125 (four planned looks,
-  Bonferroni adjustment), and no material guardrail regressions.
+- The candidate beats BOTH other variants by at least 20% in donation conversion.
+- Two-sided Fisher exact test p < 0.05/12 (approximately 0.004167) for BOTH
+  candidate comparisons: four planned looks times three pairwise comparisons,
+  with Bonferroni adjustment and no material guardrail regressions.
 - Both weekday/weekend traffic represented.
 
 If criteria are unmet: continue to next scheduled checkpoint; don't
 stop on clicks or an exciting graph. At 42 days declare inconclusive
 if underpowered or attribution unavailable; default to the existing
 less intrusive version and design the next smaller test. If a winner
-is genuinely verified, roll it out, remove A/B allocation, preserve
+is genuinely verified, roll it out, remove experiment allocation, preserve
 accurate goal tracking, and monitor 14 more days.
 
 ## Ledger
 Only real verified amounts go here; NA means missing attribution
 (NOT zero).
 
-| Review | Date | A exposed | B exposed | A clicks | B clicks | A completed gifts | B completed gifts | A net USD | B net USD | Decision |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| Launch | TBD | NA | NA | NA | NA | NA | NA | NA | NA | Not launched |
-| +1 day | TBD | NA | NA | NA | NA | NA | NA | NA | NA | QA |
-| +7 days | TBD | NA | NA | NA | NA | NA | NA | NA | NA | Formal look 1 |
-| +14 days | TBD | NA | NA | NA | NA | NA | NA | NA | NA | Formal look 2 |
-| +28 days | TBD | NA | NA | NA | NA | NA | NA | NA | NA | Formal look 3 |
-| +42 days | TBD | NA | NA | NA | NA | NA | NA | NA | NA | Final look |
+| Review | Date | Decision |
+|---|---|---|
+| Launch | TBD | Not launched |
+| +1 day | TBD | QA |
+| +7 days | TBD | Formal look 1 |
+| +14 days | TBD | Formal look 2 |
+| +28 days | TBD | Formal look 3 |
+| +42 days | TBD | Final look |
 
-The completed-gifts columns must include unique completed donor counts for
-conversion analysis. Record total payment count separately when donors give twice.
+Copy the following metrics table for each review and date it. Record unique
+completed donors for conversion analysis; total payment count is separate.
+
+| Variant | Appeal | Unique exposed | Click events | Unique completed donors | Net USD |
+|---|---|---:|---:|---:|---:|
+| A | Existing appeal | NA | NA | NA | NA |
+| B | $50 goal | NA | NA | NA | NA |
+| C | $100 goal | NA | NA | NA | NA |
+
+Record all three comparison p-values and relative lifts (A/B, A/C, B/C) in
+the review notes. Beating the control alone is insufficient to choose one
+target over the other; similar goal results remain inconclusive.
 
 ## Reproducible review command
 
@@ -177,18 +193,19 @@ for both arms. `clicks` counts click events and can exceed exposed users.
   "weekday_weekend_represented": false,
   "variants": {
     "A": { "exposed": null, "clicks": null, "donors": null, "net_cents": null },
-    "B": { "exposed": null, "clicks": null, "donors": null, "net_cents": null }
+    "B": { "exposed": null, "clicks": null, "donors": null, "net_cents": null },
+    "C": { "exposed": null, "clicks": null, "donors": null, "net_cents": null }
   }
 }
 ```
 
 Run `node scripts/review_donation_experiment.js <aggregate-review.json>`.
 The command validates counts, calculates a two-sided Fisher exact p-value,
-applies all four-look stopping criteria, and prints a decision and next review
+applies all three-comparison/four-look stopping criteria, and prints a decision and next review
 timestamp calculated from the actual launch. It refuses invalid denominators,
 never chooses a winner on clicks and returns inconclusive after day 42 when
 criteria remain unmet. A guardrail failure stops the experiment immediately.
-Only formal day 7/14/28/42 reviews can choose a conversion winner; other runs
+Only formal day 7/14/28/42 reviews can choose a winner that beats both other variants; other runs
 are health checks. Rollout still requires evaluating revenue and usability.
 
 ## Validation
@@ -206,12 +223,12 @@ can override the browser binary; `NODE_PATH` can point to bundled packages.
 the site. All external service requests in these tests are intercepted.
 SQL/signature tests cover real SQLite aggregation, duplicate deliveries,
 imported-opening-payment refunds, refund-before-create, UTC month boundaries,
-activation gates and a known Fisher exact result. Browser checks cover A/B,
+activation gates and a known Fisher exact result. Browser checks cover A/B/C,
 fractional-dollar totals, blocked storage, consent changes, mobile widths,
 stale/malformed data and a request timeout.
 
 Activation checklist:
-- Approved goal: TBD.
+- Approved targets: B=$50 and C=$100, October 7, 2026. A retains the existing appeal.
 - Verified ledger month, sum, reconciliation timestamp: TBD.
 - Attribution join mechanism/verification: TBD.
 - GA custom dimensions: TBD.
@@ -232,6 +249,12 @@ appeal also needs review of its “no tracking” claim before a live launch,
 given the current cookieless analytics configuration.
 
 ## Decision log
+2026-10-07 — Owner selected $50 and $100 targets in addition to the original
+appeal. Updated allocation to equal thirds, the API and analytics variants,
+the ledger and review input to include C, and early-stop correction to twelve
+tests (three comparisons across four formal looks). A winner must beat both
+other variants; no deployment or fabricated donation totals.
+
 2026-10-07 — staged implementation and conservative stopping rules.
 No public fundraiser progress or experiment exposure has been claimed.
 

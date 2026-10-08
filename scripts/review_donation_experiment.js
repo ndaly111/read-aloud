@@ -1,5 +1,8 @@
 // Operator-only aggregate review. No donor data or network requests.
 const fs = require('node:fs');
+const VARIANTS = ['A', 'B', 'C'];
+const PAIRS = [['A', 'B'], ['A', 'C'], ['B', 'C']];
+const ALPHA = 0.05 / (4 * PAIRS.length);
 
 function fisherExact(a, b, c, d) {
   const n = a + b + c + d;
@@ -30,7 +33,7 @@ function review(input) {
     experiment_id: 'support_goal_2026_10', day,
     formal_review: formal, decision: 'continue', winner: null,
     next_review_at: nextDay ? new Date(launch + nextDay * 86400000).toISOString() : null,
-    reasons: [], metrics: {},
+    reasons: [], metrics: {}, comparisons: {}, significance_threshold: ALPHA,
   };
   if (input.guardrails_ok === false) {
     result.decision = 'stop_for_guardrail';
@@ -38,7 +41,7 @@ function review(input) {
     return result;
   }
   let complete = true;
-  for (const variant of ['A', 'B']) {
+  for (const variant of VARIANTS) {
     const arm = input.variants?.[variant];
     if (!arm || !Number.isSafeInteger(arm.exposed) || arm.exposed <= 0 || arm.exposed > 1000000 ||
         !Number.isSafeInteger(arm.clicks) || arm.clicks < 0) {
@@ -58,19 +61,30 @@ function review(input) {
   if (!complete || input.attribution_verified !== true || input.unique_counts_verified !== true) {
     result.reasons.push('Completed-payment attribution or comparable unique-user counts are unverified. Clicks cannot establish a donation winner.');
   } else {
-    const a = input.variants.A, b = input.variants.B;
-    result.p_value = fisherExact(a.donors, a.exposed - a.donors, b.donors, b.exposed - b.donors);
-    const rateA = a.donors / a.exposed, rateB = b.donors / b.exposed;
-    const best = rateB > rateA ? 'B' : 'A';
-    const low = Math.min(rateA, rateB), high = Math.max(rateA, rateB);
-    result.relative_lift = low === 0 ? null : high / low - 1;
-    const qualifies = formal && a.donors >= 15 && b.donors >= 15 &&
-      low > 0 && result.relative_lift >= 0.20 && result.p_value < 0.0125 &&
+    for (const [left, right] of PAIRS) {
+      const a = input.variants[left], b = input.variants[right];
+      const rateA = a.donors / a.exposed, rateB = b.donors / b.exposed;
+      const low = Math.min(rateA, rateB), high = Math.max(rateA, rateB);
+      result.comparisons[left + '_' + right] = {
+        p_value: fisherExact(a.donors, a.exposed - a.donors, b.donors, b.exposed - b.donors),
+        relative_lift: low === 0 ? null : high / low - 1,
+        higher_rate_variant: rateA === rateB ? null : rateB > rateA ? right : left,
+      };
+    }
+    const best = VARIANTS.reduce((winner, variant) =>
+      result.metrics[variant].donation_rate > result.metrics[winner].donation_rate ? variant : winner);
+    const beatsEveryOtherArm = PAIRS.filter(pair => pair.includes(best)).every(pair => {
+      const comparison = result.comparisons[pair.join('_')];
+      return comparison.higher_rate_variant === best && comparison.relative_lift >= 0.20 &&
+        comparison.p_value < ALPHA;
+    });
+    const qualifies = formal && VARIANTS.every(variant => input.variants[variant].donors >= 15) &&
+      beatsEveryOtherArm &&
       input.guardrails_ok === true && input.weekday_weekend_represented === true;
     if (qualifies) {
       result.decision = 'donation_conversion_winner';
       result.winner = best;
-      result.reasons.push('All planned conversion criteria passed. Review revenue separately before rollout; this test does not establish a revenue winner.');
+      result.reasons.push('The winner beat both other variants under the three-comparison, four-review conversion criteria. Review revenue separately before rollout; this test does not establish a revenue winner.');
       return result;
     }
     result.reasons.push('The complete set of planned early-stop criteria has not passed.');
