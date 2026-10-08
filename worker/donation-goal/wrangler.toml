@@ -1,6 +1,7 @@
 name = "read-aloud-donation-goal"
 main = "src/index.js"
 compatibility_date = "2026-10-07"
+account_id = "d36f6a50c928a16dc27e0e789a94617f"
 
 # Intentionally disabled until opening ledger,
 # webhook secret and D1 are configured AND reconciled.
@@ -15,8 +16,7 @@ ATTRIBUTION_VERIFIED = "false"
 # After a verified decision: A, B or C shows that appeal to everyone and stops allocation.
 SUPPORT_ROLLOUT_VARIANT = ""
 
-# After "npx wrangler d1 create read-aloud-donations", add the returned database ID:
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "read-aloud-donations"
-# database_id = "<real database ID>"
+[[d1_databases]]
+binding = "DB"
+database_name = "read-aloud-donations"
+database_id = "730bedf9-04b2-499c-a792-f80a965ec6d4"

@@ -1,6 +1,7 @@
 # Monthly support goal test — operating record
 
 **Status: NOT LIVE / pending verification and approval (October 7, 2026).**
+Cloudflare backend deployed in disabled state; the public A/B/C trial has not started.
 Experiment: support_goal_2026_10. Owner: Read-Aloud operator.
 Source: donation-experiment.js, donation-experiment.css, worker/donation-goal/,
 index.html. This file is the permanent experiment record; do not rely on chat context.
@@ -37,7 +38,8 @@ index.html. This file is the permanent experiment record; do not rely on chat co
 - [x] Owner selected two fundraising targets, $50 and $100, on October 7, 2026.
       Do not claim either is an exact expense amount or invent separate balances.
 - [ ] Check wording/privacy (including existing "no tracking" claim).
-- [ ] Create Cloudflare D1 database and signed BMC webhook; see below.
+- [x] Create Cloudflare D1 database, initialize schema and deploy disabled Worker.
+- [ ] Connect signed BMC webhook and verify deliveries; see below.
 - [ ] Reconcile this month's successful USD one-time gifts and refunds to
       a known cutoff before enabling the public goal. Audit after each refund.
 - [ ] Validate completed-donation attribution by variant. Buy Me a Coffee
@@ -50,9 +52,10 @@ index.html. This file is the permanent experiment record; do not rely on chat co
 - [ ] Record LIVE launch timestamp and populate ledger below.
 
 ## Verified live-goal setup
-1. In worker/donation-goal run: npx wrangler d1 create read-aloud-donations.
-   Copy returned ID into the uncommented D1 binding in wrangler.toml.
-2. Run: npx wrangler d1 execute read-aloud-donations --remote --file=schema.sql.
+1. D1 `read-aloud-donations` is provisioned and bound in wrangler.toml:
+   `730bedf9-04b2-499c-a792-f80a965ec6d4`. Reuse it; do not create a second ledger.
+2. Schema has been initialized remotely with `schema.sql`. The initial empty
+   database is not a verified opening balance; no donation data has been imported.
 3. Run: npx wrangler secret put BMC_WEBHOOK_SECRET. Do not commit secret.
 4. Deploy: npx wrangler deploy. Verify the Worker URL; the client expects
    https://read-aloud-donation-goal.ndaly111.workers.dev/goal.
@@ -291,6 +294,22 @@ reconciliation before inclusion. Public supporter counts and messages are not
 a source of verified current-month dollar totals. The inspected public BMC
 session is signed out; the payment ledger, dashboard webhook configuration,
 account receipts and completed-donation attribution remain unverified.
+
+## Backend deployment record
+
+October 7, 2026 — Cloudflare CLI authentication confirmed the same account used
+by Read-Aloud's feedback Worker. Created D1 `read-aloud-donations`, initialized
+the schema and deployed `read-aloud-donation-goal` with all verification and
+experiment enable switches false. Worker version:
+`14427830-ca85-4e06-9515-531cf1cf0393`.
+
+Verified live `GET /goal` returns HTTP 200 with `{"ready":false}`, `no-store`
+and the expected allowed Read-Aloud origin; OPTIONS returns 204 with GET/OPTIONS.
+Remote D1 query confirmed zero payment rows. That means no payment facts have
+been imported, not that this month's donations are zero. BMC signing secret,
+webhook delivery, opening ledger and completed-payment attribution remain pending.
+No homepage deployment or launch timestamp was set. BMC is signed out in both
+inspected browser sessions; a login tab was opened for the owner to continue.
 
 ## Decision log
 2026-10-07 — Owner selected $50 and $100 targets in addition to the original
