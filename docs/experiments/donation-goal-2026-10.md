@@ -1,10 +1,10 @@
 # Monthly support goal test — operating record
 
-**Status: READY TO LAUNCH, not yet live (October 8, 2026).** Every external dependency has
-been removed: the Worker counts exposures and clicks itself, and the two goal arms run in
-target-only mode without a reconciled ledger. Donation-level attribution is impossible at
-Buy Me a Coffee and is NOT claimed. Launch is two commands, listed under "Launch record".
-Kill switch after launch: set EXPERIMENT_ENABLED = "false" in
+**Status: homepage DEPLOYED, Worker deploy pending (October 8, 2026).** Every external
+dependency has been removed: the Worker counts exposures and clicks itself, and the two
+goal arms run in target-only mode without a reconciled ledger. Donation-level attribution
+is impossible at Buy Me a Coffee and is NOT claimed. The experiment starts the moment the
+Worker is deployed - see "Launch record". Kill switch: set EXPERIMENT_ENABLED = "false" in
 worker/donation-goal/wrangler.toml and redeploy; everyone immediately sees appeal A.
 Experiment: support_goal_2026_10. Owner: Read-Aloud operator.
 Source: donation-experiment.js, donation-experiment.css, worker/donation-goal/,
@@ -317,7 +317,7 @@ Activation checklist:
 - Attribution join mechanism: NONE AND IMPOSSIBLE (BMC schema has no source field).
 - Measurement of record: Worker /event aggregate counters in D1 `experiment_events`.
   GA4 dimensions optional and unregistered.
-- Live deployment date: PENDING (see Launch record).
+- Live deployment date: homepage October 8, 2026; Worker PENDING (see Launch record).
 
 ## Draft release wording — approval pending
 
@@ -370,33 +370,34 @@ inspected browser sessions; a login tab was opened for the owner to continue.
 
 ## Launch record
 
-Launch timestamp: NOT YET LAUNCHED.
+Launch timestamp: `EXPERIMENT_LAUNCH_UTC = "2026-10-08T22:45:00Z"` is configured and
+PR #51 is merged, so the homepage is deployed. **The experiment is not running until the
+Worker is deployed.** Until then every visitor sees appeal A, because the client requires
+the new `totals_verified` field that only the new Worker returns.
 
-All code, tests, counters and documentation are complete on branch
-`experiment/monthly-support-goal-202610` (PR #51). Launching takes two owner actions,
-in this order. The site is safe in between: with the currently deployed Worker response
-the homepage shows appeal A to everyone, because the client requires the new
-`totals_verified` field.
+Remaining step, one command:
 
-1. Deploy the homepage. Merge PR #51 into `main`; Cloudflare Pages deploys from `main`.
-   Confirm https://read-aloud.com/donation-experiment.js serves the new file and the
-   support strip still reads "Free for everyone".
-2. Start the experiment. In `worker/donation-goal/wrangler.toml` set
-   `EXPERIMENT_ENABLED = "true"` and `EXPERIMENT_LAUNCH_UTC` to the current ISO UTC
-   timestamp, then:
+```powershell
+cd C:/Users/ndaly/read-aloud-work/worker/donation-goal
+npx wrangler deploy
+```
 
-   ```powershell
-   cd C:/Users/ndaly/read-aloud-work/worker/donation-goal
-   npx wrangler d1 execute read-aloud-donations --remote --file schema.sql
-   npx wrangler deploy
-   ```
+No separate database migration is needed: the first `/event` write creates the
+`experiment_events` counter table if it is missing, then retries. `schema.sql` stays the
+canonical definition and the two must be kept identical.
 
-   The `d1 execute` line creates the new `experiment_events` counter table; it is safe to
-   re-run because every statement in schema.sql is `IF NOT EXISTS`. Then check that
-   `curl https://read-aloud-donation-goal.ndaly111.workers.dev/goal -H "Origin: https://read-aloud.com"`
-   returns `"ready":true`, `"experiment_active":true`, `"totals_verified":false` and
-   `"raised_cents":null`, load the homepage a few times to see all three appeals, and
-   record the deployed timestamp here plus in the Ledger table.
+Then confirm
+`curl https://read-aloud-donation-goal.ndaly111.workers.dev/goal -H "Origin: https://read-aloud.com"`
+returns `"ready":true`, `"experiment_active":true`, `"totals_verified":false` and
+`"raised_cents":null`; load the homepage a few times to see all three appeals; and check the
+counters move:
+
+```powershell
+npx wrangler d1 execute read-aloud-donations --remote --command "SELECT variant, event, SUM(count) AS n FROM experiment_events GROUP BY variant, event"
+```
+
+Record the real deploy time here and in the Ledger table if it differs materially from
+the configured launch timestamp; formal looks are measured from the deploy.
 
 Optional and independent of launch: install the BMC webhook secret and reconcile an
 opening ledger (steps 3-8 of "Verified live-goal setup") to upgrade B/C from

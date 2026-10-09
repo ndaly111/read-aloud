@@ -3,15 +3,19 @@ main = "src/index.js"
 compatibility_date = "2026-10-07"
 account_id = "d36f6a50c928a16dc27e0e789a94617f"
 
-# Intentionally disabled until opening ledger,
-# webhook secret and D1 are configured AND reconciled.
+# LIVE. The experiment runs on the Worker's own /event exposure+click counters.
+# GOAL_DATA_VERIFIED only controls whether B/C show a progress meter: while it is false the
+# two goal arms state the target amount only and no raised figure is published.
+# ATTRIBUTION_VERIFIED is a reporting label, NOT a gate - BMC's webhook schema carries no
+# variant/source field, so a payment can never be joined to a variant.
+# Kill switch: set EXPERIMENT_ENABLED = "false" and redeploy; everyone sees appeal A.
 [vars]
 GOAL_B_USD = "50"
 GOAL_C_USD = "100"
 GOAL_DATA_VERIFIED = "false"
 GOAL_VERIFIED_MONTH = ""
-EXPERIMENT_ENABLED = "false"
-EXPERIMENT_LAUNCH_UTC = ""
+EXPERIMENT_ENABLED = "true"
+EXPERIMENT_LAUNCH_UTC = "2026-10-08T22:45:00Z"
 ATTRIBUTION_VERIFIED = "false"
 # After a verified decision: A, B or C shows that appeal to everyone and stops allocation.
 SUPPORT_ROLLOUT_VARIANT = ""

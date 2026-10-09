@@ -12,10 +12,14 @@ const root = path.join(__dirname, '..');
   const worker = (await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'))).default;
   const db = new DatabaseSync(':memory:');
   db.exec(fs.readFileSync(path.join(root, 'worker/donation-goal/schema.sql'), 'utf8'));
-  const DB = { prepare(sql) { return { bind(...args) { return {
-    async first() { return db.prepare(sql).get(...args); },
-    async run() { return { meta: db.prepare(sql).run(...args) }; },
-  }; } }; } };
+  // Mirrors D1: a prepared statement can be run with or without bind().
+  const DB = { prepare(sql) {
+    const exec = args => ({
+      async first() { return db.prepare(sql).get(...args); },
+      async run() { return { meta: db.prepare(sql).run(...args) }; },
+    });
+    return { bind: (...args) => exec(args), ...exec([]) };
+  } };
   const now = new Date(), created = Math.floor(Date.now() / 1000) - 60;
   const env = { DB, BMC_WEBHOOK_SECRET: 'test-only-secret', GOAL_B_USD: '50', GOAL_C_USD: '100',
     GOAL_DATA_VERIFIED: 'true', GOAL_VERIFIED_MONTH: now.toISOString().slice(0, 7),
@@ -135,6 +139,11 @@ const root = path.join(__dirname, '..');
   // Counters hold no identifiers of any kind.
   assert.deepEqual(Object.keys(db.prepare('SELECT * FROM experiment_events LIMIT 1').get()),
     ['day', 'variant', 'event', 'count']);
+  // A database that predates the counter table self-migrates on the first event.
+  db.exec('DROP TABLE experiment_events');
+  assert.equal((await post({ experiment_id: 'support_goal_2026_10', variant: 'C', event: 'click' })).status, 204);
+  assert.equal(counted('C', 'click'), 1);
+  assert.equal(counted('B', 'view'), 0);
   assert(Math.abs(fisherExact(1, 9, 11, 3) - 0.0027594561852200836) < 1e-9);
   const input = { launch_at: '2026-10-01T12:00:00Z', review_at: '2026-10-15T12:00:00Z',
     attribution_verified: true, unique_counts_verified: true, guardrails_ok: true,

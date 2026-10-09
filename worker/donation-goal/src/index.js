@@ -89,10 +89,19 @@ async function recordEvent(request, env) {
     return new Response('Invalid event', { status: 400, headers });
   }
   const day = new Date().toISOString().slice(0, 10);
-  await env.DB.prepare(
+  const increment = () => env.DB.prepare(
     'INSERT INTO experiment_events (day, variant, event, count) VALUES (?, ?, ?, 1) ' +
     'ON CONFLICT(day, variant, event) DO UPDATE SET count = experiment_events.count + 1'
   ).bind(day, body.variant, body.event).run();
+  try { await increment(); }
+  catch (_) {
+    // First write on a database that predates the counter table: create it and retry once.
+    // Must stay identical to experiment_events in schema.sql, which remains canonical.
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS experiment_events (' +
+      'day TEXT NOT NULL, variant TEXT NOT NULL, event TEXT NOT NULL, ' +
+      'count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, variant, event))').run();
+    await increment();
+  }
   return new Response(null, { status: 204, headers });
 }
 async function processWebhook(request, env) {
