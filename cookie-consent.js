@@ -77,6 +77,7 @@
     // storage to "granted" on an explicit accept; reject leaves them denied
     // (cookieless analytics + non-personalized ads).
     updateConsentMode(value === ACCEPTED);
+    window.dispatchEvent(new CustomEvent('ra-consent-change', { detail: value }));
   };
 
   const buildBanner = () => {
@@ -98,7 +99,7 @@
       const button = event.target.closest('button[data-consent]');
       if (!button) return;
       const choice = button.dataset.consent === 'accept' ? ACCEPTED : REJECTED;
-      localStorage.setItem(CONSENT_KEY, choice);
+      try { localStorage.setItem(CONSENT_KEY, choice); } catch (_) {}
       banner.remove();
       applyConsent(choice);
     });
@@ -113,14 +114,16 @@
   const setupReset = () => {
     document.querySelectorAll('[data-cookie-reset]').forEach((button) => {
       button.addEventListener('click', () => {
-        localStorage.removeItem(CONSENT_KEY);
+        try { localStorage.removeItem(CONSENT_KEY); } catch (_) {}
+        applyConsent(null);
         showBanner();
       });
     });
   };
 
   const init = () => {
-    const stored = localStorage.getItem(CONSENT_KEY);
+    let stored = null;
+    try { stored = localStorage.getItem(CONSENT_KEY); } catch (_) {}
 
     // Load analytics + ads for EVERY visitor under Google Consent Mode v2.
     // Consent defaults to "denied" (set at top), so until a visitor accepts,
