@@ -13,7 +13,7 @@ const TTS_ENDPOINTS = [
   'https://read-aloud-s4ov.onrender.com',
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
-const READER_BUILD = '20261010unicode1';
+const READER_BUILD = '20261011reports1';
 let ttsRequestSequence = 0;
 
 // Do not let one hung connection turn failover into a multi-minute wait. The
@@ -312,8 +312,18 @@ function playbackDiagnosticState() {
     speaking: isSpeaking, paused: isPaused,
     speech_speaking: speechSynthesis.speaking, speech_pending: speechSynthesis.pending,
     speech_paused: speechSynthesis.paused, rate: +rateSlider.value, volume: +volSlider.value,
+    phase: isPaused ? 'paused' : loopGapActive ? 'loop-gap' : mp3Export || subtitleExport ? 'exporting' :
+      !isSpeaking ? (totalChars > 0 && progChar >= totalChars ? 'ended' : 'idle') :
+      audio || speechSynthesis.speaking ? 'playing' : 'loading',
+    loop_on: loopOn, loop_gap_sec: loopGapSec, loop_gap_active: loopGapActive,
+    selected_voice: voiceSel.value.startsWith('neural:') ? voiceSel.value.slice(7) : 'device',
+    selected_language: langSel.value,
+    loop_remaining_ms: diagnosticLoopRemainingMs,
+    segment_count: timed ? timed.segments.length : lastRead ? lastRead.segments.length : 0,
+    ready_state: audio ? audio.readyState : 0, network_state: audio ? audio.networkState : 0,
   };
 }
+let diagnosticLoopRemainingMs = 0;
 
 /* ========== ACTIVE PLAYBACK CLOCK ========== */
 // Start only when audio/speech actually plays, not when synthesis is requested.
@@ -359,9 +369,10 @@ function usesDeviceVolumeButtons(nav = navigator) {
   langSel.value = (navigator.language || 'en').slice(0, 2);
 
   // Event listeners
-  langSel.onchange = () => populateVoiceSel();
+  langSel.onchange = () => { populateVoiceSel(); globalThis.readerDiagnostics?.record('language_change'); };
   rateSlider.oninput = () => {
     rateValue.textContent = rateSlider.value;
+    globalThis.readerDiagnostics?.record('rate_change');
     resetTimeEstimate();
     // Timed neural playback: tempo is a live playbackRate change (pitch is
     // preserved by the browser) — takes effect mid-word, no re-synthesis.
@@ -376,6 +387,7 @@ function usesDeviceVolumeButtons(nav = navigator) {
   };
   volSlider.oninput = () => {
     volValue.textContent = Math.round(+volSlider.value * 100);
+    globalThis.readerDiagnostics?.record('volume_change');
     // Neural TTS: HTMLAudioElement.volume is live-mutable.
     if (currentAudio) currentAudio.volume = +volSlider.value;
     // Browser TTS: utterance.volume is locked once speak() is called, so the only
@@ -418,11 +430,13 @@ function usesDeviceVolumeButtons(nav = navigator) {
   loopGapInput.value = loopGapSec;
   loopGapInput.oninput = () => {
     loopGapSec = clampGap(loopGapInput.value);
+    globalThis.readerDiagnostics?.record('loop_change');
     try { localStorage.setItem('ra_loop_gap', String(loopGapSec)); } catch (e) {}
   };
   applyLoop();
   loopBtn.onclick = () => {
     loopOn = !loopOn;
+    globalThis.readerDiagnostics?.record('loop_change');
     try { localStorage.setItem('ra_loop', loopOn ? '1' : '0'); } catch (e) {}
     applyLoop();
   };
@@ -668,6 +682,7 @@ function updateVoiceStatus() {
 if (voiceSel) voiceSel.addEventListener('change', () => {
   preferredVoices.set(langSel.value, voiceSel.value);
   updateVoiceStatus();
+  globalThis.readerDiagnostics?.record('voice_change');
 });
 
 /* ========== START SPEAK ========== */
@@ -896,6 +911,7 @@ function seekToChar(ch) {
   const idx = segIndexForChar(ch);
   if (idx === -1) return;
   progChar = ch;
+  globalThis.readerDiagnostics?.record('seek');
   resetTimeEstimate(ch);
   updateMeter(progChar); // instant visual feedback even while audio catches up
   const seg = timed.segments[idx];
@@ -954,7 +970,7 @@ async function useTimedNeuralSpeech(voiceId) {
     posKey: POSITION_LS_PREFIX + hashText(text),
   };
   const ownsSession = () => isSpeaking && timed === session;
-  lastRead = { key, segments, voiceId };
+  lastRead = { key, segments, voiceId, diagnosticId: globalThis.readerDiagnostics?.readingId() };
   updateExportControls();
 
   // Only actual completion clears a saved position; short readings and the
@@ -1046,7 +1062,8 @@ async function useTimedNeuralSpeech(voiceId) {
     // A stopped reading's success OR failure must not touch a newer session.
     if (!ownsSession()) return;
     console.error('Timed TTS error:', error);
-    globalThis.readerDiagnostics?.record('reading_error', ttsFailureCode(error), undefined, error.ttsDiagnostic);
+    globalThis.readerDiagnostics?.capture?.('reading_error', error, undefined,
+      { ...error.ttsDiagnostic, code: ttsFailureCode(error) });
     globalThis.readerDiagnostics?.end('stop');
     pausePlaybackClock();
     if (currentAudio) {
@@ -2020,7 +2037,10 @@ function updateExportControls() {
 async function loopGapWait(alive) {
   let remaining = loopGapSec * 1000;
   if (remaining <= 0) return;
+  const diagnosticId = globalThis.readerDiagnostics?.readingId();
   loopGapActive = true;
+  diagnosticLoopRemainingMs = remaining;
+  globalThis.readerDiagnostics?.record('loop_gap_start', '', diagnosticId);
   pausePlaybackClock();
   let last = Date.now();
   try {
@@ -2029,10 +2049,13 @@ async function loopGapWait(alive) {
       await new Promise(r => setTimeout(r, 200));
       const now = Date.now();
       if (!isPaused) remaining -= now - last;
+      if (globalThis.readerDiagnostics?.readingId() === diagnosticId) diagnosticLoopRemainingMs = Math.max(0, remaining);
       last = now;
     }
   } finally {
     loopGapActive = false;
+    if (globalThis.readerDiagnostics?.readingId() === diagnosticId) diagnosticLoopRemainingMs = 0;
+    globalThis.readerDiagnostics?.record('loop_gap_end', '', diagnosticId);
   }
 }
 
@@ -2056,6 +2079,7 @@ async function downloadMp3() {
   const reading = lastRead;
   if (!reading || !reading.segments.length || (mp3Export && mp3Export.reading === reading)) return;
   const job = mp3Export = { reading };
+  globalThis.readerDiagnostics?.record('export_start', '', reading.diagnosticId, { export_type: 'mp3' });
   const isCurrent = () => lastRead === reading && mp3Export === job;
   const rate = +rateSlider.value;
   updateExportControls();
@@ -2091,11 +2115,14 @@ async function downloadMp3() {
     a.href = url;
     a.download = Math.abs(rate - 1) > 0.01 ? `read-aloud-${rate}x.mp3` : 'read-aloud.mp3';
     a.click();
+    globalThis.readerDiagnostics?.record('export_finish', '', reading.diagnosticId, { export_type: 'mp3' });
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     if (!isSpeaking) setStatus('MP3 ready');
   } catch (e) {
     if (isCurrent()) {
       showError(`Couldn't prepare the MP3 — try again in a moment.`);
+      globalThis.readerDiagnostics?.capture?.('export_error', e, reading.diagnosticId,
+        { ...e.ttsDiagnostic, code: ttsFailureCode(e), export_type: 'mp3' });
       if (!isSpeaking) setStatus('Ready');
     }
   } finally {
@@ -2174,6 +2201,7 @@ async function downloadSubtitles() {
   const reading = lastRead;
   if (!reading || !reading.segments.length || (subtitleExport && subtitleExport.reading === reading)) return;
   const job = subtitleExport = { reading };
+  globalThis.readerDiagnostics?.record('export_start', '', reading.diagnosticId, { export_type: 'subtitles' });
   const isCurrent = () => lastRead === reading && subtitleExport === job;
   const rate = +rateSlider.value;
   updateExportControls();
@@ -2210,11 +2238,14 @@ async function downloadSubtitles() {
     a.href = url;
     a.download = scale !== 1 ? `read-aloud-${rate}x.srt` : 'read-aloud.srt';
     a.click();
+    globalThis.readerDiagnostics?.record('export_finish', '', reading.diagnosticId, { export_type: 'subtitles' });
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     if (!isSpeaking) setStatus('Subtitles ready');
   } catch (e) {
     if (isCurrent()) {
       console.error('Subtitle export error:', e);
+      globalThis.readerDiagnostics?.capture?.('export_error', e, reading.diagnosticId,
+        { ...e.ttsDiagnostic, code: ttsFailureCode(e), export_type: 'subtitles' });
       showError(`Couldn't prepare the subtitles — try again in a moment.`);
       if (!isSpeaking) setStatus('Ready');
     }

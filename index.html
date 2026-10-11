@@ -296,8 +296,8 @@
 </script>
 
 <!-- main logic -->
-<script src="playback-diagnostics.js?v=20261010diag2"></script>
-<script src="readaloud.js?v=20261010unicode1"></script>
+<script src="playback-diagnostics.js?v=20261011reports1"></script>
+<script src="readaloud.js?v=20261011reports1"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -321,6 +321,7 @@
     status.className = 'feedback-status';
     try {
       const feedbackData = new FormData(form);
+      globalThis.readerDiagnostics?.feedback();
       const readingId = globalThis.readerDiagnostics?.readingId();
       if (readingId) feedbackData.set('_reading_id', readingId);
       // Snapshot the controls now, even if they changed after the last reading.

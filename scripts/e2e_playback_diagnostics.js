@@ -30,6 +30,11 @@ const server = http.createServer((req, res) => {
     await page.route('**/*', async route => {
       const request = route.request();
       const url = new URL(request.url());
+      if (url.hostname === '127.0.0.1' && url.pathname === '/readaloud.js' && url.searchParams.has('diagnostic-fixture')) {
+        return route.fulfill({ contentType: 'application/javascript', body:
+          'setTimeout(() => { throw new TypeError("Private crash message"); }, 0);' +
+          'setTimeout(() => Promise.reject(new Error("Private rejection message")), 30);' });
+      }
       if (url.hostname === 'read-aloud-feedback.ndaly111.workers.dev') {
         if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
         const form = await new Request(request.url(), { method: 'POST', headers: request.headers(), body: request.postDataBuffer() }).formData();
@@ -88,9 +93,25 @@ const server = http.createServer((req, res) => {
     assert.equal(feedback[0]._voice_volume, '0.65');
     assert.equal(feedback[0]._voice_volume_control, 'web');
     assert(!JSON.stringify(feedback).includes('Private passage'));
+    assert(samples.some(s => s.event === 'feedback' && s.report.kind === 'feedback' && s.reading_id === id));
+    // Real asynchronous browser failures from a same-origin script, after Stop.
+    await page.addScriptTag({ url: `http://127.0.0.1:${server.address().port}/readaloud.js?diagnostic-fixture` });
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const runtime = samples.find(s => s.event === 'runtime_error');
+    assert(runtime && runtime.reading_id === id && runtime.report.error_name === 'TypeError');
+    assert(runtime.report.frames.some(f => f.file === 'readaloud.js' && f.line > 0));
+    assert(samples.some(s => s.event === 'unhandled_rejection' && s.reading_id === id));
+    assert(!JSON.stringify(samples).includes('Private crash message'));
+    assert(!JSON.stringify(samples).includes('Private rejection message'));
+    assert(!JSON.stringify(samples).includes('diagnostic-fixture'));
+    // A fresh page can report a failure before Start has ever been pressed.
+    await page.reload();
+    await page.addScriptTag({ url: `http://127.0.0.1:${server.address().port}/readaloud.js?diagnostic-fixture` });
+    await new Promise(resolve => setTimeout(resolve, 300));
+    assert(samples.some(s => s.event === 'runtime_error' && s.source === 'page' && s.reading_id !== id));
     // Python validates these exact browser payloads against the server schema.
     if (process.argv[2]) fs.writeFileSync(process.argv[2], JSON.stringify(samples));
-    console.log('PASS real browser playback, diagnostics, feedback settings at submission and document privacy');
+    console.log('PASS real browser playback, feedback snapshots, asynchronous crash/rejection reports, pre-Start/post-Stop correlation and privacy');
   } finally {
     if (browser) await browser.close();
     await new Promise(resolve => server.close(resolve));

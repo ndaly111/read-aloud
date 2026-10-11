@@ -28,7 +28,7 @@
     <p class="eyebrow"><span>Read‑Aloud</span><span class="sep">·</span><span>Privacy Policy</span></p>
     <h1>How <em>your text</em> is handled.</h1>
     <p class="lead">Browser voices stay on your device. Premium neural voices stream through our TTS server and use Microsoft Edge TTS. Text is not stored. Ads and analytics run without cookies unless you accept; accepting allows personalized ads and analytics cookies.</p>
-    <p class="last-updated"><strong>Last updated</strong> October 8, 2026</p>
+    <p class="last-updated"><strong>Last updated</strong> October 11, 2026</p>
   </header>
 
   <article class="content">
@@ -84,12 +84,19 @@
         <strong>Basic server logs:</strong> like most websites, our hosting provider may process standard logs (requested page, date/time, and basic device/network information) for security and reliability.
       </li>
       <li>
-        <strong>Playback diagnostics:</strong> we record playback events and voice-service failures to investigate problems.
+        <strong>Playback diagnostics and error reports:</strong> we automatically record operational events and failures to investigate problems, independently of the analytics cookie choice.
         Records include the voice choice, browser family and major version, operating-system family, playback position,
-        and whether the page is visible or audio is paused or muted. Each reading gets a temporary random ID held only
-        in page memory; it is included when you send feedback so we can find that reading's logs.
-        These diagnostic records do not include your pasted text, audio, email address, full browser identifier, or IP address.
-        They are kept for up to 30 days during normal operation, with a maximum of 50,000 records per server.
+        playback speed and volume setting, loop settings and countdown, loading state, and whether the page is visible or audio is paused or muted.
+        When a failure occurs, a report may include the error category, the names and line numbers of our own code files,
+        and a short sequence of recent player actions such as starting, pausing, seeking, or changing settings.
+        Reports also cover failed downloads, failures before a reading starts, and playback that appears stuck.
+        Each reading or page-level report gets a temporary random ID held only in page memory; it is included when
+        you send feedback so we can find the relevant reports. Sending feedback also records the current player state.
+        These diagnostic records do not include your pasted text, uploaded file contents or names, audio, email address,
+        raw error messages, full page addresses, full browser identifier, or IP address. They are used for troubleshooting,
+        not advertising or tracking you across visits. Access to the reports is restricted to site administration.
+        They are kept for up to 30 days during normal operation, with a maximum of 50,000 routine records and
+        5,000 separately retained error and feedback reports per server. Those limits may remove records sooner.
       </li>
     </ul>
 
