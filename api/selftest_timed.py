@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0].rsplit("\\", 1)[0])
 
-from tts_server import TICKS_PER_MS, _map_word_offsets
+from tts_server import TICKS_PER_MS, _map_word_offsets, _timed_payload
 
 
 def t(ms):
@@ -76,6 +76,26 @@ def unit_checks():
 
     # Monotonic char offsets guaranteed by cursor advance.
     ok &= check("offsets monotonic", all(a[1] < b_[1] for a, b_ in zip(words, words[1:])))
+
+    text = "\U0001f680 Hello \U00020bb7 world"
+    b = [(t(0), t(100), "Hello"), (t(200), t(100), "world")]
+    words = _map_word_offsets(text, b)
+    result = {"audio": b"synthetic", "words": words, "engine": "edge", "duration_ms": 300}
+    payload = _timed_payload(result, text)
+    ok &= check("API declares UTF-16 units", payload["text_units"] == "utf16")
+    ok &= check("emoji and supplementary CJK count as two units",
+                payload["spoken_chars"] == len(text.encode("utf-16-le")) // 2)
+    ok &= check("word anchors use browser positions", [w[1] for w in payload["words"]] == [3, 12], str(payload["words"]))
+    ok &= check("conversion does not mutate internal engine positions", [w[1] for w in words] == [2, 10])
+    backup_payload = _timed_payload({**result, "engine": "backup"}, text)
+    ok &= check("backup uses identical text units", backup_payload["words"] == payload["words"])
+    for text in ["Hello world", "Cafe\u0301", "\U0001f469\u200d\U0001f4bb works", "\U0001D400 math"]:
+        payload = _timed_payload({**result, "words": []}, text)
+        ok &= check("Unicode count round trip " + ascii(text),
+                    payload["spoken_chars"] == len(text.encode("utf-16-le")) // 2)
+
+    words = _map_word_offsets("\u0130stanbul world", [(t(0), t(100), "world")])
+    ok &= check("lowercase expansion preserves original position", words == [[0, 9]], str(words))
     return ok
 
 

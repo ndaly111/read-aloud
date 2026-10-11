@@ -359,6 +359,9 @@ def _map_word_offsets(text: str, boundaries: list) -> list:
     """
     words = []
     lower = text.lower()
+    # Lowercasing can expand a character (e.g. U+0130 -> i + combining dot).
+    # Keep lookup positions tied to the original text's code points.
+    original_positions = [i for i, char in enumerate(text) for _ in char.lower()]
     cursor = 0
     for offset_ticks, _duration_ticks, spoken in boundaries:
         w = (spoken or "").strip().lower()
@@ -366,9 +369,30 @@ def _map_word_offsets(text: str, boundaries: list) -> list:
             continue
         idx = lower.find(w, cursor)
         if idx != -1 and idx - cursor <= 200:
-            words.append([offset_ticks // TICKS_PER_MS, idx])
+            words.append([offset_ticks // TICKS_PER_MS, original_positions[idx]])
             cursor = idx + len(w)
     return words
+
+
+def _timed_payload(result: dict, spoken_text: str) -> dict:
+    """Serialize all text positions in JavaScript's UTF-16 units.
+
+    Synthesis engines work with Python code-point positions internally. Convert
+    only at the API boundary, for Edge and local backup output alike. Existing
+    browsers already expect UTF-16 counts; the marker also lets new browsers
+    safely consume older servers that still return code-point positions.
+    """
+    positions = [0]
+    for char in spoken_text:
+        positions.append(positions[-1] + (2 if ord(char) > 0xFFFF else 1))
+    return {
+        "words": [[time_ms, positions[offset]] for time_ms, offset in result["words"]],
+        "duration_ms": result["duration_ms"],
+        "engine": result["engine"],
+        "spoken_chars": positions[-1],
+        "text_units": "utf16",
+        "audio": base64.b64encode(result["audio"]).decode("ascii"),
+    }
 
 
 if backup_engine.available() and os.environ.get("BACKUP_WARM", "1") == "1":
@@ -509,7 +533,7 @@ async def text_to_speech_timed(request: Request, body: TimedTTSRequest):
     char_count = len(body.text)
 
     cache_key = hashlib.sha256(
-        f"timed|{body.text}|{body.voice}".encode("utf-8")
+        f"timed-utf16|{body.text}|{body.voice}".encode("utf-8")
     ).hexdigest()
     cached = audio_cache.get(cache_key)
     if cached is not None:
@@ -564,13 +588,7 @@ async def text_to_speech_timed(request: Request, body: TimedTTSRequest):
             raise HTTPException(status_code=500, detail=f"TTS generation failed: {edge_err}")
         raise HTTPException(status_code=503, detail="No voice engine available for this voice")
 
-    payload = json.dumps({
-        "words": result["words"],
-        "duration_ms": result["duration_ms"],
-        "engine": result["engine"],
-        "spoken_chars": len(spoken_text),
-        "audio": base64.b64encode(result["audio"]).decode("ascii"),
-    }).encode("utf-8")
+    payload = json.dumps(_timed_payload(result, spoken_text)).encode("utf-8")
 
     # Only Edge output goes in the cache; a cached backup rendition would keep
     # serving the backup voice for an hour after Edge recovered.

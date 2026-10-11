@@ -51,12 +51,30 @@ with tempfile.TemporaryDirectory() as directory:
     assert client.post("/api/diagnostics", content=b"x" * 4097, headers=headers).status_code == 413
     assert len(store.read()) == 1
 
-    response = client.post("/api/tts/timed", json={"text": "private passage"}, headers={**headers, "X-Reading-ID": ID})
+    response = client.post("/api/tts/timed", json={"text": "private passage"}, headers={**headers, "X-Reading-ID": ID,
+        "X-TTS-Request-ID": "17", "X-TTS-Attempt": "3"})
     assert response.status_code == 504
     failure = store.read(ID)[0]
     assert failure["event"] == "tts_failure" and failure["data"]["status"] == 504
+    assert failure["data"]["request_id"] == 17 and failure["data"]["attempt"] == 3
+    enhanced = {**EVENT, "event": "fetch_error", "reader_build": "20261010unicode1",
+        "endpoint": "render", "request_id": 17, "attempt": 3, "request_start": 12043,
+        "request_chars": 1185, "request_ms": 420, "http_status": 200,
+        "stage": "validation", "code": "incomplete-audio", "expected_chars": 1185,
+        "returned_chars": 1184, "audio_bytes": 200}
+    assert client.post("/api/diagnostics", json=enhanced, headers=headers).status_code == 204
+    assert store.read(ID)[0]["data"]["reader_build"] == "20261010unicode1"
+    assert client.post("/api/diagnostics", json={**enhanced, "event": "fetch_recovered", "code": "", "stage": "complete"}, headers=headers).status_code == 204
+    for field, value in [("endpoint", "https://private.example"), ("stage", "private error"),
+                         ("reader_build", "private text"), ("request_id", 1000001), ("attempt", 5),
+                         ("returned_chars", -2), ("request_start", -2), ("request_ms", "100")]:
+        assert client.post("/api/diagnostics", json={**enhanced, field: value}, headers=headers).status_code == 400
+    client.post("/api/tts/timed", json={}, headers={**headers, "X-Reading-ID": ID,
+        "X-TTS-Request-ID": "private header", "X-TTS-Attempt": "99999"})
+    assert store.read(ID)[0]["data"]["request_id"] == 0
+    assert store.read(ID)[0]["data"]["attempt"] == 0
     serialized = json.dumps(store.read())
-    for secret in ("private passage", "secret upstream", "test-token", "127.0.0.1"):
+    for secret in ("private passage", "secret upstream", "test-token", "127.0.0.1", "private header"):
         assert secret not in serialized
     print("PASS ingestion, origin checks, protected review, privacy and correlated API failures")
 

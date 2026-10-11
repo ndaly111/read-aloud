@@ -18,7 +18,7 @@ EVENTS = Literal[
     "start", "heartbeat", "visibility", "playing", "unexpected_pause",
     "waiting", "stalled", "audio_error", "play_rejected", "voice_error",
     "speech_restart", "fetch_error", "reading_error", "user_pause",
-    "user_resume", "stop", "finish",
+    "user_resume", "stop", "finish", "fetch_recovered",
 ]
 READING_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
@@ -30,6 +30,7 @@ class PlaybackEvent(BaseModel):
     event: EVENTS
     elapsed_ms: int = Field(ge=0, le=86400000)
     build: str = Field(pattern=r"^[0-9]{8}[a-z0-9-]{0,20}$")
+    reader_build: str = Field(default="", pattern=r"^(|[0-9]{8}[a-z0-9-]{0,20})$")
     source: Literal["premium", "browser"]
     voice: str = Field(pattern=r"^(device|[a-z]{2,3}-[A-Z]{2}-[A-Za-z0-9]{1,50}Neural)$")
     language: str = Field(pattern=r"^[a-z]{2,3}$")
@@ -52,7 +53,18 @@ class PlaybackEvent(BaseModel):
     online: bool
     rate: float = Field(ge=0.1, le=10)
     volume: float = Field(ge=0, le=1)
-    code: str = Field(default="", pattern=r"^(|unknown|timeout|abort|network|not-allowed|interrupted|canceled|synthesis-failed|synthesis-unavailable|audio-busy|audio-hardware|language-unavailable|voice-unavailable|invalid-argument|text-too-long|audio-[1-4]|http-[1-5][0-9]{2})$")
+    code: str = Field(default="", pattern=r"^(|unknown|timeout|abort|network|invalid-response|invalid-audio|audio-too-small|incomplete-audio|wrong-engine|not-allowed|interrupted|canceled|synthesis-failed|synthesis-unavailable|audio-busy|audio-hardware|language-unavailable|voice-unavailable|invalid-argument|text-too-long|audio-[1-4]|http-[1-5][0-9]{2})$")
+    endpoint: Literal["", "primary", "render"] = ""
+    request_id: int = Field(default=0, ge=0, le=1000000)
+    attempt: int = Field(default=0, ge=0, le=4)
+    request_start: int = Field(default=-1, ge=-1, le=10000000)
+    request_chars: int = Field(default=0, ge=0, le=10000)
+    request_ms: int = Field(default=0, ge=0, le=120000)
+    http_status: int = Field(default=0, ge=0, le=599)
+    stage: Literal["", "network", "response", "decode", "validation", "complete"] = ""
+    audio_bytes: int = Field(default=0, ge=0, le=50000000)
+    expected_chars: int = Field(default=0, ge=0, le=10000)
+    returned_chars: int = Field(default=-1, ge=-1, le=10000)
 
 
 class DiagnosticStore:
@@ -173,6 +185,12 @@ def install_diagnostics(app, path, origins, admin_token):
         started = time.monotonic()
         reading_id = request.headers.get("x-reading-id", "")
         reading_id = reading_id if READING_ID.fullmatch(reading_id) else None
+        # Numeric attempt identity only; never copy arbitrary header contents.
+        def bounded_header(name, maximum):
+            value = request.headers.get(name, "")
+            return int(value) if re.fullmatch(r"[0-9]{1,7}", value) and int(value) <= maximum else 0
+        request_id = bounded_header("x-tts-request-id", 1000000)
+        attempt = bounded_header("x-tts-attempt", 4)
         status = 500
         try:
             response = await call_next(request)
@@ -183,5 +201,6 @@ def install_diagnostics(app, path, origins, admin_token):
                 await run_in_threadpool(store.write, reading_id, "tts_failure", {
                     "path": request.url.path, "status": status,
                     "duration_ms": round((time.monotonic() - started) * 1000),
+                    "request_id": request_id, "attempt": attempt,
                 })
     return store
