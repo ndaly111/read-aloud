@@ -44,6 +44,7 @@ function context() {
     playTimedSegment(seg){ctx.played.push({text:seg.text,paused:ctx.isPaused,voice:ctx.timed.voiceId}); return new Promise(()=>{});},
   };
   vm.createContext(ctx);
+  vm.runInContext(section('const TTS_ENDPOINTS', '// One reusable <audio>'),ctx);
   vm.runInContext(section('const SEGMENT_CHARS', 'const POSITION_LS_PREFIX'),ctx);
   vm.runInContext(section('function playbackSeconds()', '/* ========== INIT'),ctx);
   vm.runInContext(section('async function useTimedNeuralSpeech(', '// Play one fetched segment'),ctx);

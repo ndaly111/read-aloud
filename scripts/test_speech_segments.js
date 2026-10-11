@@ -14,6 +14,8 @@ const fixtures = [
   ('An oversized sentence must be split without dropping a word or moving its display position ').repeat(50),
   '長い文章でも文字を飛ばさず正確な位置で読み上げます'.repeat(80),
   'a'.repeat(2000),
+  'a'.repeat(399) + '\u{1F680}' + 'b'.repeat(1800),
+  ('\u{1F680}\u{1D400}\u{20BB7}').repeat(700),
 ];
 for (const voice of ['en-GB-SoniaNeural', 'vi-VN-HoaiMyNeural', 'en-US-AriaNeural', 'en-US-GuyNeural']) {
   const maxLen = ctx.segmentCharsForVoice(voice);
@@ -24,6 +26,8 @@ for (const voice of ['en-GB-SoniaNeural', 'vi-VN-HoaiMyNeural', 'en-US-AriaNeura
     for (const segment of segments) {
       assert.ok(segment.text.length <= maxLen, `${voice}: oversized section`);
       assert.equal(segment.text, text.slice(segment.start, segment.end));
+      assert.ok(!/[\uD800-\uDBFF]$/.test(segment.text), 'No trailing half-surrogate');
+      assert.ok(!/^[\uDC00-\uDFFF]/.test(segment.text), 'No leading half-surrogate');
       assert.ok(segment.start >= previousEnd);
       assert.match(text.slice(previousEnd, segment.start), /^\s*$/);
       previousEnd = segment.end;

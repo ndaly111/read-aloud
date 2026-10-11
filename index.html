@@ -126,6 +126,10 @@
   <ul class="updates-list">
     <li>
       <span class="upd-date">Oct 10, 2026</span>
+      <span class="upd-text">Fixed an issue where emoji and certain other characters could interrupt premium reading or misalign word highlighting. (Thanks to the reader who wrote in about this.)</span>
+    </li>
+    <li>
+      <span class="upd-date">Oct 10, 2026</span>
       <span class="upd-text">Premium voices now try the backup server sooner when a request times out, while keeping your selected voice. (Thanks to the reader who wrote in about this.)</span>
     </li>
     <li>
@@ -292,8 +296,8 @@
 </script>
 
 <!-- main logic -->
-<script src="playback-diagnostics.js?v=20261004diag1"></script>
-<script src="readaloud.js?v=20261010recovery1"></script>
+<script src="playback-diagnostics.js?v=20261010diag2"></script>
+<script src="readaloud.js?v=20261010unicode1"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>

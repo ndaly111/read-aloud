@@ -13,6 +13,8 @@ const TTS_ENDPOINTS = [
   'https://read-aloud-s4ov.onrender.com',
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
+const READER_BUILD = '20261010unicode1';
+let ttsRequestSequence = 0;
 
 // Do not let one hung connection turn failover into a multi-minute wait. The
 // always-on primary gets a tight ceiling; Render gets longer because its
@@ -52,7 +54,66 @@ function ttsHttpError(status, detail) {
 
 function ttsFailureCode(error) {
   if (error.name === 'AbortError') return 'timeout';
+  if (error.diagnosticCode) return error.diagnosticCode;
+  if (error.name === 'SyntaxError') return 'invalid-response';
+  if (error.name === 'TypeError' && error.ttsDiagnostic?.stage === 'network') return 'network';
   return error.status ? `http-${error.status}` : 'unknown';
+}
+
+function ttsValidationError(code, message) {
+  const error = new Error(message);
+  error.diagnosticCode = code;
+  return error;
+}
+
+function recordTtsRequest(event, error, readingId, details) {
+  // Diagnostics remain optional, including when older scripts are cached.
+  try {
+    if (readingId) globalThis.readerDiagnostics?.record(event,
+      error ? ttsFailureCode(error) : '', readingId, details);
+  } catch (_) {}
+}
+
+function decodeTimedResponse(seg, data, details) {
+  if (!data || typeof data !== 'object' ||
+      (data.text_units != null && data.text_units !== 'utf16')) {
+    throw ttsValidationError('invalid-response', 'Invalid timed response');
+  }
+  if (data.engine && data.engine !== 'edge') {
+    throw ttsValidationError('wrong-engine', 'voice server substituted a different voice');
+  }
+  // Older servers count Python code points. Translate both counts and anchors
+  // to the browser's UTF-16 units without weakening the completeness check.
+  const positions = [0];
+  for (const char of seg.text) positions.push(positions[positions.length - 1] + char.length);
+  const utf16 = data.text_units === 'utf16';
+  const expected = utf16 ? seg.text.length : positions.length - 1;
+  details.expected_chars = expected;
+  details.returned_chars = Number.isInteger(data.spoken_chars) ? data.spoken_chars : -1;
+  if (data.spoken_chars != null && data.spoken_chars !== expected) {
+    throw ttsValidationError('incomplete-audio', 'voice server returned incomplete audio');
+  }
+  details.stage = 'decode';
+  let bin;
+  try { bin = atob(data.audio || ''); }
+  catch (_) { throw ttsValidationError('invalid-audio', 'Invalid audio encoding'); }
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  details.audio_bytes = bytes.length;
+  if (bytes.length < 100) throw ttsValidationError('audio-too-small', 'audio too small');
+  details.stage = 'validation';
+  if (!Array.isArray(data.words || [])) {
+    throw ttsValidationError('invalid-response', 'Invalid word anchors');
+  }
+  const words = (data.words || []).map(w => {
+    if (!Array.isArray(w) || !Number.isFinite(w[0]) || w[0] < 0 ||
+        !Number.isInteger(w[1]) || w[1] < 0 || w[1] >= expected) {
+      throw ttsValidationError('invalid-response', 'Invalid word anchor');
+    }
+    return [w[0] / 1000, (utf16 ? w[1] : positions[w[1]]) + seg.start];
+  });
+  // Do not leave a reusable blob behind if any validation failed.
+  return { blob: new Blob([bytes], { type: 'audio/mpeg' }), engine: data.engine || 'edge', words };
 }
 
 function switchTtsEndpoint(error) {
@@ -625,7 +686,7 @@ function startSpeak() {
   const [voiceType, voiceId] = voiceSel.value.split(':');
 
   globalThis.readerDiagnostics?.begin(voiceType === 'neural' && apiAvailable ? 'premium' : 'browser',
-    voiceId, langSel.value, playbackDiagnosticState);
+    voiceId, langSel.value, playbackDiagnosticState, READER_BUILD);
 
   if (voiceType === 'neural' && apiAvailable) {
     useTimedNeuralSpeech(voiceId);
@@ -689,6 +750,8 @@ function segmentTextWithOffsets(text, maxLen) {
     while (pe - cur > maxLen) {
       let cut = text.lastIndexOf(' ', cur + maxLen);
       if (cut <= cur) cut = cur + maxLen;
+      // Never send half an emoji/non-BMP character at a hard section boundary.
+      if (/[\uD800-\uDBFF]/.test(text[cut - 1]) && /[\uDC00-\uDFFF]/.test(text[cut])) cut--;
       addPiece(cur, cut);
       cur = cut;
     }
@@ -705,18 +768,25 @@ async function fetchTimedSegment(seg, voiceId, label) {
   // (which can't be downloaded). Missing endpoints fail cleanly as well.
   const urlOrder = ttsUrlOrder();
   const diagnosticHeaders = globalThis.readerDiagnostics?.headers() || {};
+  const requestId = ttsRequestSequence = (ttsRequestSequence % 1000000) + 1;
+  let requestAttempt = 0;
   let lastErr;
   let all404 = true;
   for (const url of urlOrder) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       if (attempt > 1) await new Promise(r => setTimeout(r, 800 * attempt));
       let timeout;
+      const started = Date.now();
+      const details = { endpoint: url === TTS_ENDPOINTS[0] ? 'primary' : 'render',
+        request_id: requestId, attempt: ++requestAttempt, request_start: seg.start,
+        request_chars: seg.text.length, http_status: 0, stage: 'network' };
       try {
         const controller = new AbortController();
         timeout = setTimeout(() => controller.abort(), ttsRequestTimeout(url));
         const r = await fetch(`${url}/api/tts/timed`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...diagnosticHeaders },
+          headers: { 'Content-Type': 'application/json', ...diagnosticHeaders,
+            'X-TTS-Request-ID': String(requestId), 'X-TTS-Attempt': String(requestAttempt) },
           // A premium selection must remain that exact voice for the whole
           // reading. Asking explicitly for Edge lets the client try the same
           // voice on the other server instead of accepting a different local
@@ -724,8 +794,13 @@ async function fetchTimedSegment(seg, voiceId, label) {
           body: JSON.stringify({ text: seg.text, voice: voiceId, engine: 'edge' }),
           signal: controller.signal
         });
+        details.http_status = r.status;
+        details.stage = 'response';
         if (r.status === 404) {
-          lastErr = new Error('timed endpoint unavailable');
+          lastErr = ttsHttpError(404, 'timed endpoint unavailable');
+          details.request_ms = Date.now() - started;
+          lastErr.ttsDiagnostic = details;
+          recordTtsRequest('fetch_error', lastErr, diagnosticHeaders['X-Reading-ID'], details);
           noteTtsFailure(url); // don't re-probe a knowingly-stale primary every segment
           break; // this server lacks the endpoint — try the next one, not more attempts
         }
@@ -735,30 +810,24 @@ async function fetchTimedSegment(seg, voiceId, label) {
           throw ttsHttpError(r.status, err.detail);
         }
         const d = await r.json();
-        if (d.engine && d.engine !== 'edge') {
-          throw new Error('voice server substituted a different voice');
+        details.stage = 'validation';
+        Object.assign(seg, decodeTimedResponse(seg, d, details));
+        details.stage = 'complete';
+        details.request_ms = Date.now() - started;
+        if (lastErr || activeTtsUrl !== url) {
+          recordTtsRequest('fetch_recovered', null, diagnosticHeaders['X-Reading-ID'], details);
         }
-        const bin = atob(d.audio || '');
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        if (bytes.length < 100) throw new Error('audio too small');
-        const spoken = d.spoken_chars != null ? d.spoken_chars : seg.text.length;
-        if (spoken !== seg.text.length) throw new Error('voice server returned incomplete audio');
-        seg.blob = new Blob([bytes], { type: 'audio/mpeg' });
-        seg.engine = d.engine || 'edge';
-        seg.words = (d.words || []).map(w => [w[0] / 1000, w[1] + seg.start]);
         noteTtsSuccess(url);
-        console.log(`Timed segment ${label}: ${bytes.length} bytes, ${seg.words.length} word anchors`);
+        console.log(`Timed segment ${label}: ${seg.blob.size} bytes, ${seg.words.length} word anchors`);
         return seg;
       } catch (e) {
         all404 = false;
         lastErr = e;
+        details.request_ms = Date.now() - started;
+        e.ttsDiagnostic = details;
         noteTtsFailure(url);
         console.warn(`Timed segment ${label} via ${url} attempt ${attempt} failed:`, e.message);
-        if (diagnosticHeaders['X-Reading-ID']) {
-          globalThis.readerDiagnostics?.record('fetch_error', ttsFailureCode(e),
-            diagnosticHeaders['X-Reading-ID']);
-        }
+        recordTtsRequest('fetch_error', e, diagnosticHeaders['X-Reading-ID'], details);
         // Retrying the same connection after a hard timeout recreated the exact
         // multi-minute wait that failover is supposed to prevent.
         if (switchTtsEndpoint(e)) break;
@@ -977,7 +1046,7 @@ async function useTimedNeuralSpeech(voiceId) {
     // A stopped reading's success OR failure must not touch a newer session.
     if (!ownsSession()) return;
     console.error('Timed TTS error:', error);
-    globalThis.readerDiagnostics?.record('reading_error');
+    globalThis.readerDiagnostics?.record('reading_error', ttsFailureCode(error), undefined, error.ttsDiagnostic);
     globalThis.readerDiagnostics?.end('stop');
     pausePlaybackClock();
     if (currentAudio) {
@@ -1123,21 +1192,28 @@ function playTimedSegment(seg, startAtSec) {
 
 // Fetch a single chunk with bounded retry/backoff, sharing the timed player's
 // cooldown and immediate failover on timeout. Returns an audio Blob or throws.
-async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider.value) {
+async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider.value, segmentStart = -1) {
   const diagnosticHeaders = globalThis.readerDiagnostics?.headers() || {};
   const urlOrder = ttsUrlOrder();
+  const requestId = ttsRequestSequence = (ttsRequestSequence % 1000000) + 1;
+  let requestAttempt = 0;
   let lastErr;
   for (const url of urlOrder) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       if (attempt > 1) await new Promise(r => setTimeout(r, 1000 * attempt));
       let timeout;
+      const started = Date.now();
+      const details = { endpoint: url === TTS_ENDPOINTS[0] ? 'primary' : 'render',
+        request_id: requestId, attempt: ++requestAttempt, request_start: segmentStart,
+        request_chars: text.length, http_status: 0, stage: 'network' };
       try {
         const controller = new AbortController();
         timeout = setTimeout(() => controller.abort(), ttsRequestTimeout(url));
         console.log(`Fetching TTS chunk ${chunkIndex + 1} via ${url} (attempt ${attempt})`);
         const response = await fetch(`${url}/api/tts`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...diagnosticHeaders },
+          headers: { 'Content-Type': 'application/json', ...diagnosticHeaders,
+            'X-TTS-Request-ID': String(requestId), 'X-TTS-Attempt': String(requestAttempt) },
           body: JSON.stringify({
             text,
             voice: voiceId,
@@ -1146,23 +1222,31 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider
           }),
           signal: controller.signal
         });
+        details.http_status = response.status;
+        details.stage = 'response';
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
           throw ttsHttpError(response.status, error.detail);
         }
         const blob = await response.blob();
-        if (blob.size < 100) throw new Error('Audio blob too small');
+        details.audio_bytes = blob.size;
+        details.stage = 'validation';
+        if (blob.size < 100) throw ttsValidationError('audio-too-small', 'Audio blob too small');
+        details.stage = 'complete';
+        details.request_ms = Date.now() - started;
+        if (lastErr || activeTtsUrl !== url) {
+          recordTtsRequest('fetch_recovered', null, diagnosticHeaders['X-Reading-ID'], details);
+        }
         noteTtsSuccess(url);
         console.log(`Got audio blob for chunk ${chunkIndex + 1}, size: ${blob.size}`);
         return blob;
       } catch (e) {
         lastErr = e;
+        details.request_ms = Date.now() - started;
+        e.ttsDiagnostic = details;
         noteTtsFailure(url);
         console.warn(`Chunk ${chunkIndex + 1} via ${url} attempt ${attempt} failed:`, e.message);
-        if (diagnosticHeaders['X-Reading-ID']) {
-          globalThis.readerDiagnostics?.record('fetch_error', ttsFailureCode(e),
-            diagnosticHeaders['X-Reading-ID']);
-        }
+        recordTtsRequest('fetch_error', e, diagnosticHeaders['X-Reading-ID'], details);
         if (switchTtsEndpoint(e)) break;
       } finally {
         clearTimeout(timeout);
@@ -1986,7 +2070,7 @@ async function downloadMp3() {
         blobs = [];
         for (let i = 0; i < segs.length; i++) {
           if (!isSpeaking) setStatus(`Preparing MP3 at ${rate}x — part ${i + 1} of ${segs.length}...`);
-          blobs.push(await fetchChunkWithRetry(segs[i].text, reading.voiceId, i, rate));
+          blobs.push(await fetchChunkWithRetry(segs[i].text, reading.voiceId, i, rate, segs[i].start));
           if (!isCurrent()) return;
         }
       } else {

@@ -15,7 +15,7 @@ const primary = 'https://tts.read-aloud.com';
 const backup = 'https://read-aloud-s4ov.onrender.com';
 const voice = 'en-US-GuyNeural';
 const text = 'A synthetic sentence for the selected voice.';
-function harness(kind) {
+function harness(kind, inputText = text) {
   let now = 100000;
   const requests = [], events = [], timers = new Map(), replies = [];
   let timerId = 0;
@@ -36,20 +36,25 @@ function harness(kind) {
       record: (...args) => events.push(args),
     },
     fetch: async (url, options) => {
-      requests.push({ host: new URL(url).origin, body: JSON.parse(options.body) });
+      requests.push({ host: new URL(url).origin, body: JSON.parse(options.body), headers: options.headers });
       assert.ok(replies.length, 'Unexpected extra network request');
       const reply = replies.shift();
       if (reply === 'abort') {
         const error = new Error('Synthetic deadline'); error.name = 'AbortError'; throw error;
       }
+      if (reply === 'network') throw new TypeError('Synthetic network failure');
       const status = typeof reply === 'number' ? reply : 200;
       return {
         status, ok: status === 200,
-        json: async () => status === 200 ? {
+        json: async () => {
+          if (reply === 'bad-json') throw new SyntaxError('Synthetic malformed JSON');
+          if (reply && typeof reply === 'object') return reply;
+          return status === 200 ? {
           audio: Buffer.alloc(200, 1).toString('base64'),
           engine: reply === 'substitute' ? 'backup' : 'edge',
-          spoken_chars: text.length, words: [[0, 0]],
-        } : { detail: 'Synthetic upstream failure' },
+          spoken_chars: Array.from(inputText).length, words: [[0, 0]],
+        } : { detail: 'Synthetic upstream failure' };
+        },
         blob: async () => new Blob([Buffer.alloc(200, 1)]),
       };
     },
@@ -58,23 +63,23 @@ function harness(kind) {
   vm.runInContext(section('async function fetchTimedSegment(', '// Playback and exports'), ctx);
   vm.runInContext(section('async function fetchChunkWithRetry(', '// Legacy chunked player'), ctx);
   return {
-    requests, events, replies,
+    requests, events, replies, ctx,
     advance: ms => { now += ms; },
     order: () => Array.from(ctx.ttsUrlOrder()),
     run: async () => {
-      const seg = { text, start: 80 };
+      const seg = { text: inputText, start: 80 };
       if (kind === 'timed') {
         await ctx.fetchTimedSegment(seg, voice, 'test');
         assert.equal(seg.engine, 'edge');
         assert.equal(seg.words[0][1], 80, 'Preserve absolute word positions');
         return seg.blob;
       }
-      return ctx.fetchChunkWithRetry(text, voice, 0, 2);
+      return ctx.fetchChunkWithRetry(inputText, voice, 0, 2, 80);
     },
     verifyRequests: () => {
       for (const request of requests) {
         assert.equal(request.body.voice, voice);
-        assert.equal(request.body.text, text);
+        assert.equal(request.body.text, inputText);
         if (kind === 'timed') assert.equal(request.body.engine, 'edge');
         else assert.equal(request.body.rate, '+100%');
       }
@@ -139,4 +144,61 @@ function harness(kind) {
   await assert.rejects(h.run(), error => error.legacy === true);
   h.verifyRequests();
   console.log('PASS: substituted voices rejected and legacy endpoint detection retained');
+
+  // Execute the real decoder against old and new server contracts. Neither may
+  // silently skip text, misalign highlights, or poison the segment cache.
+  const unicode = '🚀 Hello 𠮷 world';
+  const audio = Buffer.alloc(200, 1).toString('base64');
+  for (const modern of [false, true]) {
+    h = harness('timed', unicode);
+    const payload = { audio, engine: 'edge', spoken_chars: modern ? unicode.length : Array.from(unicode).length,
+      words: modern ? [[100, 3], [900, 12]] : [[100, 2], [900, 10]] };
+    if (modern) payload.text_units = 'utf16';
+    h.replies.push(payload);
+    const seg = { text: unicode, start: 80 };
+    await h.ctx.fetchTimedSegment(seg, voice, 'unicode');
+    assert.deepEqual(JSON.parse(JSON.stringify(seg.words)), [[0.1, 83], [0.9, 92]]);
+    assert.equal(seg.blob.size, 200);
+    assert.equal(h.requests.length, 1, 'Unicode must not require retries');
+    assert.equal(h.events.length, 0, 'Successful primary requests do not flood diagnostics');
+    h.verifyRequests();
+  }
+  const valid = { audio, engine: 'edge', text_units: 'utf16', spoken_chars: text.length, words: [[0, 0]] };
+  for (const [reply, code, stage] of [
+    [{ ...valid, spoken_chars: text.length - 1 }, 'incomplete-audio', 'validation'],
+    [{ ...valid, audio: '%%%invalid' }, 'invalid-audio', 'decode'],
+    [{ ...valid, audio: 'YQ==' }, 'audio-too-small', 'decode'],
+    [{ ...valid, words: [[0, text.length]] }, 'invalid-response', 'validation'],
+    [{ ...valid, text_units: 'unknown' }, 'invalid-response', 'validation'],
+    ['bad-json', 'invalid-response', 'response'],
+    ['network', 'network', 'network'],
+  ]) {
+    h = harness('timed');
+    h.replies.push(reply, reply, reply, reply);
+    const seg = { text, start: 12043 };
+    await assert.rejects(h.ctx.fetchTimedSegment(seg, voice, 'bad'), error => h.ctx.ttsFailureCode(error) === code);
+    assert.equal(seg.blob, undefined, 'A failed response cannot leave cached audio');
+    assert.equal(h.events.length, 4);
+    h.events.forEach((event, i) => {
+      assert.equal(event[1], code);
+      assert.equal(event[3].request_id, 1);
+      assert.equal(event[3].attempt, i + 1);
+      assert.equal(event[3].request_start, 12043, 'Track fetched position, not currently playing position');
+      assert.equal(event[3].stage, stage);
+      assert.equal(event[3].endpoint, i < 2 ? 'primary' : 'render');
+      assert.equal(h.requests[i].headers['X-TTS-Request-ID'], '1');
+      assert.equal(h.requests[i].headers['X-TTS-Attempt'], String(i + 1));
+    });
+    h.verifyRequests();
+  }
+  h = harness('timed');
+  h.replies.push(504, 200);
+  await h.run();
+  const recovery = h.events.find(event => event[0] === 'fetch_recovered');
+  assert.ok(recovery);
+  assert.equal(recovery[3].endpoint, 'render');
+  assert.equal(recovery[3].attempt, 2);
+  assert.equal(recovery[3].http_status, 200);
+  assert.equal(recovery[3].stage, 'complete');
+  console.log('PASS: Unicode compatibility, accurate anchors, strict validation, uncached failures and correlated recovery diagnostics');
 })().catch(error => { console.error(error); process.exitCode = 1; });
