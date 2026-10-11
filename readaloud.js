@@ -6,10 +6,8 @@ const $ = (id) => document.getElementById(id);
 // Edge TTS API endpoints, in priority order.
 // Primary: self-hosted via Cloudflare Tunnel from the mini PC.
 // Backup: Render (auto-deploys the same code on every push, so it stays current).
-// When the primary is down, Cloudflare returns 502/530 in well under a second, so
-// failover to Render is fast — this is NOT the slow-retry-against-a-dead-host setup
-// that got the old fallback removed in 2026-04. activeTtsUrl sticks to whichever
-// endpoint last worked, so only the first request after an outage pays the switch.
+// Keep the selected voice on both servers. After failover, briefly prefer the
+// working server, then give the primary another chance on a real speech request.
 const TTS_ENDPOINTS = [
   'https://tts.read-aloud.com',
   'https://read-aloud-s4ov.onrender.com',
@@ -25,20 +23,43 @@ function ttsRequestTimeout(url) {
   return url === TTS_ENDPOINTS[0] ? PRIMARY_REQUEST_TIMEOUT_MS : BACKUP_REQUEST_TIMEOUT_MS;
 }
 
-// Failover used to be sticky for the whole session: one blip pinned every later
-// request to Render, whose bandwidth is metered (5 GB cap blew in Aug 2026 at
-// ~2% leakage). Now a failed-over session re-tries the primary after a cooldown,
-// so Render only carries traffic while the mini PC is actually unreachable.
+// Render bandwidth is metered. A single failed section should not route the
+// rest of a short reading through Render. Avoid a separate health probe: its
+// success does not establish that speech synthesis works.
 let primaryFailedAt = 0;
-const PRIMARY_RETRY_MS = 5 * 60 * 1000;
+const PRIMARY_RETRY_MS = 30 * 1000;
 function ttsUrlOrder() {
   const primary = TTS_ENDPOINTS[0];
-  const preferred = (activeTtsUrl !== primary && Date.now() - primaryFailedAt > PRIMARY_RETRY_MS)
+  const preferred = (activeTtsUrl !== primary && Date.now() - primaryFailedAt >= PRIMARY_RETRY_MS)
     ? primary : activeTtsUrl;
   return [preferred, ...TTS_ENDPOINTS.filter(u => u !== preferred)];
 }
 function noteTtsFailure(url) {
   if (url === TTS_ENDPOINTS[0]) primaryFailedAt = Date.now();
+}
+
+function noteTtsSuccess(url) {
+  if (url === TTS_ENDPOINTS[0]) primaryFailedAt = 0;
+  if (activeTtsUrl !== url) console.log(`Switched active TTS endpoint to ${url}`);
+  activeTtsUrl = url;
+}
+
+function ttsHttpError(status, detail) {
+  const error = new Error(detail || `API error ${status}`);
+  error.status = status;
+  return error;
+}
+
+function ttsFailureCode(error) {
+  if (error.name === 'AbortError') return 'timeout';
+  return error.status ? `http-${error.status}` : 'unknown';
+}
+
+function switchTtsEndpoint(error) {
+  // A 504 already spent the server's synthesis deadline. Do not spend it twice
+  // before trying the other host. Likewise skip retries on unavailable hosts
+  // and rate limits; retain one retry for fast, transient synthesis failures.
+  return error.name === 'AbortError' || error.status === 429 || error.status >= 502;
 }
 
 // One reusable <audio> element for ALL neural chunks. A fresh element per
@@ -711,7 +732,7 @@ async function fetchTimedSegment(seg, voiceId, label) {
         all404 = false;
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          throw new Error(err.detail || `API error ${r.status}`);
+          throw ttsHttpError(r.status, err.detail);
         }
         const d = await r.json();
         if (d.engine && d.engine !== 'edge') {
@@ -726,10 +747,7 @@ async function fetchTimedSegment(seg, voiceId, label) {
         seg.blob = new Blob([bytes], { type: 'audio/mpeg' });
         seg.engine = d.engine || 'edge';
         seg.words = (d.words || []).map(w => [w[0] / 1000, w[1] + seg.start]);
-        if (activeTtsUrl !== url) {
-          console.log(`Switched active TTS endpoint to ${url}`);
-          activeTtsUrl = url;
-        }
+        noteTtsSuccess(url);
         console.log(`Timed segment ${label}: ${bytes.length} bytes, ${seg.words.length} word anchors`);
         return seg;
       } catch (e) {
@@ -738,12 +756,12 @@ async function fetchTimedSegment(seg, voiceId, label) {
         noteTtsFailure(url);
         console.warn(`Timed segment ${label} via ${url} attempt ${attempt} failed:`, e.message);
         if (diagnosticHeaders['X-Reading-ID']) {
-          globalThis.readerDiagnostics?.record('fetch_error', e.name === 'AbortError' ? 'timeout' : 'unknown',
+          globalThis.readerDiagnostics?.record('fetch_error', ttsFailureCode(e),
             diagnosticHeaders['X-Reading-ID']);
         }
         // Retrying the same connection after a hard timeout recreated the exact
         // multi-minute wait that failover is supposed to prevent.
-        if (e && e.name === 'AbortError') break;
+        if (switchTtsEndpoint(e)) break;
       } finally {
         clearTimeout(timeout);
       }
@@ -1103,9 +1121,8 @@ function playTimedSegment(seg, startAtSec) {
 
 /* ========== NEURAL TTS (Edge TTS API) ========== */
 
-// Fetch a single chunk with retry/backoff. Tries activeTtsUrl twice, then any other
-// configured endpoint twice. Updates activeTtsUrl when fallback succeeds so the next
-// chunk goes straight to the working URL. Returns an audio Blob or throws.
+// Fetch a single chunk with bounded retry/backoff, sharing the timed player's
+// cooldown and immediate failover on timeout. Returns an audio Blob or throws.
 async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider.value) {
   const diagnosticHeaders = globalThis.readerDiagnostics?.headers() || {};
   const urlOrder = ttsUrlOrder();
@@ -1131,14 +1148,11 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider
         });
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
-          throw new Error(error.detail || `API error: ${response.status}`);
+          throw ttsHttpError(response.status, error.detail);
         }
         const blob = await response.blob();
         if (blob.size < 100) throw new Error('Audio blob too small');
-        if (activeTtsUrl !== url) {
-          console.log(`Switched active TTS endpoint to ${url}`);
-          activeTtsUrl = url;
-        }
+        noteTtsSuccess(url);
         console.log(`Got audio blob for chunk ${chunkIndex + 1}, size: ${blob.size}`);
         return blob;
       } catch (e) {
@@ -1146,10 +1160,10 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider
         noteTtsFailure(url);
         console.warn(`Chunk ${chunkIndex + 1} via ${url} attempt ${attempt} failed:`, e.message);
         if (diagnosticHeaders['X-Reading-ID']) {
-          globalThis.readerDiagnostics?.record('fetch_error', e.name === 'AbortError' ? 'timeout' : 'unknown',
+          globalThis.readerDiagnostics?.record('fetch_error', ttsFailureCode(e),
             diagnosticHeaders['X-Reading-ID']);
         }
-        if (e && e.name === 'AbortError') break;
+        if (switchTtsEndpoint(e)) break;
       } finally {
         clearTimeout(timeout);
       }
