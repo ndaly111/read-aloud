@@ -54,8 +54,11 @@
     if (!counter) return;
     const body = JSON.stringify({ experiment_id: EXPERIMENT_ID, variant, event: counter });
     try {
+      // text/plain keeps the beacon a CORS "simple" request. A JSON-typed beacon needs a
+      // preflight, and beacons always send credentials, so the preflight failed and every
+      // event was silently dropped while sendBeacon still returned true.
       if (navigator.sendBeacon && navigator.sendBeacon(EVENT_ENDPOINT,
-        new Blob([body], { type: 'application/json' }))) return;
+        new Blob([body], { type: 'text/plain' }))) return;
       fetch(EVENT_ENDPOINT, { method: 'POST', body, mode: 'cors', credentials: 'omit',
         keepalive: true, referrerPolicy: 'no-referrer',
         headers: { 'content-type': 'application/json' } }).catch(() => {});
