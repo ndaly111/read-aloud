@@ -33,6 +33,21 @@ from typing import Optional
 
 import threading
 import edge_tts
+import edge_tts.communicate as _edge_communicate
+from edge_tts import constants as _edge_constants
+
+# edge-tts 7.2.8 still uses the retired Bing synthesis host, which started
+# rejecting every handshake with HTTP 403 in October 2026. Microsoft's new
+# speech host accepts the same voice IDs, token and word-timing protocol.
+# Match only the old URL so a future edge-tts release keeps its own transport.
+# See https://github.com/rany2/edge-tts/pull/491.
+if _edge_communicate.WSS_URL.startswith(
+    "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?"
+):
+    _edge_communicate.WSS_URL = (
+        "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1"
+        f"?Ocp-Apim-Subscription-Key={_edge_constants.TRUSTED_CLIENT_TOKEN}"
+    )
 
 try:
     from . import backup_engine          # loaded as the `api` package
