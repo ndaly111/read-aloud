@@ -105,7 +105,7 @@
       progress.setAttribute('aria-label', 'Verified monthly support progress');
       const scope = document.createElement('small');
       scope.className = 'support-goal__scope';
-      scope.textContent = 'Verified one-time USD gifts, less refunds';
+      scope.textContent = 'Donations this month';
       totals.textContent = dollars(raised) + ' of ' + dollars(target) + ' · ' + data.month_label;
       goal.append(totals, progress, scope);
     } else {
