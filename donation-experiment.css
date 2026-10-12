@@ -1,31 +1,81 @@
 /* Donation-goal challenger only; control retains the existing support bar. */
 #supportBar.support-bar--goal {
-  gap: 12px;
+  gap: 14px 22px;
   flex-wrap: wrap;
+  padding: 14px 18px;
+  background: var(--ink);
+  color: var(--paper-bright);
+  border: 1px solid var(--ink);
+  box-shadow: 4px 4px 0 0 var(--vermilion);
+}
+#supportBar.support-bar--goal .msg {
+  flex: 1 1 220px;
+  color: var(--paper);
+  line-height: 1.45;
 }
 #supportBar .support-goal {
   display: grid;
-  gap: 4px;
-  flex: 1 1 240px;
-  min-width: 160px;
+  gap: 6px;
+  flex: 1.4 1 260px;
+  min-width: 180px;
   letter-spacing: 0.02em;
   font: 0.72rem var(--font-mono);
 }
 #supportBar .support-goal__totals {
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: 0;
+  color: var(--paper-bright);
 }
 #supportBar .support-goal__progress {
-  appearance: auto;
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  height: 9px;
-  accent-color: var(--vermilion);
+  height: 16px;
+  border: 1px solid var(--paper-bright);
+  border-radius: 999px;
+  overflow: hidden;
+  background: #34363d;
+}
+#supportBar .support-goal__progress::-webkit-progress-bar { background: #34363d; }
+#supportBar .support-goal__progress::-webkit-progress-value {
+  background: var(--marker);
+  border-radius: 999px;
+}
+#supportBar .support-goal__progress::-moz-progress-bar {
+  background: var(--marker);
+  border-radius: 999px;
+}
+#supportBar .support-goal__scope {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--marker);
+}
+#supportBar.support-bar--goal .coffeeBtn {
+  padding: 10px 16px;
+  background: var(--vermilion);
+  color: var(--paper-bright);
+  border: 1px solid var(--paper-bright);
+  border-radius: var(--radius);
+  box-shadow: 2px 2px 0 0 var(--paper-bright);
+}
+#supportBar.support-bar--goal .coffeeBtn:hover {
+  background: var(--vermilion-dark);
+  color: var(--paper-bright);
+  border-color: var(--paper-bright);
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 0 var(--paper-bright);
 }
 @media (max-width: 640px) {
-  #supportBar.support-bar--goal .support-goal {
+  #supportBar.support-bar--goal .support-goal,
+  #supportBar.support-bar--goal .msg {
     flex-basis: 100%;
   }
+  #supportBar.support-bar--goal .coffeeBtn { width: 100%; text-align: center; }
 }
-#supportBar .support-goal__scope { font-size: 0.65rem; }
 /* Target-only mode: no verified ledger, so no progress element is rendered. */
 #supportBar .support-goal--target-only {
   flex: 0 1 auto;

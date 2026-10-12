@@ -251,6 +251,8 @@ function updateWordCount() {
   const n = trimmed ? trimmed.split(/\s+/).length : 0;
   wordCountNum.textContent = n.toLocaleString();
   if (wordCountLabel) wordCountLabel.textContent = n === 1 ? 'word' : 'words';
+  const clearBtn = $('clearBtn');
+  if (clearBtn) clearBtn.hidden = !txt.value;
 }
 
 /* ========== GLOBALS ========== */
@@ -445,6 +447,18 @@ function usesDeviceVolumeButtons(nav = navigator) {
   // File upload (.txt / .md / .pdf / .docx) — button, picker, and drag-drop.
   const fileInput = $('fileInput');
   const fileBtn = $('fileBtn');
+  const clearBtn = $('clearBtn');
+  if (clearBtn) {
+    clearBtn.onclick = () => {
+      txt.value = '';
+      const nameEl = $('fileName');
+      if (nameEl) nameEl.textContent = '';
+      // Same path as typing: stops any reading and resets the display and count.
+      txt.dispatchEvent(new Event('input'));
+      autoSize();
+      txt.focus();
+    };
+  }
   if (fileBtn && fileInput) {
     fileBtn.onclick = () => fileInput.click();
     fileInput.addEventListener('change', () => {
