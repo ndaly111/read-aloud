@@ -1824,3 +1824,54 @@ html.dyslexia .hero-lede {
 .file-name { color: var(--ink); }
 .file-name:empty { display: none; }
 #txt.drop-target { outline: 2px dashed var(--vermilion); outline-offset: -4px; }
+
+/* ============================================================
+   Full-screen reading — the instrument panel takes over the
+   viewport; the text grows, controls stay underneath.
+   ============================================================ */
+.file-row .focus-toggle { margin-left: 0; }
+body.focus-mode { overflow: hidden; }
+/* Lift the tool's stacking context above the sticky site header. */
+body.focus-mode main,
+body.focus-mode .masthead,
+body.focus-mode .masthead-tool { z-index: 3000; }
+body.focus-mode .panel--instrument {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  margin: 0;
+  max-width: none;
+  border-radius: 0;
+  overflow-y: auto;
+  background: var(--paper);
+}
+body.focus-mode .panel--instrument .tool-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  box-sizing: border-box;
+  height: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 20px;
+}
+body.focus-mode .tool-input { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+body.focus-mode textarea#txt {
+  flex: 1;
+  min-height: 120px;
+  height: auto;
+  max-height: none;
+  width: 100%;
+  max-width: none;
+  font-size: 1.2rem;
+  line-height: 32px;
+  background:
+    linear-gradient(to right, transparent 38px, rgba(200, 52, 30, 0.18) 38px, rgba(200, 52, 30, 0.18) 39px, transparent 39px),
+    repeating-linear-gradient(to bottom, #ffffff 0, #ffffff 31px, #e6dec8 31px, #e6dec8 32px);
+  background-attachment: local;
+  resize: none;
+}
+/* While reading, the highlighted pane replaces the text box and fills the space. */
+body.focus-mode.is-reading textarea#txt { display: none; }
+body.focus-mode #disp { flex: 1; min-height: 120px; max-height: none; font-size: 1.25rem; line-height: 1.7; }
+body.focus-mode .controls { flex: none; }

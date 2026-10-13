@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20261002b">
+  <link rel="stylesheet" href="/styles.css?v=20261013a">
   <link rel="stylesheet" href="/donation-experiment.css?v=20261008a">
   <script src="/cookie-consent.js?v=20261007b" defer></script>
   <script src="/donation-experiment.js?v=20261008a" defer></script>
@@ -63,6 +63,8 @@
               <button type="button" id="clearBtn" class="link-btn" hidden>Clear text</button>
               <button id="dyslexiaToggle" class="dyslexia-toggle" type="button" aria-pressed="false"
                       title="Switch to a dyslexia-friendly font">Dyslexia font</button>
+              <button id="focusToggle" class="dyslexia-toggle focus-toggle" type="button" aria-pressed="false"
+                      title="Fill the screen with the text (Esc to exit)">Full screen</button>
               <span class="word-count" id="wordcount" aria-live="polite"><span class="word-count-num" id="wordcount-num">0</span> <span class="word-count-label" id="wordcount-label">words</span></span>
             </div>
             <textarea id="txt" placeholder="Paste or type text here, or upload a file…"></textarea>
@@ -302,7 +304,7 @@
 
 <!-- main logic -->
 <script src="playback-diagnostics.js?v=20261011reports1"></script>
-<script src="readaloud.js?v=20261011reports1"></script>
+<script src="readaloud.js?v=20261013a"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>

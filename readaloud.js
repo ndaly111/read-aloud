@@ -2427,6 +2427,20 @@ async function loadFile(file) {
   }
 }
 
+/* ========== FULL-SCREEN READING ========== */
+function setFocusMode(on) {
+  document.body.classList.toggle('focus-mode', on);
+  const btn = document.getElementById('focusToggle');
+  if (btn) {
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.classList.toggle('is-on', on);
+    btn.textContent = on ? 'Exit full screen' : 'Full screen';
+  }
+}
+document.getElementById('focusToggle')?.addEventListener('click', () => {
+  setFocusMode(!document.body.classList.contains('focus-mode'));
+});
+
 /* ========== KEYBOARD SHORTCUTS ========== */
 function handleShortcuts(event) {
   const isMac = navigator.platform.toUpperCase().includes('MAC');
@@ -2442,6 +2456,9 @@ function handleShortcuts(event) {
     if (isSpeaking) {
       event.preventDefault();
       stopAll();
+    } else if (document.body.classList.contains('focus-mode')) {
+      event.preventDefault();
+      setFocusMode(false);
     }
     return;
   }
