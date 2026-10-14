@@ -404,6 +404,15 @@ opening ledger (steps 3-8 of "Verified live-goal setup") to upgrade B/C from
 target-only to a live progress meter. The experiment does not wait for it.
 
 ## Decision log
+2026-10-13 — Added time-proximity donation matching (SECONDARY evidence only; click rate
+still decides). The Worker now also writes each support click as (unix ts, variant) to D1
+`click_times` — no identifiers. Pre-registered rule, fixed before any matched data exists:
+a donation (BMC payment time, entered into `donations.created_at`) is attributed to arm X
+only if every click in the 30 minutes before it came from arm X; clicks from two or more arms
+in that window = AMBIGUOUS, no click in the window = UNMATCHED. Report matched / ambiguous /
+unmatched counts and matched USD per arm; never impute ambiguous or unmatched donations.
+Clicks before 2026-10-13 deploy have no timestamps, so earlier donations are UNMATCHED.
+
 2026-10-08 — Removed every blocker that could not be cleared. (1) BMC's published
 webhook schema was enumerated field by field: there is no referrer/source/campaign/UTM
 field, so the "validate completed-payment attribution" prerequisite was unsatisfiable and

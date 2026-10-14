@@ -102,6 +102,20 @@ async function recordEvent(request, env) {
       'count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, variant, event))').run();
     await increment();
   }
+  if (body.event === 'click') {
+    // Click timestamps let a later donation be matched to the arm whose click preceded it
+    // (BMC payments carry no referrer). Time + variant only - still no identifiers.
+    // Must stay identical to click_times in schema.sql, which remains canonical.
+    const ts = Math.floor(Date.now() / 1000);
+    const log = () => env.DB.prepare('INSERT INTO click_times (ts, variant) VALUES (?, ?)')
+      .bind(ts, body.variant).run();
+    try { await log(); }
+    catch (_) {
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS click_times (' +
+        'ts INTEGER NOT NULL, variant TEXT NOT NULL)').run();
+      await log();
+    }
+  }
   return new Response(null, { status: 204, headers });
 }
 async function processWebhook(request, env) {

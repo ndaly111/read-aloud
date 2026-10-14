@@ -15,3 +15,9 @@ CREATE TABLE IF NOT EXISTS experiment_events (
   count INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (day, variant, event)
 );
+
+-- Click timestamps for time-proximity donation matching: time + variant only, no identifiers.
+CREATE TABLE IF NOT EXISTS click_times (
+  ts INTEGER NOT NULL,
+  variant TEXT NOT NULL
+);
