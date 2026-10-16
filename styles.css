@@ -1738,6 +1738,39 @@ form button { justify-self: start; }
 }
 
 /* ============================================================
+   Mobile menu (nav-menu.js adds .menu-toggle and .has-menu; no JS = nav stays visible)
+   ============================================================ */
+.menu-toggle { display: none; }
+@media (max-width: 640px) {
+  .site-header.has-menu .nav-container {
+    flex-direction: row; align-items: center; justify-content: flex-start;
+    flex-wrap: wrap; gap: 0 12px; padding: 8px 16px;
+  }
+  .site-header.has-menu .menu-toggle {
+    display: block; position: relative; width: 40px; height: 40px; margin-left: -9px; padding: 0;
+    background: transparent; border: 0; border-radius: 0; box-shadow: none;
+    min-height: 0; cursor: pointer; transform: none;
+  }
+  .menu-toggle span {
+    position: absolute; left: 9px; top: 50%; width: 22px; height: 2px; margin: 0;
+    background: var(--ink); transform-origin: center; transition: transform 0.2s ease;
+  }
+  .menu-toggle span:first-child { transform: translateY(-4px); }
+  .menu-toggle span:last-child { transform: translateY(3px); }
+  .site-header.menu-open .menu-toggle span:first-child { transform: translateY(-0.5px) rotate(45deg); }
+  .site-header.menu-open .menu-toggle span:last-child { transform: translateY(-0.5px) rotate(-45deg); }
+  .site-header.has-menu .site-nav {
+    display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; padding: 4px 0 6px;
+  }
+  .site-header.menu-open .site-nav { display: flex; }
+  .site-header.has-menu .site-nav a {
+    font-size: 0.78rem; padding: 12px 0; border-bottom: 0;
+    border-top: 1px solid rgba(26, 28, 34, 0.15);
+  }
+  .site-header.has-menu .site-nav a[aria-current="page"] { color: var(--vermilion); }
+}
+
+/* ============================================================
    Dyslexia-friendly reading mode
    ============================================================ */
 .dyslexia-toggle {
