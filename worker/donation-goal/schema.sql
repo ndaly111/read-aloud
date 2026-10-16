@@ -21,3 +21,14 @@ CREATE TABLE IF NOT EXISTS click_times (
   ts INTEGER NOT NULL,
   variant TEXT NOT NULL
 );
+
+-- Time-rotated design (from Oct 16): aggregate counts per UTC hour index (hours since the
+-- epoch) / variant / event. No identifiers. experiment_events above is the retired
+-- per-visitor random design.
+CREATE TABLE IF NOT EXISTS rotation_events (
+  hour INTEGER NOT NULL,
+  variant TEXT NOT NULL,
+  event TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (hour, variant, event)
+);

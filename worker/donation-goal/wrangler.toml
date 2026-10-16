@@ -6,8 +6,8 @@ account_id = "d36f6a50c928a16dc27e0e789a94617f"
 # LIVE. The experiment runs on the Worker's own /event exposure+click counters.
 # GOAL_DATA_VERIFIED only controls whether B/C show a progress meter: while it is false the
 # two goal arms state the target amount only and no raised figure is published.
-# ATTRIBUTION_VERIFIED is a reporting label, NOT a gate - BMC's webhook schema carries no
-# variant/source field, so a payment can never be joined to a variant.
+# ATTRIBUTION_VERIFIED is a reporting label, NOT a gate. BMC's webhook carries no variant
+# field; the hourly rotation credits payments by time instead.
 # Kill switch: set EXPERIMENT_ENABLED = "false" and redeploy; everyone sees appeal A.
 [vars]
 GOAL_B_USD = "50"
@@ -15,7 +15,9 @@ GOAL_C_USD = "100"
 GOAL_DATA_VERIFIED = "true"
 GOAL_VERIFIED_MONTH = "2026-10"
 EXPERIMENT_ENABLED = "true"
-EXPERIMENT_LAUNCH_UTC = "2026-10-08T22:45:00Z"
+# Oct 16 restart as a TIME-ROTATED test (src/schedule.mjs): one appeal per UTC hour, so a
+# donation is credited to the appeal live when it was made. Starts on a 3-hour slot boundary.
+EXPERIMENT_LAUNCH_UTC = "2026-10-16T21:00:00Z"
 ATTRIBUTION_VERIFIED = "false"
 # After a verified decision: A, B or C shows that appeal to everyone and stops allocation.
 SUPPORT_ROLLOUT_VARIANT = ""

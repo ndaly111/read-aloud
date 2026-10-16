@@ -16,7 +16,7 @@ const server = http.createServer((req, res) => {
     res.end(data);
   });
 });
-const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'support_goal_2026_10',
+const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'support_goal_2026_10t',
   currency: 'USD', data_scope: 'verified_one_time_usd_donations', goals_cents: { B: 5000, C: 10000 },
   totals_verified: true, raised_cents: 4250, month_label: new Intl.DateTimeFormat('en-US', {
     month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date()),
@@ -29,30 +29,27 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
     browser = await chromium.launch({ headless: true,
       executablePath: process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' });
     const url = `http://127.0.0.1:${server.address().port}/`;
-    async function scenario({ variant = 'B', consent = 'rejected', payload = goal(), width = 1280, blocked = false, slow = false, seed = true, rejectByte = false } = {}) {
+    async function scenario({ variant = 'B', consent = 'rejected', payload = goal(), width = 1280, blocked = false, slow = false } = {}) {
+      // The Worker names this hour's appeal; tests pin it unless the payload sets its own.
+      if (payload && typeof payload === 'object' && !('schedule_variant' in payload)) payload = { ...payload, schedule_variant: variant };
       const context = await browser.newContext({ viewport: { width, height: 900 } });
       const page = await context.newPage();
       const errors = [];
       const beacons = [];
       page.on('pageerror', error => errors.push(error.message));
-      await page.addInitScript(({ variant, consent, blocked, seed, rejectByte }) => {
+      await page.addInitScript(({ consent, blocked }) => {
         window.testEvents = [];
         window.gtag = (...args) => window.testEvents.push(args);
-        // Deterministic allocation if storage is unavailable.
-        const fill = ['A', 'B', 'C'].indexOf(variant);
-        let first = true;
-        Object.defineProperty(window.crypto, 'getRandomValues', { value: bytes => {
-          bytes.fill(first && rejectByte ? 255 : fill); first = false; return bytes;
-        } });
         if (blocked) {
           for (const storage of ['localStorage', 'sessionStorage']) Object.defineProperty(window, storage, {
             get() { throw new DOMException('Storage blocked', 'SecurityError'); } });
         } else {
           localStorage.setItem('ra_cookie_consent', consent);
-          if (seed) sessionStorage.setItem('ra_support_exp_202610', variant);
-          if (seed && consent === 'accepted') localStorage.setItem('ra_support_exp_202610', variant);
+          // A saved assignment from the retired random design must be ignored and cleared.
+          localStorage.setItem('ra_support_exp_202610', 'C');
+          sessionStorage.setItem('ra_support_exp_202610', 'C');
         }
-      }, { variant, consent, blocked, seed, rejectByte });
+      }, { consent, blocked });
       await page.route('**/*', async route => {
         const host = new URL(route.request().url()).hostname;
         if (host === 'read-aloud-donation-goal.ndaly111.workers.dev') {
@@ -76,13 +73,14 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
     assert.equal(await a.page.locator('.support-goal').count(), 0);
     assert.equal(await a.page.locator('.coffeeBtn').textContent(), 'Buy me a coffee');
     await a.page.waitForTimeout(250);
-    assert.deepEqual(a.beacons, [{ experiment_id: 'support_goal_2026_10', variant: 'A', event: 'view' }]);
+    assert.deepEqual(a.beacons, [{ experiment_id: 'support_goal_2026_10t', variant: 'A', event: 'view' }]);
     const b = await scenario({ consent: 'accepted' });
     await b.page.waitForFunction(() => document.querySelector('progress')?.value === 4250);
     assert((await b.page.locator('.support-goal__totals').textContent()).startsWith('$42.50 of $50'));
     assert.equal(await b.page.locator('.support-goal__progress').getAttribute('max'), '5000');
     assert.equal(await b.page.locator('.coffeeBtn').getAttribute('href'), 'https://coff.ee/readaloud');
-    assert.equal(await b.page.evaluate(() => localStorage.getItem('ra_support_exp_202610')), 'B');
+    assert.equal(await b.page.evaluate(() => localStorage.getItem('ra_support_exp_202610')), null);
+    assert.equal(await b.page.evaluate(() => sessionStorage.getItem('ra_support_exp_202610')), null);
     assert.equal((await b.page.evaluate(() => testEvents.filter(event => event[1] === 'donation_experiment_view'))).length, 1);
     await b.page.locator('.coffeeBtn').dispatchEvent('click');
     assert.equal((await b.page.evaluate(() => testEvents.filter(event => event[1] === 'donation_experiment_click'))).length, 1);
@@ -90,25 +88,9 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
     await b.page.waitForFunction(() => true);
     await b.page.waitForTimeout(250);
     assert.deepEqual(b.beacons, [
-      { experiment_id: 'support_goal_2026_10', variant: 'B', event: 'view' },
-      { experiment_id: 'support_goal_2026_10', variant: 'B', event: 'click' },
+      { experiment_id: 'support_goal_2026_10t', variant: 'B', event: 'view' },
+      { experiment_id: 'support_goal_2026_10t', variant: 'B', event: 'click' },
     ]);
-    await b.page.evaluate(() => {
-      localStorage.setItem('ra_cookie_consent', 'rejected');
-      window.dispatchEvent(new CustomEvent('ra-consent-change', { detail: 'rejected' }));
-    });
-    assert.equal(await b.page.evaluate(() => localStorage.getItem('ra_support_exp_202610')), null);
-    assert.equal(await b.page.evaluate(() => sessionStorage.getItem('ra_support_exp_202610')), 'B');
-    await b.page.evaluate(() => {
-      localStorage.setItem('ra_cookie_consent', 'accepted');
-      window.dispatchEvent(new CustomEvent('ra-consent-change', { detail: 'accepted' }));
-    });
-    assert.equal(await b.page.evaluate(() => localStorage.getItem('ra_support_exp_202610')), 'B');
-    await b.page.evaluate(() => {
-      localStorage.removeItem('ra_cookie_consent');
-      window.dispatchEvent(new StorageEvent('storage', { key: 'ra_cookie_consent' }));
-    });
-    assert.equal(await b.page.evaluate(() => localStorage.getItem('ra_support_exp_202610')), null);
     // The existing reader remains usable with the challenger present.
     await b.page.fill('#txt', 'Reading still works while the support goal is displayed.');
     assert.equal(await b.page.locator('#start').isEnabled(), true);
@@ -123,17 +105,10 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
     await c.page.waitForFunction(() => document.querySelector('#supportBar').dataset.donationVariant === 'C');
     assert((await c.page.locator('.support-goal__totals').textContent()).startsWith('$42.50 of $100'));
     assert.equal(await c.page.locator('.support-goal__progress').getAttribute('max'), '10000');
-    assert.equal(await c.page.evaluate(() => localStorage.getItem('ra_support_exp_202610')), 'C');
     assert.equal((await c.page.evaluate(() => testEvents.find(event => event[1] === 'donation_experiment_view')))[2].variant_id, 'C');
     assert.deepEqual(c.errors, []);
     if (desktopScreenshot) await c.page.locator('#supportBar').screenshot({ path: path.join(desktopScreenshot, 'donation-100-desktop.png') });
     await c.context.close();
-    for (const variant of ['A', 'B', 'C']) {
-      const random = await scenario({ variant, seed: false, rejectByte: variant === 'C' });
-      await random.page.waitForFunction(expected => document.querySelector('#supportBar').dataset.donationVariant === expected, variant);
-      assert.deepEqual(random.errors, []);
-      await random.context.close();
-    }
     for (const variant of ['A', 'B', 'C']) {
       const winner = await scenario({ variant: variant === 'B' ? 'C' : 'B', consent: 'accepted',
         payload: { ...goal(), experiment_active: false, rollout_variant: variant,
@@ -200,7 +175,9 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
       // The previously deployed Worker omitted totals_verified entirely.
       (({ totals_verified, ...rest }) => rest)(goal()),
       { ...goal(), totals_verified: true, raised_cents: null },
-      { ...goal(), goals_cents: { B: 5000 } }, { ...goal(), goals_cents: { B: 5000, C: 5000 } }, null]) {
+      { ...goal(), goals_cents: { B: 5000 } }, { ...goal(), goals_cents: { B: 5000, C: 5000 } },
+      // No (or an invalid) scheduled appeal: show nothing rather than guess one.
+      { ...goal(), schedule_variant: null }, { ...goal(), schedule_variant: 'D' }, null]) {
       const inactive = await scenario({ payload });
       await inactive.page.waitForLoadState('networkidle');
       assert.equal(await inactive.page.locator('#supportBar .msg').textContent(), original);
@@ -222,7 +199,7 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
     assert.equal(await slow.page.locator('#supportBar .msg').textContent(), original);
     assert.deepEqual(slow.errors, []);
     await slow.context.close();
-    console.log('Homepage control/$50/$100, winner rollout, random allocation, consent changes, overfunding, mobile layouts and fallbacks passed.');
+    console.log('Homepage control/$50/$100, winner rollout, hourly schedule, stale-assignment cleanup, overfunding, mobile layouts and fallbacks passed.');
   } finally {
     if (browser) await browser.close();
     server.closeAllConnections();

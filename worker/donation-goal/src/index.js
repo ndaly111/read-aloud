@@ -1,4 +1,5 @@
 // Cloudflare Worker for verified aggregate Buy Me a Coffee support totals.
+import { ROTATION_EXPERIMENT_ID, hourIndex, scheduledVariant } from './schedule.mjs';
 // Stores only transaction IDs, amounts, timestamps and refund status. No donor PII.
 const ORIGINS = new Set(['https://read-aloud.com', 'https://www.read-aloud.com']);
 const json = (body, status, headers = {}) => new Response(JSON.stringify(body), {
@@ -64,8 +65,10 @@ async function currentGoal(env, request) {
     totals_verified: raised !== null,
     raised_cents: raised,
     data_scope: 'verified_one_time_usd_donations',
-    experiment_id: 'support_goal_2026_10',
+    experiment_id: ROTATION_EXPERIMENT_ID,
     experiment_active: active,
+    // The appeal everyone sees this UTC hour. Time-rotated, not per-visitor random.
+    schedule_variant: active ? scheduledVariant(today.getTime()) : null,
     rollout_variant: rollout || null,
     launch_at: Number.isFinite(launch) ? new Date(launch).toISOString() : null,
     as_of: today.toISOString()
@@ -75,7 +78,8 @@ const EVENT_NAMES = new Set(['view', 'click', 'rollout_view', 'rollout_click']);
 const VARIANTS = new Set(['A', 'B', 'C']);
 // Own-counter exposure/click logging. GA4 event-scoped custom dimensions are not
 // retroactive and are blocked by ad blockers, so the experiment counts its own
-// aggregate events here. Stored per day/variant/event only - no identifiers at all.
+// aggregate events here. Stored per UTC hour/variant/event only - no identifiers at all.
+// (experiment_events holds the retired per-visitor random design, Oct 12-16.)
 async function recordEvent(request, env) {
   const headers = publicHeaders(request);
   if (!headers['access-control-allow-origin']) return new Response('Forbidden', { status: 403 });
@@ -84,29 +88,35 @@ async function recordEvent(request, env) {
   let body;
   try { body = await request.json(); }
   catch (_) { return new Response('Invalid JSON', { status: 400 }); }
-  if (!body || typeof body !== 'object' || body.experiment_id !== 'support_goal_2026_10' ||
+  if (!body || typeof body !== 'object' || body.experiment_id !== ROTATION_EXPERIMENT_ID ||
       !VARIANTS.has(body.variant) || !EVENT_NAMES.has(body.event)) {
     return new Response('Invalid event', { status: 400, headers });
   }
-  const day = new Date().toISOString().slice(0, 10);
+  const now = Date.now();
+  // Experiment events must carry the appeal scheduled now or in the previous hour (a page
+  // opened just before the hour turned). Anything else is a stale client: drop it.
+  if ((body.event === 'view' || body.event === 'click') &&
+      body.variant !== scheduledVariant(now) && body.variant !== scheduledVariant(now - 3600000)) {
+    return new Response(null, { status: 204, headers });
+  }
   const increment = () => env.DB.prepare(
-    'INSERT INTO experiment_events (day, variant, event, count) VALUES (?, ?, ?, 1) ' +
-    'ON CONFLICT(day, variant, event) DO UPDATE SET count = experiment_events.count + 1'
-  ).bind(day, body.variant, body.event).run();
+    'INSERT INTO rotation_events (hour, variant, event, count) VALUES (?, ?, ?, 1) ' +
+    'ON CONFLICT(hour, variant, event) DO UPDATE SET count = rotation_events.count + 1'
+  ).bind(hourIndex(now), body.variant, body.event).run();
   try { await increment(); }
   catch (_) {
     // First write on a database that predates the counter table: create it and retry once.
-    // Must stay identical to experiment_events in schema.sql, which remains canonical.
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS experiment_events (' +
-      'day TEXT NOT NULL, variant TEXT NOT NULL, event TEXT NOT NULL, ' +
-      'count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, variant, event))').run();
+    // Must stay identical to rotation_events in schema.sql, which remains canonical.
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS rotation_events (' +
+      'hour INTEGER NOT NULL, variant TEXT NOT NULL, event TEXT NOT NULL, ' +
+      'count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (hour, variant, event))').run();
     await increment();
   }
   if (body.event === 'click') {
-    // Click timestamps let a later donation be matched to the arm whose click preceded it
-    // (BMC payments carry no referrer). Time + variant only - still no identifiers.
+    // Click timestamps back up the hour-based donation credit (a click just before the hour
+    // turned). Time + variant only - still no identifiers.
     // Must stay identical to click_times in schema.sql, which remains canonical.
-    const ts = Math.floor(Date.now() / 1000);
+    const ts = Math.floor(now / 1000);
     const log = () => env.DB.prepare('INSERT INTO click_times (ts, variant) VALUES (?, ?)')
       .bind(ts, body.variant).run();
     try { await log(); }

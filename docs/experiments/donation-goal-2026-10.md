@@ -1,6 +1,8 @@
 # Monthly support goal test — operating record
 
-**Status: homepage DEPLOYED, Worker deploy pending (October 8, 2026).** Every external
+**Status: RESTARTED October 16, 2026 as a TIME-ROTATED test - see "Time-rotated restart" at the end; it supersedes the random-assignment design and decision rules above.** Earlier status: LIVE, verified October 14, 2026. The first enabled Worker deployed October 12 at 18:12:55.173 UTC. The October 8 launch setting is inaccurate; see the scheduled review below.
+
+Historical October 8 setup note: Every external
 dependency has been removed: the Worker counts exposures and clicks itself, and the two
 goal arms run in target-only mode without a reconciled ledger. Donation-level attribution
 is impossible at Buy Me a Coffee and is NOT claimed. The experiment starts the moment the
@@ -227,12 +229,13 @@ Only real verified amounts go here; NA means missing attribution
 
 | Review | Date | Decision |
 |---|---|---|
-| Launch | TBD | Not launched |
-| +1 day | TBD | QA |
-| +7 days | TBD | Formal look 1 |
-| +14 days | TBD | Formal look 2 |
-| +28 days | TBD | Formal look 3 |
-| +42 days | TBD | Final look |
+| Launch | 2026-10-12 18:12:55.173 UTC | First enabled Worker deployment verified from Cloudflare history |
+| +1 day | 2026-10-13 18:12:55.173 UTC | No verified QA review recorded here |
+| Health check | 2026-10-14 | Live; continue; timing discrepancy recorded below |
+| +7 days | 2026-10-19 18:12:55.173 UTC | Formal look 1 pending |
+| +14 days | 2026-10-26 18:12:55.173 UTC | Formal look 2 pending |
+| +28 days | 2026-11-09 18:12:55.173 UTC | Formal look 3 pending |
+| +42 days | 2026-11-23 18:12:55.173 UTC | Final look pending; configured cutoff currently falls earlier |
 
 Copy the following metrics table for each review and date it. Record unique
 completed donors for conversion analysis; total payment count is separate.
@@ -451,3 +454,93 @@ verified goal response was supplied, and left the page unassigned when the
 feed was disabled. The Worker returned ready:false while unverified and an
 aggregate response with a mock database when verified. These are MOCK checks,
 not a live webhook/payment or browser end-to-end test.
+
+## Scheduled review — October 14, 2026
+
+Read-only production checks: PR #51 is MERGED (merged October 9 at 01:24:40 UTC),
+not draft. The live /goal endpoint returned HTTP 200, ready:true,
+experiment_active:true, totals_verified:true, no rollout variant and an October
+aggregate of 1,567 cents. This is account-wide one-time USD support less refunds,
+before fees; it does not identify which variant caused any payment.
+
+Cloudflare deployment history and the first enabled version's bindings establish
+October 12 at 18:12:55.173 UTC as the actual launch. That version is
+eba3e76f-febc-4498-9db4-e9d961ee0e38; EXPERIMENT_ENABLED was true and
+EXPERIMENT_LAUNCH_UTC was already set to the earlier October 8 date. The preceding
+version was the disabled October 8 deployment. Counter rows first appear on
+October 12. Later deployments were October 12 at 23:33:37.495 UTC and October 14
+at 01:56:06.597 UTC. The pending-deployment text under Launch record above is
+historical and superseded by these production checks.
+
+The following raw counter snapshot was read directly from D1 during this review.
+These are event counts, not verified unique visitors or unique clickers; test/bot
+exclusion and reader guardrails were not independently verified in this run.
+
+| Variant | Appeal | View events | Click events | Clicks / views | Unique completed donors | Attributable revenue |
+|---|---|---:|---:|---:|---:|---:|
+| A | Existing appeal | 1,605 | 4 | 0.25% | NA | NA |
+| B | $50 goal | 1,755 | 10 | 0.57% | NA | NA |
+| C | $100 goal | 1,767 | 21 | 1.19% | NA | NA |
+
+Decision: continue; no early winner. This is a health check before day 7, no arm
+has reached the runbook's 30-click minimum, and the observed period has not yet
+included a weekend. Per-variant completed-payment attribution and comparable
+unique-exposure denominators remain unavailable. Do not infer either from
+click timestamps, matched payment windows or the account-wide total.
+
+The review CLI was not used to declare a conversion winner: the scheduled task
+requires verified per-variant unique exposures, completed donors and revenue,
+which are unavailable. The current CLI/runbook permits click-rate decisions;
+the scheduled task still specifies donation-conversion stopping rules. Align
+that review scope before a formal decision. Bonferroni correction and a click
+floor do not establish independence for repeated view/click events.
+
+Next formal look: October 19 at 2:12:55 p.m. America/New_York (18:12:55 UTC),
+then October 26 at the same local time, November 9 and November 23 at 1:12:55 p.m.
+(18:12:55 UTC after the daylight-saving transition). Correct the launch setting
+to 2026-10-12T18:12:55.173Z and redeploy after checking other active work. Otherwise
+the configured cutoff runs November 19 at 22:45 UTC instead of November 23 at
+18:12:55.173 UTC. This review recorded the actual schedule but did not alter the
+production configuration. No rollout, deployment, secret change or homepage
+copy was performed during this review; existing approval requirements remain.
+
+## Time-rotated restart — October 16, 2026
+Owner decision (Nick): credit DONATIONS to an appeal, not just clicks. Buy Me a Coffee
+payments carry no referrer, so per-visitor random assignment can never say which appeal a
+donor saw. The appeal is now set by the clock instead: everyone sees the same appeal for a
+whole UTC hour, and a donation is credited to the appeal that was live when it was made.
+
+**Design.** `worker/donation-goal/src/schedule.mjs` (shared by the Worker and the report):
+hours cycle A, B, C and each UTC day starts one step later than the day before. Every
+appeal gets exactly 8 hours a day; over the 42 days each appeal covers every hour of the day
+exactly 14 times and every weekday+hour pair exactly twice. The Worker publishes the current
+appeal in `/goal` (`schedule_variant`); the page shows it, stores nothing, and clears the old
+per-visitor key. Experiment id `support_goal_2026_10t`. Launch 2026-10-16T21:00:00Z (a slot
+boundary), runs 42 days to 2026-11-27T21:00Z. Counts go to D1 `rotation_events`
+(UTC hour index / variant / event / count, no identifiers); `/event` drops views/clicks whose
+appeal is not the one scheduled this hour or the previous one (stale cached pages).
+
+**Random-design data, archived (Oct 12 18:13Z - Oct 16, `experiment_events`, not pooled):**
+views/clicks A 4,263/14 (0.33%), B 4,522/23 (0.51%), C 4,392/34 (0.77%). No donation could be
+attributed (5 donations, $51.67; click-time logging began Oct 14 and matched none).
+
+**Pre-registered decision rule (fixed before any rotated data exists).**
+- Primary: unique payments per 1,000 views per appeal, payments credited by the UTC hour of
+  the BMC payment time (`donations.created_at`; manual non-USD rows use the payment time).
+  Refunded payments excluded.
+- Test: two-sided exact conditional binomial test of the two arms' payment counts given their
+  view split, for each pair. Formal looks on day 21 and day 42 only; Bonferroni alpha
+  0.05/6 = 0.0083 per pair.
+- Winner: at least 10 payments, at least 20% higher rate than BOTH others, and p < 0.0083
+  against BOTH, with no guardrail regression and the month total not down. Otherwise continue;
+  at day 42 with no winner the result is inconclusive and the existing appeal (A) stays.
+- Reported, not tested: dollars per 1,000 views (one large gift dominates), click rate, and a
+  sensitivity credit using the single appeal clicked in the 30 minutes before a payment.
+- Known limit: a visitor who opens the page just before the hour turns and pays after it is
+  credited to the next appeal; with ~1 payment a day this is rare noise, not bias.
+- Power: at ~1 payment/day the test has ~14 payments per arm by day 42 - it detects only a
+  large difference (roughly one appeal doubling another).
+
+Report: `node scripts/donation_rotation_report.mjs` (reads live D1, prints the per-appeal table,
+pairwise p-values and the decision for the current look).
+
