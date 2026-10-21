@@ -468,13 +468,16 @@ function usesDeviceVolumeButtons(nav = navigator) {
     loadFromUrl(link);
   });
   // Shared from another app (e.g. an iPhone Shortcut): read-aloud.com/?url=<link>
+  // Everything after "url=" is the link, so a Shortcut can append it unencoded
+  // (its own ?a=1&b=2 stays intact); an encoded link works too.
   try {
-    const params = new URLSearchParams(location.search);
-    const shared = linkFromText(params.get('url'));
+    const m = location.search.match(/[?&]url=(.*)$/);
+    let raw = m ? m[1] + location.hash : null;
+    if (raw && /^https?%3A/i.test(raw)) raw = decodeURIComponent(raw);
+    const shared = linkFromText(raw);
     if (shared) {
-      params.delete('url');
-      const qs = params.toString();
-      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+      const qs = location.search.slice(0, m.index).replace(/^\?/, '');
+      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
       loadFromUrl(shared);
     }
   } catch (e) {}
