@@ -73,12 +73,12 @@
       scope.textContent = raised >= target
         ? 'Goal reached this month - thank you!'
         : dollars(target - raised) + ' to go this month';
-      totals.textContent = dollars(raised) + ' of ' + dollars(target) + ' · ' + data.month_label;
+      totals.textContent = "This month's goal: " + dollars(raised) + ' of ' + dollars(target);
       goal.append(totals, progress, scope);
     } else {
       // No reconciled ledger: state the target only. No raised amount is shown or implied.
       goal.classList.add('support-goal--target-only');
-      totals.textContent = 'Monthly goal: ' + dollars(target) + ' · ' + data.month_label;
+      totals.textContent = "This month's goal: " + dollars(target);
       goal.append(totals);
     }
     link.textContent = 'Support Read-Aloud';

@@ -148,7 +148,7 @@ const goal = () => ({ ready: true, experiment_active: true, experiment_id: 'supp
       assert.equal(await targetOnly.page.locator('.support-goal__scope').count(), 0);
       assert.equal(await targetOnly.page.locator('.support-goal--target-only').count(), 1);
       assert.equal(await targetOnly.page.locator('.support-goal__totals').textContent(),
-        'Monthly goal: ' + (variant === 'B' ? '$50' : '$100') + ' · ' + goal().month_label);
+        "This month's goal: " + (variant === 'B' ? '$50' : '$100'));
       assert.equal(await targetOnly.page.locator('.coffeeBtn').textContent(), 'Support Read-Aloud');
       assert.equal(await targetOnly.page.locator('.coffeeBtn').getAttribute('href'), 'https://coff.ee/readaloud');
       assert.equal((await targetOnly.page.evaluate(() => testEvents.filter(event => event[1] === 'donation_experiment_view'))).length, 1);
