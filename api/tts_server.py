@@ -51,8 +51,10 @@ if _edge_communicate.WSS_URL.startswith(
 
 try:
     from . import backup_engine          # loaded as the `api` package
+    from . import article_extract
 except ImportError:
     import backup_engine                 # run directly from api/
+    import article_extract
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
@@ -682,6 +684,35 @@ async def engines_status():
         "backup": backup_engine.status(),
         "fallbacks_served": _fallback_count,
     }
+
+
+class ExtractRequest(BaseModel):
+    url: str = Field(..., min_length=8, max_length=2048)
+
+
+# Separate, tighter budget than speech: each call makes an outbound fetch.
+extract_counts = defaultdict(list)
+EXTRACT_LIMIT = 10  # per minute per IP
+
+
+@app.post("/api/extract")
+async def extract_article(request: Request, body: ExtractRequest):
+    """Fetch a web page and return its article text (reader view)."""
+    if not _origin_allowed(request):
+        raise HTTPException(status_code=403, detail="origin not allowed")
+    ip = _client_ip(request)
+    now = time.time()
+    extract_counts[ip] = [t for t in extract_counts[ip] if t > now - 60]
+    if len(extract_counts[ip]) >= EXTRACT_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many links at once. Please wait a moment.")
+    extract_counts[ip].append(now)
+    if len(extract_counts) > 5000:
+        for k in [k for k, v in extract_counts.items() if not v or v[-1] <= now - 60]:
+            del extract_counts[k]
+    try:
+        return await article_extract.fetch_article(body.url)
+    except article_extract.ExtractError as e:
+        raise HTTPException(status_code=e.status, detail=str(e))
 
 
 @app.get("/api/tts")

@@ -459,6 +459,25 @@ function usesDeviceVolumeButtons(nav = navigator) {
       txt.focus();
     };
   }
+  // A pasted link on its own (into an empty box) becomes the article it points to.
+  txt.addEventListener('paste', (e) => {
+    const link = linkFromText(e.clipboardData && e.clipboardData.getData('text'));
+    const replacingAll = txt.selectionStart === 0 && txt.selectionEnd === txt.value.length;
+    if (!link || !(txt.value.trim() === '' || replacingAll)) return;
+    e.preventDefault();
+    loadFromUrl(link);
+  });
+  // Shared from another app (e.g. an iPhone Shortcut): read-aloud.com/?url=<link>
+  try {
+    const params = new URLSearchParams(location.search);
+    const shared = linkFromText(params.get('url'));
+    if (shared) {
+      params.delete('url');
+      const qs = params.toString();
+      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+      loadFromUrl(shared);
+    }
+  } catch (e) {}
   if (fileBtn && fileInput) {
     fileBtn.onclick = () => fileInput.click();
     fileInput.addEventListener('change', () => {
@@ -2424,6 +2443,71 @@ async function loadFile(file) {
     setStatus('Ready');
   } finally {
     if (btn) btn.disabled = false;
+  }
+}
+
+/* ========== READ FROM A LINK ========== */
+// Paste a web link (or open read-aloud.com/?url=...) and the server pulls the
+// article text out of the page, like Safari's reader view.
+function linkFromText(text) {
+  const s = (text || '').trim();
+  if (!/^https?:\/\/\S+$/i.test(s)) return null;
+  try { return new URL(s).href; } catch (e) { return null; }
+}
+
+async function loadFromUrl(url) {
+  if (isSpeaking) stopAll();
+  clearError();
+  invalidateSavedReading();
+  txt.value = url;
+  txt.dispatchEvent(new Event('input'));
+  const nameEl = $('fileName');
+  if (nameEl) nameEl.textContent = '';
+  setStatus('Getting the article…');
+  txt.readOnly = true;
+  let message = "Couldn't reach the article service. Copy and paste the text instead.";
+  try {
+    for (const base of ttsUrlOrder()) {
+      let res;
+      try {
+        res = await fetch(base + '/api/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+          signal: AbortSignal.timeout(ttsRequestTimeout(base)),
+        });
+      } catch (e) {
+        noteTtsFailure(base);
+        continue;
+      }
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.text) {
+        if (txt.value !== url) return; // the reader changed the text meanwhile
+        let text = data.text;
+        const truncated = text.length > FILE_MAX_CHARS;
+        if (truncated) text = text.slice(0, FILE_MAX_CHARS);
+        txt.value = text;
+        buildDisplay();
+        updateWordCount();
+        autoSize();
+        if (nameEl) {
+          try { nameEl.textContent = new URL(data.url || url).hostname.replace(/^www\./, ''); } catch (e) {}
+        }
+        setStatus(truncated
+          ? `Loaded the first ${FILE_MAX_CHARS.toLocaleString()} characters of the article`
+          : 'Ready');
+        return;
+      }
+      // 404/5xx without a message means this server lacks the feature; try the next one.
+      if (data && typeof data.detail === 'string' && res.status !== 404) {
+        message = data.detail;
+        break;
+      }
+    }
+    showError(message);
+    setStatus('Ready');
+  } finally {
+    txt.readOnly = false;
   }
 }
 
