@@ -13,11 +13,13 @@ account_id = "d36f6a50c928a16dc27e0e789a94617f"
 GOAL_B_USD = "50"
 GOAL_C_USD = "100"
 GOAL_DATA_VERIFIED = "true"
-GOAL_VERIFIED_MONTH = "2026-10"
+# Meter counts donations from this instant (restart 10/21: $50 goal had shown as met all test).
+GOAL_COUNT_FROM_UTC = "2026-10-21T15:00:00Z"
 EXPERIMENT_ENABLED = "true"
 # Oct 16 restart as a TIME-ROTATED test (src/schedule.mjs): one appeal per UTC hour, so a
 # donation is credited to the appeal live when it was made. Starts on a 3-hour slot boundary.
-EXPERIMENT_LAUNCH_UTC = "2026-10-16T21:00:00Z"
+# Oct 21 restart: goals reset to $0 (the 10/16 run showed B's $50 goal already met).
+EXPERIMENT_LAUNCH_UTC = "2026-10-21T15:00:00Z"
 ATTRIBUTION_VERIFIED = "false"
 # After a verified decision: A, B or C shows that appeal to everyone and stops allocation.
 SUPPORT_ROLLOUT_VARIANT = ""

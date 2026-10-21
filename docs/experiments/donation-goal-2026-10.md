@@ -544,3 +544,80 @@ attributed (5 donations, $51.67; click-time logging began Oct 14 and matched non
 Report: `node scripts/donation_rotation_report.mjs` (reads live D1, prints the per-appeal table,
 pairwise p-values and the decision for the current look).
 
+
+## Scheduled review - October 21, 2026
+
+Production checks were read-only. PR #51 remains MERGED. At 09:00:59 UTC the live
+/goal endpoint returned HTTP 200, ready:true, experiment_active:true,
+experiment_id:support_goal_2026_10t, schedule_variant:C, no rollout variant,
+launch_at:2026-10-16T21:00:00.000Z and totals_verified:true. The verified October
+account-wide total was 6,367 cents (one-time USD gifts less full refunds, before
+fees). That total is not attributable revenue for any particular appeal.
+
+The restart is confirmed by the live experiment id/launch setting and D1 rows.
+Cloudflare's latest deployment was October 16 at 20:02:39.948 UTC, version
+56a58ce8-5b84-4d60-ad09-f102b5a48842, preceding the scheduled 21:00 UTC launch.
+The new rotation counters start at hour 497829, the October 16 21:00 UTC slot.
+Do not pool the archived random-assignment experiment with this restarted test.
+The old October 8 launch-date discrepancy no longer applies to the live setting.
+
+Raw rotation_events snapshot, restricted to the restart through this review:
+
+| Variant | Appeal | View events | Click events | Clicks / views | Verified unique exposed | Verified unique donors | Attributable revenue |
+|---|---|---:|---:|---:|---:|---:|---:|
+| A | Existing appeal | 4,487 | 20 | 0.45% | NA | NA | NA |
+| B | $50 goal | 4,536 | 21 | 0.46% | NA | NA | NA |
+| C | $100 goal | 4,350 | 33 | 0.76% | NA | NA | NA |
+
+Separately, the donations ledger contains 2 unrefunded payments totaling 1,200
+cents since the restart. These are account-wide payment counts, not unique
+completed donors or verified appeal conversions. No timestamps, click windows
+or the account total were used to infer payment-to-variant attribution.
+
+Decision: continue; no conversion winner and no rollout. The restart is only
+about 4.5 days old. Comparable unique-exposure counts, unique completed donors,
+per-variant revenue and independently checked reader guardrails are unavailable.
+The review_donation_experiment.js eligibility condition in this scheduled task
+is not met, so it was not run. The rotation report was also not run: it assigns
+payments by timestamp, which this scheduled task explicitly prohibits treating
+as verified attribution. C's higher raw click rate is descriptive only.
+
+Review schedule from the recorded October 16 21:00 UTC restart:
+
+| Checkpoint | UTC | America/New_York |
+|---|---|---|
+| Day 7 (heartbeat's original schedule) | October 23, 21:00 | October 23, 5 p.m. EDT |
+| Day 14 (heartbeat's original schedule) | October 30, 21:00 | October 30, 5 p.m. EDT |
+| Day 21 (restart runbook's first formal look) | November 6, 21:00 | November 6, 4 p.m. EST |
+| Day 28 (heartbeat's original schedule) | November 13, 21:00 | November 13, 4 p.m. EST |
+| Day 42 (both schedules' final look) | November 27, 21:00 | November 27, 4 p.m. EST |
+
+Next check: October 23 health checkpoint; the restarted runbook's first formal
+decision is November 6. Align the heartbeat prompt and decision metric with the
+restarted design before selecting any winner. The current heartbeat still
+specifies equal random assignment and verified donor conversion at four looks;
+the current runbook specifies hourly rotation and timestamp-credited payments
+at two looks. The scheduled review did not silently change either rule set.
+Only this local ledger entry was written; production, automation settings,
+secrets, homepage wording and deployment approval requirements were unchanged.
+
+## Restart 2026-10-21 (goals reset to $0)
+
+The 10/16 time-rotated run was stopped at day 4.6. The progress meter summed every October
+donation, including $51.67 given 10/12-10/14 before the run began, so appeal B's $50 goal
+displayed as already met for the whole run and C opened at ~64% of $100. B could not test a
+goal anyone was helping to reach.
+
+Fix: `GOAL_COUNT_FROM_UTC` - the meter counts only donations made at or after that instant (and
+still resets each calendar month). It replaces `GOAL_VERIFIED_MONTH`, which would also have
+switched the meter off on Nov 1 mid-test. Both `GOAL_COUNT_FROM_UTC` and `EXPERIMENT_LAUNCH_UTC`
+= 2026-10-21T15:00:00Z; 42 days to 2026-12-02T15:00Z. Formal looks day 21 (2026-11-11) and day
+42 only, same rule as above. Report script reads the new launch automatically.
+
+Archived 10/16 run (2026-10-16T21:00Z to 2026-10-21T15:00Z), not pooled with the restart:
+
+| Arm | Hours | Views | Clicks | Click% | Donations | Raised |
+|---|---|---|---|---|---|---|
+| A | 37 | 4593 | 22 | 0.48 | 0 | $0.00 |
+| B | 36 | 4612 | 21 | 0.46 | 1 | $10.00 |
+| C | 37 | 4444 | 33 | 0.74 | 1 | $2.00 |

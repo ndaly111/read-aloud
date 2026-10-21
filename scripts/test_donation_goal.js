@@ -8,7 +8,12 @@ const { review, fisherExact } = require('./review_donation_experiment');
 const root = path.join(__dirname, '..');
 
 (async () => {
-  const source = fs.readFileSync(path.join(root, 'worker/donation-goal/src/index.js'), 'utf8');
+  // index.js is ESM in a CommonJS repo, so it loads from a data URL; its relative
+  // ./schedule.mjs import is pointed at the real file (a data URL has no base to resolve).
+  const { pathToFileURL } = require('node:url');
+  const schedule = pathToFileURL(path.join(root, 'worker/donation-goal/src/schedule.mjs')).href;
+  const source = fs.readFileSync(path.join(root, 'worker/donation-goal/src/index.js'), 'utf8')
+    .replace("'./schedule.mjs'", JSON.stringify(schedule));
   const worker = (await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'))).default;
   const db = new DatabaseSync(':memory:');
   db.exec(fs.readFileSync(path.join(root, 'worker/donation-goal/schema.sql'), 'utf8'));
@@ -22,7 +27,7 @@ const root = path.join(__dirname, '..');
   } };
   const now = new Date(), created = Math.floor(Date.now() / 1000) - 60;
   const env = { DB, BMC_WEBHOOK_SECRET: 'test-only-secret', GOAL_B_USD: '50', GOAL_C_USD: '100',
-    GOAL_DATA_VERIFIED: 'true', GOAL_VERIFIED_MONTH: now.toISOString().slice(0, 7),
+    GOAL_DATA_VERIFIED: 'true', GOAL_COUNT_FROM_UTC: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
     EXPERIMENT_ENABLED: 'true', ATTRIBUTION_VERIFIED: 'true',
     EXPERIMENT_LAUNCH_UTC: new Date(Date.now() - 86400000).toISOString() };
   const goal = async (overrides = {}, origin = 'https://read-aloud.com') => worker.fetch(
@@ -64,6 +69,9 @@ const root = path.join(__dirname, '..');
   db.prepare('INSERT INTO donations VALUES (?, ?, ?, ?)').run('4', start - 1, 10000, 0);
   db.prepare('INSERT INTO donations VALUES (?, ?, ?, ?)').run('5', start, 125, 0);
   assert.equal((await (await goal()).json()).raised_cents, 650);
+  // Donations before GOAL_COUNT_FROM_UTC (the test restart) never count toward the meter.
+  const from = new Date((created + 1) * 1000).toISOString();
+  assert.equal((await (await goal({ GOAL_COUNT_FROM_UTC: from })).json()).raised_cents, 0);
   assert.equal((await (await goal()).json()).totals_verified, true);
   for (const overrides of [{ GOAL_B_USD: '0.001' },
     { GOAL_B_USD: '100' }, { GOAL_C_USD: '50' }, { GOAL_C_USD: '' },
@@ -71,8 +79,8 @@ const root = path.join(__dirname, '..');
     assert.equal((await (await goal(overrides)).json()).ready, false);
   }
   // An unreconciled ledger publishes the TARGET only: no raised figure, test still runs.
-  for (const overrides of [{ GOAL_DATA_VERIFIED: 'false' }, { GOAL_VERIFIED_MONTH: '2020-01' },
-    { GOAL_VERIFIED_MONTH: '' }, { DB: null }]) {
+  for (const overrides of [{ GOAL_DATA_VERIFIED: 'false' }, { GOAL_COUNT_FROM_UTC: 'nope' },
+    { GOAL_COUNT_FROM_UTC: '' }, { DB: null }]) {
     const unverified = await (await goal(overrides)).json();
     assert.equal(unverified.ready, true);
     assert.equal(unverified.totals_verified, false);

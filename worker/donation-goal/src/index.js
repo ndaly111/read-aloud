@@ -37,18 +37,21 @@ async function currentGoal(env, request) {
   const year = today.getUTCFullYear();
   const monthNum = today.getUTCMonth();
   const month = year + '-' + String(monthNum + 1).padStart(2, '0');
-  const start = Date.UTC(year, monthNum, 1) / 1000;
+  // The meter counts only donations made since GOAL_COUNT_FROM_UTC (the test restart), so
+  // a goal is never shown already met before the test begins; it still resets each month.
+  const countFrom = Date.parse(env.GOAL_COUNT_FROM_UTC || '');
+  const start = Math.max(Date.UTC(year, monthNum, 1), Number.isFinite(countFrom) ? countFrom : 0) / 1000;
   const end = Date.UTC(year, monthNum + 1, 1) / 1000;
   // A progress total is published ONLY for a reconciled ledger month. Import individual
   // payment facts rather than an aggregate balance so late refunds and webhook retries
   // can update the same transaction without double counting. Without a verified ledger
   // the goal amount still shows, with no raised figure at all - never a guessed one.
   let raised = null;
-  if (env.DB && env.GOAL_DATA_VERIFIED === 'true' && env.GOAL_VERIFIED_MONTH === month) {
+  if (env.DB && env.GOAL_DATA_VERIFIED === 'true' && Number.isFinite(countFrom)) {
     const row = await env.DB.prepare(
       'SELECT COALESCE(SUM(amount_cents), 0) AS cents FROM donations ' +
       'WHERE created_at >= ? AND created_at < ? AND refunded = 0'
-    ).bind(start, Math.min(end, Math.floor(today.getTime() / 1000) + 1)).first();
+    ).bind(Math.ceil(start), Math.min(end, Math.floor(today.getTime() / 1000) + 1)).first();
     raised = Number(row?.cents || 0);
     if (!Number.isSafeInteger(raised) || raised < 0) return json({ ready: false }, 200, headers);
   }
