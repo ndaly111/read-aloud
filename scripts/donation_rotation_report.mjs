@@ -40,7 +40,8 @@ function rateTest(d1, v1, d2, v2) {
 
 const now = Date.now();
 const day = (now - launch) / 86400000;
-const startHour = hourIndex(launch);
+// First FULL hour: a mid-hour launch shares its hour bucket with the previous run.
+const startHour = Math.ceil(launch / 3600000);
 const arm = () => ({ hours: 0, views: 0, clicks: 0, donations: 0, cents: 0, clickCredited: 0 });
 const stats = Object.fromEntries(ARMS.map(a => [a, arm()]));
 for (let h = startHour; h < hourIndex(Math.min(now, launch + 42 * 86400000)); h++) {

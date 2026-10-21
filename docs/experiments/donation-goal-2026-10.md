@@ -611,10 +611,10 @@ goal anyone was helping to reach.
 Fix: `GOAL_COUNT_FROM_UTC` - the meter counts only donations made at or after that instant (and
 still resets each calendar month). It replaces `GOAL_VERIFIED_MONTH`, which would also have
 switched the meter off on Nov 1 mid-test. Both `GOAL_COUNT_FROM_UTC` and `EXPERIMENT_LAUNCH_UTC`
-= 2026-10-21T15:00:00Z; 42 days to 2026-12-02T15:00Z. Formal looks day 21 (2026-11-11) and day
+= 2026-10-21T11:47:00Z (started immediately; the report counts from the first full hour, 12:00Z, since hour buckets 11:00-11:47 hold the prior run). 42 days to 2026-12-02. Formal looks day 21 (2026-11-11) and day
 42 only, same rule as above. Report script reads the new launch automatically.
 
-Archived 10/16 run (2026-10-16T21:00Z to 2026-10-21T15:00Z), not pooled with the restart:
+Archived 10/16 run (2026-10-16T21:00Z to 2026-10-21T11:47Z), not pooled with the restart:
 
 | Arm | Hours | Views | Clicks | Click% | Donations | Raised |
 |---|---|---|---|---|---|---|
