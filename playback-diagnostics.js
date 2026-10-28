@@ -2,7 +2,7 @@
 // Optional and fire-and-forget: playback never awaits this module or its requests.
 (() => {
   const ENDPOINT = 'https://tts.read-aloud.com/api/diagnostics';
-  const BUILD = '20261011reports1';
+  const BUILD = '20261028a';
   const CODES = /^(|unknown|no-progress|timeout|abort|network|invalid-response|invalid-audio|audio-too-small|incomplete-audio|wrong-engine|not-allowed|interrupted|canceled|synthesis-failed|synthesis-unavailable|audio-busy|audio-hardware|language-unavailable|voice-unavailable|invalid-argument|text-too-long|audio-[1-4]|http-[1-5][0-9]{2})$/;
   const EVENTS = new Set(['start', 'heartbeat', 'visibility', 'playing', 'unexpected_pause',
     'waiting', 'stalled', 'audio_error', 'play_rejected', 'voice_error', 'speech_restart',

@@ -621,3 +621,64 @@ Archived 10/16 run (2026-10-16T21:00Z to 2026-10-21T11:47Z), not pooled with the
 | A | 37 | 4593 | 22 | 0.48 | 0 | $0.00 |
 | B | 36 | 4612 | 21 | 0.46 | 1 | $10.00 |
 | C | 37 | 4444 | 33 | 0.74 | 1 | $2.00 |
+
+## Scheduled review - October 28, 2026
+
+Read-only production checks: PR #51 remains MERGED. At 09:04:41 UTC, /goal
+returned HTTP 200, ready:true, experiment_active:true, experiment id
+support_goal_2026_10t, schedule_variant:A, no rollout variant, launch_at
+2026-10-21T11:47:00.000Z and totals_verified:true. The API raised_cents was
+6,054. This is the October 21 restart's current-month support meter, not the
+entire October total and not attributable revenue for any particular appeal.
+
+The October 21 restart supersedes the October 16 run. Cloudflare history shows
+version 19d20379-873e-41c1-92da-172246cfb3e6 deployed October 21 at 11:47:15.641
+UTC, within 16 seconds of the recorded 11:47 launch. Local and live launch
+settings agree. Do not pool this run with either archived predecessor.
+
+D1 rotation_events snapshot restricted to the first complete restart hour
+(October 21, 12:00 UTC, epoch hour 497940) through this review:
+
+| Variant | Appeal | View events | Click events | Clicks / views | Verified unique exposed | Verified unique completed donors | Attributable revenue |
+|---|---|---:|---:|---:|---:|---:|---:|
+| A | Existing appeal | 8,282 | 41 | 0.50% | NA | NA | NA |
+| B | $50 goal | 8,138 | 50 | 0.61% | NA | NA | NA |
+| C | $100 goal | 8,340 | 46 | 0.55% | NA | NA | NA |
+
+The unrefunded payment ledger contains 5 payments totaling 6,054 cents since
+October 21 at 11:47 UTC, agreeing with the API's $60.54 meter. There were no
+payments in the excluded 11:47-12:00 partial hour. These are payment counts,
+not verified unique donors or verified appeal conversions. Payment records
+were not assigned to variants by timestamps or click proximity. The BMC
+account ledger and refund delivery were not independently reconciled in this
+run, and reader guardrails were not independently checked.
+
+Decision: continue; no early conversion winner and no rollout. At the start
+of this review the restart was approximately 6.89 days old. Its day-7 point
+is later today. B's small raw click-rate lead is descriptive only. The entire
+run has just 5 payments, below even the restarted protocol's 10-payment
+candidate floor; verified per-variant donor counts and unique exposure
+denominators are still unavailable. The required data condition for
+scripts/review_donation_experiment.js is not met, so it was not run. The
+rotation report was not used to infer attribution because it assigns
+payments by timestamp, which the heartbeat instructions prohibit.
+
+Checkpoint dates calculated from the October 21 at 11:47 UTC restart:
+
+| Checkpoint | UTC | America/New_York |
+|---|---|---|
+| Day 7 (heartbeat schedule) | October 28, 11:47 | October 28, 7:47 a.m. EDT |
+| Day 14 (heartbeat schedule) | November 4, 11:47 | November 4, 6:47 a.m. EST |
+| Day 21 (restart protocol's first formal look) | November 11, 11:47 | November 11, 6:47 a.m. EST |
+| Day 28 (heartbeat schedule) | November 18, 11:47 | November 18, 6:47 a.m. EST |
+| Day 42 (both schedules' final look) | December 2, 11:47 | December 2, 6:47 a.m. EST |
+
+Next check: the day-7 checkpoint later today; next weekly heartbeat is due
+November 4, before that day's 11:47 UTC checkpoint if its current firing time
+continues. The restarted protocol's first formal decision is November 11,
+not November 6, and the final decision is December 2, not November 27.
+Align the heartbeat's original equal-assignment, four-look, verified-donor
+rule with the current hourly-rotation, two-look protocol before selecting a
+winner. No rule or payment-attribution assumption was silently changed here.
+Only this local ledger entry was written. Production, automation settings,
+secrets, homepage wording and deployment requirements were unchanged.

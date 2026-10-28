@@ -13,7 +13,7 @@ const TTS_ENDPOINTS = [
   'https://read-aloud-s4ov.onrender.com',
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
-const READER_BUILD = '20261011reports1';
+const READER_BUILD = '20261028a';
 let ttsRequestSequence = 0;
 
 // Do not let one hung connection turn failover into a multi-minute wait. The
