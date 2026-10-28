@@ -1049,6 +1049,11 @@ async function useTimedNeuralSpeech(voiceId) {
 
       const seg = segments[timed.i];
       if (!seg.blob) {
+        // Mid-reading gap: keep the media element playing (silent loop) while
+        // we wait, so a screen-off Android tab stays an active media session
+        // instead of going idle and getting throttled/frozen ("pauses every
+        // few minutes" overnight). playTimedSegment swaps the src back.
+        if (timed.i > 0) startSilentKeepAlive();
         setStatus(`Loading part ${timed.i + 1} of ${segments.length}...`);
         await ensureTimedSegment(seg, voiceId, `${timed.i + 1}/${segments.length}`);
         if (!ownsSession()) return;
@@ -1060,9 +1065,10 @@ async function useTimedNeuralSpeech(voiceId) {
       }
       if (!ownsSession()) return;
 
-      // Keep the next TWO segments in flight while this one plays, so one
-      // slow synthesis (or a backup-engine render) doesn't leave a gap.
-      for (const k of [1, 2]) {
+      // Keep the next FOUR segments (~5 min of audio) in flight while this one
+      // plays, so a slow synthesis, a backup-engine render, or a throttled
+      // screen-off retry doesn't leave a gap.
+      for (const k of [1, 2, 3, 4]) {
         const nxt = segments[timed.i + k];
         if (nxt && !nxt.blob && !nxt.fetching) {
           ensureTimedSegment(nxt, voiceId, `${timed.i + k + 1}/${segments.length}`);
@@ -1171,6 +1177,9 @@ function playTimedSegment(seg, startAtSec) {
         lastAdvanceAt = Date.now();
         return;
       }
+      // Silently suspended (no stalled/waiting event fired): nudge it before
+      // the 45s give-up, so a screen-lock suspend resumes instead of ending.
+      if (audio.paused && Date.now() - lastAdvanceAt > 10000) retryPlay();
       if (Date.now() - lastAdvanceAt > 45000) {
         globalThis.readerDiagnostics?.record('stalled', 'timeout');
         audio.pause();
