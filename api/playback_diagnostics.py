@@ -24,7 +24,7 @@ EVENTS = Literal[
     "loop_change", "loop_gap_start", "loop_gap_end", "voice_change", "language_change",
     "rate_change", "volume_change", "seek", "export_start", "export_finish", "export_error",
     "runtime_error", "unhandled_rejection", "resource_error", "no_progress", "feedback",
-    "online", "offline", "page_exit",
+    "online", "offline", "page_freeze", "page_resume", "page_exit",
 ]
 READING_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 

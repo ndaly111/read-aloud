@@ -9,7 +9,8 @@
     'fetch_error', 'fetch_recovered', 'reading_error', 'user_pause', 'user_resume', 'stop', 'finish',
     'loop_change', 'loop_gap_start', 'loop_gap_end', 'voice_change', 'language_change',
     'rate_change', 'volume_change', 'seek', 'export_start', 'export_finish', 'export_error',
-    'runtime_error', 'unhandled_rejection', 'resource_error', 'no_progress', 'feedback', 'online', 'offline', 'page_exit']);
+    'runtime_error', 'unhandled_rejection', 'resource_error', 'no_progress', 'feedback', 'online', 'offline', 'page_exit',
+    'page_freeze', 'page_resume']);
   const critical = new Set(['unexpected_pause', 'audio_error', 'play_rejected', 'voice_error',
     'speech_restart', 'fetch_error', 'fetch_recovered', 'reading_error', 'stop', 'finish']);
   const REPORT_KINDS = { runtime_error: 'uncaught-error', unhandled_rejection: 'unhandled-rejection',
@@ -238,5 +239,10 @@
   document.addEventListener('visibilitychange', () => record('visibility'));
   globalThis.addEventListener('online', () => { retryReports(true); record('online'); });
   globalThis.addEventListener('offline', () => record('offline'));
+  // Page Lifecycle: Chrome freezes a hidden tab (~5 min) unless it is audibly
+  // playing. A frozen page runs no JS, so the only trace is a heartbeat gap —
+  // name it explicitly so a "stops every N minutes" report can be read.
+  document.addEventListener('freeze', () => { record('page_freeze'); retryReports(true); });
+  document.addEventListener('resume', () => record('page_resume'));
   globalThis.addEventListener('pagehide', () => { retryReports(true); record('page_exit'); globalThis.readerDiagnostics.end('stop'); });
 })();
