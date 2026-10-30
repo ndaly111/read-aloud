@@ -107,7 +107,7 @@ class PlaybackEvent(BaseModel):
     network_state: int = Field(default=0, ge=0, le=3)
     export_type: Literal["", "mp3", "subtitles"] = ""
     report: Optional[FailureReport] = None
-    endpoint: Literal["", "primary", "render"] = ""
+    endpoint: Literal["", "primary", "render", "primary-backup"] = ""
     request_id: int = Field(default=0, ge=0, le=1000000)
     attempt: int = Field(default=0, ge=0, le=4)
     request_start: int = Field(default=-1, ge=-1, le=10000000)

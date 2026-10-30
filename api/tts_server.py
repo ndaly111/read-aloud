@@ -567,6 +567,11 @@ async def text_to_speech_timed(request: Request, body: TimedTTSRequest):
     result = None
     engine = body.engine
     can_fallback = backup_engine.supports(body.voice)
+    if engine == "edge" and _edge_breaker_open():
+        # The client asked for this exact voice and has another host to try.
+        # Failing fast moves it there now instead of after a 20s timeout, and
+        # gives Edge's per-address rate limit a rest (10/29: HTTP 429s).
+        raise HTTPException(status_code=503, detail="Edge temporarily unavailable on this server")
     try_edge = engine == "edge" or (engine == "auto" and not (_edge_breaker_open() and can_fallback))
 
     if try_edge:

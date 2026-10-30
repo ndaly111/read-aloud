@@ -13,7 +13,7 @@ const TTS_ENDPOINTS = [
   'https://read-aloud-s4ov.onrender.com',
 ];
 let activeTtsUrl = TTS_ENDPOINTS[0];
-const READER_BUILD = '20261028a';
+const READER_BUILD = '20261029a';
 let ttsRequestSequence = 0;
 
 // Do not let one hung connection turn failover into a multi-minute wait. The
@@ -74,12 +74,13 @@ function recordTtsRequest(event, error, readingId, details) {
   } catch (_) {}
 }
 
-function decodeTimedResponse(seg, data, details) {
+function decodeTimedResponse(seg, data, details, allowBackup = false) {
   if (!data || typeof data !== 'object' ||
       (data.text_units != null && data.text_units !== 'utf16')) {
     throw ttsValidationError('invalid-response', 'Invalid timed response');
   }
-  if (data.engine && data.engine !== 'edge') {
+  const backup = !!data.engine && data.engine !== 'edge';
+  if (backup && !allowBackup) {
     throw ttsValidationError('wrong-engine', 'voice server substituted a different voice');
   }
   // Older servers count Python code points. Translate both counts and anchors
@@ -90,7 +91,14 @@ function decodeTimedResponse(seg, data, details) {
   const expected = utf16 ? seg.text.length : positions.length - 1;
   details.expected_chars = expected;
   details.returned_chars = Number.isInteger(data.spoken_chars) ? data.spoken_chars : -1;
-  if (data.spoken_chars != null && data.spoken_chars !== expected) {
+  // The backup engine speaks a sentence-bounded prefix of a long segment and
+  // reports how much it covered; the caller splits off the rest. Edge audio
+  // must always cover the complete segment.
+  let spoken = expected;
+  if (backup && Number.isInteger(data.spoken_chars) &&
+      data.spoken_chars > 0 && data.spoken_chars < expected) {
+    spoken = data.spoken_chars;
+  } else if (data.spoken_chars != null && data.spoken_chars !== expected) {
     throw ttsValidationError('incomplete-audio', 'voice server returned incomplete audio');
   }
   details.stage = 'decode';
@@ -107,16 +115,21 @@ function decodeTimedResponse(seg, data, details) {
   }
   const words = (data.words || []).map(w => {
     if (!Array.isArray(w) || !Number.isFinite(w[0]) || w[0] < 0 ||
-        !Number.isInteger(w[1]) || w[1] < 0 || w[1] >= expected) {
+        !Number.isInteger(w[1]) || w[1] < 0 || w[1] >= spoken) {
       throw ttsValidationError('invalid-response', 'Invalid word anchor');
     }
     return [w[0] / 1000, (utf16 ? w[1] : positions[w[1]]) + seg.start];
   });
   // Do not leave a reusable blob behind if any validation failed.
-  return { blob: new Blob([bytes], { type: 'audio/mpeg' }), engine: data.engine || 'edge', words };
+  return { blob: new Blob([bytes], { type: 'audio/mpeg' }), engine: data.engine || 'edge', words,
+    spokenUnits: utf16 ? spoken : positions[spoken] };
 }
 
-function switchTtsEndpoint(error) {
+function switchTtsEndpoint(error, url) {
+  // Any primary failure goes straight to the other host: when Microsoft
+  // throttles the mini PC's address, a same-server retry fails the same way
+  // and only adds wait (10/29: 51 seconds of silence before Render answered).
+  if (url === TTS_ENDPOINTS[0]) return true;
   // A 504 already spent the server's synthesis deadline. Do not spend it twice
   // before trying the other host. Likewise skip retries on unavailable hosts
   // and rate limits; retain one retry for fast, transient synthesis failures.
@@ -823,29 +836,37 @@ async function fetchTimedSegment(seg, voiceId, label) {
   let requestAttempt = 0;
   let lastErr;
   let all404 = true;
-  for (const url of urlOrder) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
+  let primaryAnswered = false;
+  let edgeErr = null;
+  // The selected Edge voice on every host first. Only if all of them fail does
+  // the primary's local backup voice speak this segment, so a throttled or
+  // broken Edge never leaves the reader stopped (10/29 throttling incident).
+  const plan = [...urlOrder.map(url => [url, 'edge']), [TTS_ENDPOINTS[0], 'backup']];
+  for (const [url, engine] of plan) {
+    if (engine === 'backup' && (all404 || !primaryAnswered)) break;
+    for (let attempt = 1; attempt <= (engine === 'backup' ? 1 : 2); attempt++) {
       if (attempt > 1) await new Promise(r => setTimeout(r, 800 * attempt));
       let timeout;
       const started = Date.now();
-      const details = { endpoint: url === TTS_ENDPOINTS[0] ? 'primary' : 'render',
+      const details = { endpoint: engine === 'backup' ? 'primary-backup'
+          : url === TTS_ENDPOINTS[0] ? 'primary' : 'render',
         request_id: requestId, attempt: ++requestAttempt, request_start: seg.start,
         request_chars: seg.text.length, http_status: 0, stage: 'network' };
       try {
         const controller = new AbortController();
-        timeout = setTimeout(() => controller.abort(), ttsRequestTimeout(url));
+        timeout = setTimeout(() => controller.abort(),
+          engine === 'backup' ? BACKUP_REQUEST_TIMEOUT_MS : ttsRequestTimeout(url));
         const r = await fetch(`${url}/api/tts/timed`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...diagnosticHeaders,
             'X-TTS-Request-ID': String(requestId), 'X-TTS-Attempt': String(requestAttempt) },
-          // A premium selection must remain that exact voice for the whole
-          // reading. Asking explicitly for Edge lets the client try the same
-          // voice on the other server instead of accepting a different local
-          // backup voice for just one segment.
-          body: JSON.stringify({ text: seg.text, voice: voiceId, engine: 'edge' }),
+          // Ask explicitly for Edge so each host tries the selected voice
+          // itself; the backup voice is requested only as the last resort.
+          body: JSON.stringify({ text: seg.text, voice: voiceId, engine }),
           signal: controller.signal
         });
         details.http_status = r.status;
+        if (url === TTS_ENDPOINTS[0] && r.status !== 404) primaryAnswered = true;
         details.stage = 'response';
         if (r.status === 404) {
           lastErr = ttsHttpError(404, 'timed endpoint unavailable');
@@ -862,13 +883,18 @@ async function fetchTimedSegment(seg, voiceId, label) {
         }
         const d = await r.json();
         details.stage = 'validation';
-        Object.assign(seg, decodeTimedResponse(seg, d, details));
+        const { spokenUnits, ...decoded } = decodeTimedResponse(seg, d, details, engine === 'backup');
+        if (spokenUnits < seg.text.length && !splitSegmentAt(seg, spokenUnits)) {
+          throw ttsValidationError('incomplete-audio', 'voice server returned incomplete audio');
+        }
+        Object.assign(seg, decoded);
         details.stage = 'complete';
         details.request_ms = Date.now() - started;
         if (lastErr || activeTtsUrl !== url) {
           recordTtsRequest('fetch_recovered', null, diagnosticHeaders['X-Reading-ID'], details);
         }
-        noteTtsSuccess(url);
+        // A backup render says nothing about whether this host's Edge works.
+        if (engine === 'edge') noteTtsSuccess(url);
         console.log(`Timed segment ${label}: ${seg.blob.size} bytes, ${seg.words.length} word anchors`);
         return seg;
       } catch (e) {
@@ -876,12 +902,16 @@ async function fetchTimedSegment(seg, voiceId, label) {
         lastErr = e;
         details.request_ms = Date.now() - started;
         e.ttsDiagnostic = details;
-        noteTtsFailure(url);
-        console.warn(`Timed segment ${label} via ${url} attempt ${attempt} failed:`, e.message);
+        if (engine === 'edge') noteTtsFailure(url);
+        console.warn(`Timed segment ${label} via ${url} (${engine}) attempt ${attempt} failed:`, e.message);
         recordTtsRequest('fetch_error', e, diagnosticHeaders['X-Reading-ID'], details);
+        // Keep the Edge failure as the reported cause; the backup voice was
+        // only a last resort (and may not exist for this language).
+        if (engine === 'backup') lastErr = edgeErr || e;
+        else edgeErr = e;
         // Retrying the same connection after a hard timeout recreated the exact
         // multi-minute wait that failover is supposed to prevent.
-        if (switchTtsEndpoint(e)) break;
+        if (switchTtsEndpoint(e, url)) break;
       } finally {
         clearTimeout(timeout);
       }
@@ -910,15 +940,19 @@ function ensureTimedSegment(seg, voiceId, label) {
 
 // Split `seg` so it covers only its first `n` chars; the rest becomes a new,
 // unfetched segment right after it in the shared segments array.
+// Returns false when the segment is not in a live reading (nothing to split
+// into), so the caller rejects the partial audio instead of skipping text.
 function splitSegmentAt(seg, n) {
   const arr = (timed && timed.segments) || (lastRead && lastRead.segments);
   const idx = arr ? arr.indexOf(seg) : -1;
   const restText = seg.text.slice(n).replace(/^\s+/, '');
-  if (idx === -1 || !restText) return;
+  if (idx === -1) return false;
+  if (!restText) return true; // only whitespace was left unspoken
   const restStart = seg.start + (seg.text.length - restText.length);
   arr.splice(idx + 1, 0, { text: restText, start: restStart, end: seg.end });
   seg.text = seg.text.slice(0, n).replace(/\s+$/, '');
   seg.end = seg.start + seg.text.length;
+  return true;
 }
 
 function segIndexForChar(ch) {
@@ -1309,7 +1343,7 @@ async function fetchChunkWithRetry(text, voiceId, chunkIndex, rate = +rateSlider
         noteTtsFailure(url);
         console.warn(`Chunk ${chunkIndex + 1} via ${url} attempt ${attempt} failed:`, e.message);
         recordTtsRequest('fetch_error', e, diagnosticHeaders['X-Reading-ID'], details);
-        if (switchTtsEndpoint(e)) break;
+        if (switchTtsEndpoint(e, url)) break;
       } finally {
         clearTimeout(timeout);
       }

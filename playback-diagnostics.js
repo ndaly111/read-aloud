@@ -124,7 +124,7 @@
       const state = snapshot(s);
       // Retries can finish within five seconds. Distinguish individual attempts
       // so four server attempts do not collapse into a single "unknown" event.
-      const endpoint = ['primary', 'render'].includes(details.endpoint) ? details.endpoint : '';
+      const endpoint = ['primary', 'render', 'primary-backup'].includes(details.endpoint) ? details.endpoint : '';
       const requestId = bound(details.request_id, 1000000);
       const attempt = bound(details.attempt, 4);
       const action = /^(loop|voice|language|rate|volume)_change$/.test(event)

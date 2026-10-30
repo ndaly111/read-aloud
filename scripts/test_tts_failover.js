@@ -31,6 +31,7 @@ function harness(kind, inputText = text) {
     },
     clearTimeout(id) { timers.delete(id); },
     rateToApiFormat: rate => `+${(rate - 1) * 100}%`,
+    timed: null, lastRead: null,
     readerDiagnostics: {
       headers: () => ({ 'X-Reading-ID': 'synthetic-reading' }),
       record: (...args) => events.push(args),
@@ -62,6 +63,7 @@ function harness(kind, inputText = text) {
   vm.runInContext(section('const TTS_ENDPOINTS', '// One reusable <audio>'), ctx);
   vm.runInContext(section('async function fetchTimedSegment(', '// Playback and exports'), ctx);
   vm.runInContext(section('async function fetchChunkWithRetry(', '// Legacy chunked player'), ctx);
+  vm.runInContext(section('// Returns false when the segment', 'function segIndexForChar'), ctx);
   return {
     requests, events, replies, ctx,
     advance: ms => { now += ms; },
@@ -80,7 +82,12 @@ function harness(kind, inputText = text) {
       for (const request of requests) {
         assert.equal(request.body.voice, voice);
         assert.equal(request.body.text, inputText);
-        if (kind === 'timed') assert.equal(request.body.engine, 'edge');
+        // Only the final request may ask for the backup voice, and only on the primary.
+        if (kind === 'timed') {
+          const last = request === requests.at(-1);
+          assert.ok(request.body.engine === 'edge' || (last && request.body.engine === 'backup' &&
+            request.host === primary), `unexpected engine ${request.body.engine} on ${request.host}`);
+        }
         else assert.equal(request.body.rate, '+100%');
       }
       assert.equal(replies.length, 0, 'Consume expected responses');
@@ -106,11 +113,12 @@ function harness(kind, inputText = text) {
       assert.equal(h.requests.at(-1).host, primary, 'Stay on recovered primary');
       h.verifyRequests();
     }
-    // A fast upstream 500 can recover on one retry without any Render bandwidth.
+    // A primary 500 (Edge throttling the mini PC returns these) goes straight
+    // to Render: a same-server retry failed the same way on 10/29.
     let h = harness(kind);
     h.replies.push(500, 200);
     await h.run();
-    assert.deepEqual(h.requests.map(r => r.host), [primary, primary]);
+    assert.deepEqual(h.requests.map(r => r.host), [primary, backup]);
     assert.equal(h.events[0][1], 'http-500');
     h.verifyRequests();
 
@@ -123,20 +131,24 @@ function harness(kind, inputText = text) {
     h.verifyRequests();
 
     // Both hosts down: bounded attempts, reject, and let the player save position.
+    // The timed player also asks the primary's backup voice once (503 here:
+    // no backup for this voice) and still reports the Edge failure.
     h = harness(kind);
     h.replies.push(504, 504);
+    if (kind === 'timed') h.replies.push(503);
     await assert.rejects(h.run(), error => error.status === 504);
-    assert.deepEqual(h.requests.map(r => r.host), [primary, backup]);
+    assert.deepEqual(h.requests.map(r => r.host),
+      kind === 'timed' ? [primary, backup, primary] : [primary, backup]);
     h.verifyRequests();
-    console.log(`PASS ${kind}: immediate timeout failover, 30-second recovery, bounded retry, exact voice and HTTP diagnostics`);
+    console.log(`PASS ${kind}: immediate primary failover, 30-second recovery, bounded retry, exact voice and HTTP diagnostics`);
   }
   let h = harness('timed');
   h.replies.push('substitute', 'substitute', 200);
   await h.run();
-  assert.deepEqual(h.requests.map(r => r.host), [primary, primary, backup]);
+  assert.deepEqual(h.requests.map(r => r.host), [primary, backup, backup]);
   h.verifyRequests();
   h = harness('timed');
-  h.replies.push('substitute', 'substitute', 'substitute', 'substitute');
+  h.replies.push('substitute', 'substitute', 'substitute', 503);
   await assert.rejects(h.run(), /substituted a different voice/);
   h.verifyRequests();
   h = harness('timed');
@@ -173,19 +185,22 @@ function harness(kind, inputText = text) {
     ['bad-json', 'invalid-response', 'response'],
     ['network', 'network', 'network'],
   ]) {
+    // Primary once, Render twice, then the primary's backup voice once — unless
+    // the primary never answered, in which case its backup is not reachable either.
+    const attempts = reply === 'network' ? 3 : 4;
     h = harness('timed');
-    h.replies.push(reply, reply, reply, reply);
+    for (let i = 0; i < attempts; i++) h.replies.push(reply);
     const seg = { text, start: 12043 };
     await assert.rejects(h.ctx.fetchTimedSegment(seg, voice, 'bad'), error => h.ctx.ttsFailureCode(error) === code);
     assert.equal(seg.blob, undefined, 'A failed response cannot leave cached audio');
-    assert.equal(h.events.length, 4);
+    assert.equal(h.events.length, attempts);
     h.events.forEach((event, i) => {
       assert.equal(event[1], code);
       assert.equal(event[3].request_id, 1);
       assert.equal(event[3].attempt, i + 1);
       assert.equal(event[3].request_start, 12043, 'Track fetched position, not currently playing position');
       assert.equal(event[3].stage, stage);
-      assert.equal(event[3].endpoint, i < 2 ? 'primary' : 'render');
+      assert.equal(event[3].endpoint, ['primary', 'render', 'render', 'primary-backup'][i]);
       assert.equal(h.requests[i].headers['X-TTS-Request-ID'], '1');
       assert.equal(h.requests[i].headers['X-TTS-Attempt'], String(i + 1));
     });
@@ -201,4 +216,69 @@ function harness(kind, inputText = text) {
   assert.equal(recovery[3].http_status, 200);
   assert.equal(recovery[3].stage, 'complete');
   console.log('PASS: Unicode compatibility, accurate anchors, strict validation, uncached failures and correlated recovery diagnostics');
+
+  // Backup voice as the last resort: Edge failed on both hosts (10/29 throttling).
+  const backupReply = spoken => ({ audio, engine: 'backup', text_units: 'utf16',
+    spoken_chars: spoken, words: [[0, 0], [400, 2]] });
+  h = harness('timed');
+  h.replies.push(500, 504, backupReply(text.length));
+  let seg = { text, start: 80 };
+  await h.ctx.fetchTimedSegment(seg, voice, 'backup-full');
+  assert.equal(seg.engine, 'backup');
+  assert.deepEqual(h.requests.map(r => [r.host, r.body.engine]),
+    [[primary, 'edge'], [backup, 'edge'], [primary, 'backup']]);
+  assert.ok(vm.runInContext('primaryFailedAt', h.ctx) > 0, 'A backup render does not mark the primary Edge healthy');
+  const rec = h.events.find(event => event[0] === 'fetch_recovered');
+  assert.equal(rec[3].endpoint, 'primary-backup');
+  h.verifyRequests();
+
+  // A partial backup render splits the segment; the rest is queued right after it.
+  const long = 'First sentence here. Second sentence follows. Third one ends it.';
+  const cut = 'First sentence here. '.length;
+  h = harness('timed', long);
+  h.replies.push(500, 500, 500, backupReply(cut));
+  seg = { text: long, start: 1000, end: 1000 + long.length };
+  const following = { text: 'Next.', start: 1000 + long.length + 1, end: 1000 + long.length + 6 };
+  h.ctx.timed = { segments: [seg, following] };
+  await h.ctx.fetchTimedSegment(seg, voice, 'backup-partial');
+  const segs = h.ctx.timed.segments;
+  assert.equal(segs.length, 3);
+  assert.equal(segs[0], seg);
+  assert.equal(seg.text, 'First sentence here.');
+  assert.equal(seg.end, 1000 + seg.text.length);
+  assert.equal(segs[1].text, 'Second sentence follows. Third one ends it.');
+  assert.equal(segs[1].start, 1000 + cut);
+  assert.equal(segs[1].end, 1000 + long.length);
+  assert.equal(segs[1].blob, undefined, 'The remainder is fetched separately');
+  assert.equal(segs[2], following);
+  assert.deepEqual(JSON.parse(JSON.stringify(seg.words)), [[0, 1000], [0.4, 1002]]);
+  h.verifyRequests();
+
+  // Partial audio for a segment outside any live reading is rejected, never skipped.
+  h = harness('timed', long);
+  h.replies.push(500, 500, 500, backupReply(cut));
+  seg = { text: long, start: 0 };
+  await assert.rejects(h.ctx.fetchTimedSegment(seg, voice, 'orphan'), error => error.status === 500,
+    'The Edge failure stays the reported cause');
+  assert.equal(h.events.at(-1)[1], 'incomplete-audio');
+  assert.equal(h.events.at(-1)[3].endpoint, 'primary-backup');
+  assert.equal(seg.blob, undefined);
+  h.verifyRequests();
+
+  // Edge audio must still be complete even though backup audio may be partial.
+  h = harness('timed', long);
+  h.replies.push({ ...backupReply(cut), engine: 'edge' }, 503, 503);
+  h.ctx.timed = { segments: [{ text: long, start: 0 }] };
+  await assert.rejects(h.ctx.fetchTimedSegment(h.ctx.timed.segments[0], voice, 'edge-partial'),
+    error => h.ctx.ttsFailureCode(error) === 'incomplete-audio' || error.status === 503);
+  assert.equal(h.ctx.timed.segments.length, 1, 'Partial Edge audio never splits a segment');
+  h.verifyRequests();
+
+  // Primary unreachable: its backup voice is unreachable too, so do not wait on it.
+  h = harness('timed');
+  h.replies.push('network', 504);
+  await assert.rejects(h.run(), error => error.status === 504);
+  assert.deepEqual(h.requests.map(r => r.host), [primary, backup]);
+  h.verifyRequests();
+  console.log('PASS: backup voice only after Edge fails everywhere, partial renders split in place, unreachable primary skipped');
 })().catch(error => { console.error(error); process.exitCode = 1; });
