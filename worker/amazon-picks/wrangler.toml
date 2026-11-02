@@ -8,8 +8,9 @@ account_id = "d36f6a50c928a16dc27e0e789a94617f"
 # Kill switch: PICKS_ENABLED = "false" and redeploy; the strip stays hidden on every page.
 [vars]
 PICKS_ENABLED = "true"
-# The live Associates store/tracking ID (the 2020 "nickdaly-20" application was closed by Amazon).
-PARTNER_TAG = "nickdaly0c-20"
+# Site-level tracking ID Nick created 11/02 so read-aloud earnings show separately in Associates
+# Central reports. The account store ID is nickdaly0c-20 (the 2020 "nickdaly-20" was closed).
+PARTNER_TAG = "read-aloud-20"
 # Per-pick tracking IDs Nick has CREATED in Associates Central (space-separated). A pick whose
 # derived ID (see trackingTag in src/catalog.js) is listed here links with it; the rest use
 # PARTNER_TAG. Never list an ID that does not exist yet - such links earn nothing.
