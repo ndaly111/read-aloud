@@ -109,6 +109,21 @@ export function scheduledPicks(ms, active) {
   return out;
 }
 
+// Per-pick Amazon tracking ID, so Associates Central reports clicks, orders and earnings per
+// pick. Tracking IDs have to be created by hand in Associates Central (Account Settings >
+// Manage Tracking IDs) and a link carrying an ID that does not exist earns nothing, so a
+// pick uses its own ID only when that ID is listed in the TRACKING_TAGS var; otherwise it
+// falls back to the account's main tag. Derived name: "ra" + id without hyphens, cut to 14
+// characters, plus "-20". Run `node scripts/amazon_picks_tags.mjs` to print the full list.
+export function trackingTag(pick) {
+  return 'ra' + pick.id.replace(/-/g, '').slice(0, 14) + '-20';
+}
+export function tagFor(pick, env) {
+  const created = new Set(String(env.TRACKING_TAGS || '').split(/[\s,]+/).filter(Boolean));
+  const own = trackingTag(pick);
+  return created.has(own) ? own : env.PARTNER_TAG;
+}
+
 export function pickUrl(pick, tag) {
   const t = encodeURIComponent(tag);
   if (pick.kind === 'asin') return 'https://www.amazon.com/dp/' + pick.asin + '?tag=' + t;

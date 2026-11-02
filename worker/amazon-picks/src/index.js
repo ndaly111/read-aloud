@@ -6,7 +6,7 @@
 //   cron 6-hourly - refreshes product facts from the Amazon Creators API.
 //   cron weekly   - rotatePool(): benches active picks nobody clicks, promotes bench picks.
 // Stores product facts and counts only. Nothing about visitors is ever recorded.
-import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl } from './catalog.js';
+import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag } from './catalog.js';
 
 const ORIGINS = new Set(['https://read-aloud.com', 'https://www.read-aloud.com']);
 const TOKEN_URL = 'https://api.amazon.com/auth/o2/token';
@@ -83,8 +83,8 @@ async function currentPicks(env, request) {
       id: pick.id,
       title: pick.title,
       hook: pick.hook,
-      // The API's own tagged detail URL when we have it; our tagged link otherwise.
-      url: (fact && fact.url) || pickUrl(pick, env.PARTNER_TAG),
+      // Our own link, carrying the pick's tracking ID when Nick has created it.
+      url: pickUrl(pick, tagFor(pick, env)),
       image: (fact && fact.image) || null,
       // Stale prices are withheld rather than shown wrong.
       price: fresh && fact.price ? fact.price : null,
@@ -270,7 +270,7 @@ async function status(env) {
   return json({
     refresh: refresh || null,
     rules: { active_size: ACTIVE_SIZE, rotate_n: ROTATE_N, min_views: MIN_VIEWS, retire_below_median: RETIRE_BELOW, cron: ROTATE_CRON },
-    active: active.map(p => ({ id: p.id, keep: !!p.keep, week: stats[p.id] || { views: 0, clicks: 0 } })),
+    active: active.map(p => ({ id: p.id, keep: !!p.keep, tag: tagFor(p, env), own_tag: tagFor(p, env) === trackingTag(p), week: stats[p.id] || { views: 0, clicks: 0 } })),
     bench,
     last_rotation: rotation || null
   }, 200, { 'cache-control': 'no-store' });

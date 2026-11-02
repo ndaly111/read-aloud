@@ -10,6 +10,10 @@ account_id = "d36f6a50c928a16dc27e0e789a94617f"
 PICKS_ENABLED = "true"
 # The live Associates store/tracking ID (the 2020 "nickdaly-20" application was closed by Amazon).
 PARTNER_TAG = "nickdaly0c-20"
+# Per-pick tracking IDs Nick has CREATED in Associates Central (space-separated). A pick whose
+# derived ID (see trackingTag in src/catalog.js) is listed here links with it; the rest use
+# PARTNER_TAG. Never list an ID that does not exist yet - such links earn nothing.
+TRACKING_TAGS = ""
 
 # 17 */6: product facts refresh (title/photo/price; Amazon requires shown prices < 24h old).
 # 7 6 * * 1: weekly pool rotation (Monday 06:07 UTC) - bench unclicked picks, promote bench.
