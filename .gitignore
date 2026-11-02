@@ -65,3 +65,6 @@ _archive/
 
 # Versioned exceptions
 !/CLAUDE.md
+
+# Private dashboard link for the Amazon picks worker (key is a Worker secret)
+worker/amazon-picks/.dash_url

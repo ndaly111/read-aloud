@@ -7,6 +7,7 @@
 //   cron weekly   - rotatePool(): benches active picks nobody clicks, promotes bench picks.
 // Stores product facts and counts only. Nothing about visitors is ever recorded.
 import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag } from './catalog.js';
+import { renderDash } from './dash.js';
 
 const ORIGINS = new Set(['https://read-aloud.com', 'https://www.read-aloud.com']);
 const TOKEN_URL = 'https://api.amazon.com/auth/o2/token';
@@ -293,6 +294,50 @@ async function status(env) {
   }, 200, { 'cache-control': 'no-store' });
 }
 
+// ---- live dashboard (private link: /dash?k=DASH_KEY) ------------------------------------
+async function sums(env, sql, ...args) {
+  return (await env.DB.prepare(sql).bind(...args).all()).results || [];
+}
+async function dashData(env) {
+  const now = Date.now();
+  const hour = hourIndex(now);
+  const active = await activePicks(env);
+  const picks = scheduledPicks(now, active);
+  const agg = rowsIn => {
+    const out = {};
+    for (const r of rowsIn) {
+      out[r.key] ||= { views: 0, clicks: 0 };
+      out[r.key][r.event === 'click' ? 'clicks' : 'views'] += Number(r.n);
+    }
+    return out;
+  };
+  const week = agg(await sums(env, 'SELECT pick AS key, event, SUM(count) AS n FROM pick_events WHERE hour >= ? GROUP BY pick, event', hour - 168));
+  const day = agg(await sums(env, 'SELECT pick AS key, event, SUM(count) AS n FROM pick_events WHERE hour >= ? GROUP BY pick, event', hour - 24));
+  const photos = agg(await sums(env, "SELECT pick || ' #' || photo AS key, event, SUM(count) AS n FROM pick_photo_events WHERE hour >= ? GROUP BY pick, photo, event", hour - 168));
+  const hourly = agg(await sums(env, 'SELECT hour AS key, event, SUM(count) AS n FROM pick_events WHERE hour >= ? GROUP BY hour, event', hour - 24));
+  const total = m => Object.values(m).reduce((a, r) => ({ views: a.views + r.views, clicks: a.clicks + r.clicks }), { views: 0, clicks: 0 });
+  const bench = ((await env.DB.prepare("SELECT id FROM pick_pool WHERE status = 'bench' ORDER BY since ASC, id ASC").all()).results || [])
+    .map(r => r.id).filter(id => byId.has(id));
+  const refresh = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_refresh WHERE id = 1').first();
+  const rotation = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_rotations ORDER BY ran_at DESC LIMIT 1').first();
+  const rate = r => (r.views ? r.clicks / r.views : 0);
+  return {
+    as_of: new Date(now).toISOString().slice(0, 16).replace('T', ' '),
+    hour,
+    tag: env.PARTNER_TAG,
+    totals: { today: total(day), week: total(week) },
+    now: picks.map((p, i) => {
+      const photo = (hour + i) % (p.photos || 1) + 1;
+      return { id: p.id, title: p.title, hook: p.hook, url: pickUrl(p, tagFor(p, env)), photo, image: SITE_PHOTO + p.id + '-' + photo + '.jpg' };
+    }),
+    active: active.map(p => ({ id: p.id, keep: !!p.keep, ...(week[p.id] || { views: 0, clicks: 0 }) }))
+      .sort((a, b) => rate(b) - rate(a) || b.views - a.views),
+    photos: Object.entries(photos).map(([key, c]) => ({ key, ...c })).sort((a, b) => a.key.localeCompare(b.key)),
+    hourly: Object.entries(hourly).map(([h, c]) => ({ label: new Date(Number(h) * 3600000).toISOString().slice(5, 16).replace('T', ' '), ...c }))
+      .sort((a, b) => b.label.localeCompare(a.label)),
+    bench, refresh: refresh || null, rotation: rotation || null
+  };
+}
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -319,7 +364,17 @@ export default {
       try { return await status(env); }
       catch (err) { return json({ error: String(err.message) }, 503); }
     }
-    return new Response('Not found', { status: 404 });
+    if (url.pathname === '/dash' || url.pathname === '/dash.json') {
+      // Private operator page: the key is a Worker secret, never in the repo.
+      if (!env.DASH_KEY || url.searchParams.get('k') !== env.DASH_KEY) return new Response('Not found', { status: 404 });
+      if (!env.DB) return new Response('Not configured', { status: 503 });
+      try {
+        const data = await dashData(env);
+        if (url.pathname === '/dash.json') return json(data, 200, { 'cache-control': 'no-store' });
+        return new Response(renderDash(data), { status: 200,
+          headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
+      } catch (err) { return new Response('Dashboard error: ' + err.message, { status: 503 }); }
+    }    return new Response('Not found', { status: 404 });
   },
   async scheduled(event, env, ctx) {
     ctx.waitUntil(event.cron === ROTATE_CRON ? rotatePool(env) : refreshCatalog(env));
