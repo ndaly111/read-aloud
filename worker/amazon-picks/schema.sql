@@ -43,3 +43,14 @@ CREATE TABLE IF NOT EXISTS pick_rotations (
   status TEXT NOT NULL,
   detail TEXT
 );
+
+-- Same aggregate counts keyed by which stock photo (1-based) was on the card, so the photos
+-- of one pick can be compared. 0 = Amazon's own product image, not recorded here.
+CREATE TABLE IF NOT EXISTS pick_photo_events (
+  hour INTEGER NOT NULL,
+  pick TEXT NOT NULL,
+  photo INTEGER NOT NULL,
+  event TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (hour, pick, photo, event)
+);

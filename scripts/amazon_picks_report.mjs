@@ -31,3 +31,17 @@ const total = active.reduce((a, r) => ({ views: a.views + r.views, clicks: a.cli
 console.log('total'.padEnd(20), String(total.views).padStart(7), String(total.clicks).padStart(7), pct(total.views ? total.clicks / total.views : 0));
 console.log('\nBENCH (next up first):', pool.filter(p => p.status === 'bench').map(p => p.id).join(', ') || 'none');
 console.log('\nLAST ROTATION:', rotation ? new Date(rotation.ran_at * 1000).toISOString() + ' ' + rotation.status + ' ' + (rotation.detail || '') : 'none yet');
+
+// Per-photo comparison for picks that rotate several stock photos.
+const photoRows = query('SELECT pick, photo, event, SUM(count) AS n FROM pick_photo_events WHERE hour >= ' + sinceHour + ' GROUP BY pick, photo, event');
+const photos = {};
+for (const r of photoRows) {
+  const key = r.pick + ' #' + r.photo;
+  photos[key] ||= { views: 0, clicks: 0 };
+  photos[key][r.event === 'click' ? 'clicks' : 'views'] += Number(r.n);
+}
+const photoList = Object.entries(photos).map(([k, c]) => ({ k, ...c, ctr: c.views ? c.clicks / c.views : 0 })).sort((a, b) => a.k.localeCompare(b.k));
+if (photoList.length) {
+  console.log('\nPHOTOS (last ' + days + ' days)');
+  for (const r of photoList) console.log(r.k.padEnd(24), String(r.views).padStart(7), String(r.clicks).padStart(7), pct(r.ctr));
+}

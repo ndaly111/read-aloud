@@ -79,16 +79,20 @@ async function currentPicks(env, request) {
     }
   }
   const nowS = Math.floor(now / 1000);
-  const items = picks.map(pick => {
+  const hour = hourIndex(now);
+  const items = picks.map((pick, i) => {
     const fact = pick.kind === 'asin' ? facts.get(pick.asin) : null;
     const fresh = fact && nowS - fact.updated_at <= PRICE_MAX_AGE_S;
+    // Which of the pick's stock photos this hour shows (1-based); photos take turns hour by hour.
+    const photo = fact && fact.image ? 0 : (hour + i) % (pick.photos || 1) + 1;
     return {
       id: pick.id,
       title: pick.title,
       hook: pick.hook,
       // Our own link, carrying the pick's tracking ID when Nick has created it.
       url: pickUrl(pick, tagFor(pick, env)),
-      image: (fact && fact.image) || SITE_PHOTO + pick.id + '.jpg',
+      image: (fact && fact.image) || SITE_PHOTO + pick.id + '-' + photo + '.jpg',
+      photo,
       // 'product' = Amazon's own product shot (shown whole on white); 'stock' = our scene photo.
       image_kind: fact && fact.image ? 'product' : 'stock',
       // Stale prices are withheld rather than shown wrong.
@@ -110,6 +114,7 @@ async function recordEvent(request, env) {
   let body;
   try { body = await request.json(); }
   catch (_) { return new Response('Invalid JSON', { status: 400 }); }
+  const photo = body && Number.isInteger(body.photo) && body.photo >= 0 && body.photo <= 20 ? body.photo : 0;
   if (!body || typeof body !== 'object' || typeof body.pick !== 'string' || !EVENT_NAMES.has(body.event)) {
     return new Response('Invalid event', { status: 400, headers });
   }
@@ -122,6 +127,13 @@ async function recordEvent(request, env) {
     'INSERT INTO pick_events (hour, pick, event, count) VALUES (?, ?, ?, 1) ' +
     'ON CONFLICT(hour, pick, event) DO UPDATE SET count = pick_events.count + 1'
   ).bind(hourIndex(now), body.pick, body.event).run();
+  if (photo > 0) {
+    // Same count again, keyed by which stock photo was on the card, so photos can be compared.
+    await env.DB.prepare(
+      'INSERT INTO pick_photo_events (hour, pick, photo, event, count) VALUES (?, ?, ?, ?, 1) ' +
+      'ON CONFLICT(hour, pick, photo, event) DO UPDATE SET count = pick_photo_events.count + 1'
+    ).bind(hourIndex(now), body.pick, photo, body.event).run();
+  }
   return new Response(null, { status: 204, headers });
 }
 
