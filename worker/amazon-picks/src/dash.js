@@ -51,7 +51,7 @@ export function renderDash(d) {
   <div class="tile"><b>${n(t.today.clicks)}</b><span>clicks, last 24h</span><small>${n(t.week.clicks)} in 7 days</small></div>
   <div class="tile"><b>${pct(t.today.clicks, t.today.views)}</b><span>click rate, last 24h</span><small>${pct(t.week.clicks, t.week.views)} in 7 days</small></div>
 </div>
-<h2>On the page right now (UTC hour ${esc(d.hour)})</h2>
+<h2>On the page right now (since ${esc(d.hour_label)})</h2>
 <div class="nowgrid">${now}</div>
 <h2>Active picks · last 7 days</h2>
 <table><tr><th>pick</th><th>views</th><th>clicks</th><th>rate</th></tr>${rows(d.active, 'id')}</table>

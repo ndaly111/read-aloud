@@ -324,6 +324,7 @@ async function dashData(env) {
   return {
     as_of: new Date(now).toISOString().slice(0, 16).replace('T', ' '),
     hour,
+    hour_label: new Date(hour * 3600000).toISOString().slice(11, 16) + ' UTC',
     tag: env.PARTNER_TAG,
     totals: { today: total(day), week: total(week) },
     now: picks.map((p, i) => {
