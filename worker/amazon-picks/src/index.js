@@ -15,6 +15,9 @@ const MARKETPLACE = 'www.amazon.com';
 // Amazon allows a displayed price only when it was fetched within the last 24 hours.
 const PRICE_MAX_AGE_S = 24 * 3600;
 const DISCLOSURE = 'As an Amazon Associate I earn from qualifying purchases.';
+// Our own licensed stock photo per pick (Pexels license, self-hosted in the site's /picks/ folder),
+// shown until Amazon's product photo is available through the API. Never an Amazon image.
+const SITE_PHOTO = 'https://read-aloud.com/picks/';
 const ROTATE_CRON = '7 6 * * 1';
 
 // Weekly pool rotation - the readable rules:
@@ -85,7 +88,7 @@ async function currentPicks(env, request) {
       hook: pick.hook,
       // Our own link, carrying the pick's tracking ID when Nick has created it.
       url: pickUrl(pick, tagFor(pick, env)),
-      image: (fact && fact.image) || null,
+      image: (fact && fact.image) || SITE_PHOTO + pick.id + '.jpg',
       // Stale prices are withheld rather than shown wrong.
       price: fresh && fact.price ? fact.price : null,
       price_as_of: fresh && fact.price ? new Date(fact.updated_at * 1000).toISOString() : null

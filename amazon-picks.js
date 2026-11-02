@@ -21,19 +21,26 @@
 
   function card(item) {
     const a = document.createElement('a');
-    a.className = 'pick-card' + (item.image ? ' pick-card--photo' : '');
+    a.className = 'pick-card';
     a.href = item.url;
     a.target = '_blank';
     a.rel = 'noopener sponsored';
     a.addEventListener('click', () => send(item.id, 'click'));
     if (item.image) {
+      const frame = document.createElement('span');
+      frame.className = 'pick-card__frame';
       const img = document.createElement('img');
       img.className = 'pick-card__img';
       img.src = item.image;
       img.alt = '';
       img.loading = 'lazy';
       img.decoding = 'async';
-      a.appendChild(img);
+      img.width = 640;
+      img.height = 400;
+      // A photo that fails to load leaves a text card rather than a broken image.
+      img.addEventListener('error', () => frame.remove());
+      frame.appendChild(img);
+      a.appendChild(frame);
     }
     const body = document.createElement('span');
     body.className = 'pick-card__body';
