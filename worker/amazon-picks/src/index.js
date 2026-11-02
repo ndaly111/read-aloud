@@ -1,10 +1,12 @@
 // Cloudflare Worker for the homepage "Worth a look" Amazon picks strip.
-//   GET  /picks  - the picks scheduled for this UTC hour, with API-fetched title/image/price
-//                  when Amazon has let us have them.
-//   POST /event  - aggregate view/click counters per hour and pick. No identifiers.
-//   cron         - refreshes product facts from the Amazon Creators API every 6 hours.
+//   GET  /picks   - the picks scheduled for this UTC hour, with API-fetched title/image/price
+//                   when Amazon has let us have them.
+//   POST /event   - aggregate view/click counters per hour and pick. No identifiers.
+//   GET  /status  - operator view: last catalog refresh, active/bench pool, last rotation.
+//   cron 6-hourly - refreshes product facts from the Amazon Creators API.
+//   cron weekly   - rotatePool(): benches active picks nobody clicks, promotes bench picks.
 // Stores product facts and counts only. Nothing about visitors is ever recorded.
-import { PICKS, hourIndex, scheduledPicks, pickUrl } from './catalog.js';
+import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl } from './catalog.js';
 
 const ORIGINS = new Set(['https://read-aloud.com', 'https://www.read-aloud.com']);
 const TOKEN_URL = 'https://api.amazon.com/auth/o2/token';
@@ -13,6 +15,19 @@ const MARKETPLACE = 'www.amazon.com';
 // Amazon allows a displayed price only when it was fetched within the last 24 hours.
 const PRICE_MAX_AGE_S = 24 * 3600;
 const DISCLOSURE = 'As an Amazon Associate I earn from qualifying purchases.';
+const ROTATE_CRON = '7 6 * * 1';
+
+// Weekly pool rotation - the readable rules:
+//   - A pick is judged on the last 7 days only, and only if it was seen at least MIN_VIEWS
+//     times in that week (otherwise it is not judged and stays).
+//   - The ROTATE_N judged picks with the lowest click-through rate are benched, but only if
+//     their rate is under RETIRE_BELOW x the median of the judged picks - when everything
+//     performs alike, nothing is swapped.
+//   - Benched picks go to the back of the bench and can return later. keep:true picks are
+//     never benched. The bench picks that have waited longest are promoted.
+const ROTATE_N = 3;
+const MIN_VIEWS = 200;
+const RETIRE_BELOW = 0.6;
 
 const json = (body, status, headers = {}) => new Response(JSON.stringify(body), {
   status,
@@ -22,12 +37,34 @@ function publicHeaders(request) {
   const origin = request.headers.get('Origin');
   return ORIGINS.has(origin) ? { 'access-control-allow-origin': origin, 'vary': 'Origin' } : {};
 }
+const byId = new Map(CATALOG.map(p => [p.id, p]));
+
+// The active picks, in a stable order. Catalog entries the pool table has never seen are
+// added to it (the first ACTIVE_SIZE ever seen become active, later ones join the bench).
+async function activePicks(env) {
+  if (!env.DB) return CATALOG.slice(0, ACTIVE_SIZE);
+  const read = async () => (await env.DB.prepare('SELECT id, status, since FROM pick_pool').all()).results || [];
+  let rows = await read();
+  const known = new Set(rows.map(r => r.id));
+  const missing = CATALOG.filter(p => !known.has(p.id));
+  if (missing.length) {
+    let activeCount = rows.filter(r => r.status === 'active').length;
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.batch(missing.map((p, i) => env.DB.prepare(
+      'INSERT OR IGNORE INTO pick_pool (id, status, since) VALUES (?, ?, ?)'
+    ).bind(p.id, activeCount++ < ACTIVE_SIZE ? 'active' : 'bench', now + i)));
+    rows = await read();
+  }
+  const active = rows.filter(r => r.status === 'active' && byId.has(r.id))
+    .sort((a, b) => a.since - b.since || (a.id < b.id ? -1 : 1)).map(r => byId.get(r.id));
+  return active.length ? active : CATALOG.slice(0, ACTIVE_SIZE);
+}
 
 async function currentPicks(env, request) {
   const headers = { ...publicHeaders(request), 'cache-control': 'public, max-age=300' };
   if (env.PICKS_ENABLED !== 'true' || !env.PARTNER_TAG) return json({ ready: false }, 200, headers);
   const now = Date.now();
-  const picks = scheduledPicks(now);
+  const picks = scheduledPicks(now, await activePicks(env));
   const facts = new Map();
   if (env.DB) {
     const asins = picks.filter(p => p.kind === 'asin').map(p => p.asin);
@@ -73,13 +110,64 @@ async function recordEvent(request, env) {
   }
   const now = Date.now();
   // Only a pick on screen this hour or last hour (a page opened before the hour turned) counts.
-  const allowed = new Set([...scheduledPicks(now), ...scheduledPicks(now - 3600000)].map(p => p.id));
+  const active = await activePicks(env);
+  const allowed = new Set([...scheduledPicks(now, active), ...scheduledPicks(now - 3600000, active)].map(p => p.id));
   if (!allowed.has(body.pick)) return new Response(null, { status: 204, headers });
   await env.DB.prepare(
     'INSERT INTO pick_events (hour, pick, event, count) VALUES (?, ?, ?, 1) ' +
     'ON CONFLICT(hour, pick, event) DO UPDATE SET count = pick_events.count + 1'
   ).bind(hourIndex(now), body.pick, body.event).run();
   return new Response(null, { status: 204, headers });
+}
+
+// ---- weekly pool rotation ---------------------------------------------------------------
+async function weekStats(env, sinceHour) {
+  const rows = (await env.DB.prepare(
+    'SELECT pick, event, SUM(count) AS n FROM pick_events WHERE hour >= ? GROUP BY pick, event'
+  ).bind(sinceHour).all()).results || [];
+  const stats = {};
+  for (const r of rows) {
+    stats[r.pick] ||= { views: 0, clicks: 0 };
+    stats[r.pick][r.event === 'click' ? 'clicks' : 'views'] += Number(r.n);
+  }
+  return stats;
+}
+
+async function rotatePool(env) {
+  if (!env.DB) return;
+  const nowS = Math.floor(Date.now() / 1000);
+  const log = (status, detail) => env.DB.prepare(
+    'INSERT INTO pick_rotations (ran_at, status, detail) VALUES (?, ?, ?)'
+  ).bind(nowS, status, detail || null).run();
+  const active = await activePicks(env);
+  const stats = await weekStats(env, hourIndex(Date.now()) - 7 * 24);
+  const judged = active.filter(p => !p.keep)
+    .map(p => ({ id: p.id, ...(stats[p.id] || { views: 0, clicks: 0 }) }))
+    .filter(s => s.views >= MIN_VIEWS)
+    .map(s => ({ ...s, ctr: s.clicks / s.views }))
+    .sort((a, b) => a.ctr - b.ctr);
+  if (!judged.length) { await log('skipped', 'no active pick reached ' + MIN_VIEWS + ' views this week'); return; }
+  const median = judged[Math.floor(judged.length / 2)].ctr;
+  const retire = judged.filter(s => s.ctr < median * RETIRE_BELOW).slice(0, ROTATE_N);
+  const bench = ((await env.DB.prepare(
+    "SELECT id FROM pick_pool WHERE status = 'bench' ORDER BY since ASC, id ASC"
+  ).all()).results || []).map(r => r.id).filter(id => byId.has(id));
+  const swaps = Math.min(retire.length, bench.length);
+  if (!swaps) {
+    await log('no_change', JSON.stringify({ judged: judged.length, median_ctr: median, below_bar: retire.length, bench: bench.length }));
+    return;
+  }
+  const stmts = [];
+  for (let i = 0; i < swaps; i++) {
+    stmts.push(env.DB.prepare("UPDATE pick_pool SET status = 'bench', since = ? WHERE id = ?").bind(nowS + i, retire[i].id));
+    stmts.push(env.DB.prepare("UPDATE pick_pool SET status = 'active', since = ? WHERE id = ?").bind(nowS + i, bench[i]));
+  }
+  await env.DB.batch(stmts);
+  await log('rotated', JSON.stringify({
+    median_ctr: median,
+    retired: retire.slice(0, swaps).map(s => ({ id: s.id, views: s.views, clicks: s.clicks })),
+    promoted: bench.slice(0, swaps)
+  }));
 }
 
 // ---- Amazon Creators API refresh --------------------------------------------------------
@@ -131,7 +219,7 @@ async function refreshCatalog(env) {
     if (env.DB) await note('not_configured');
     return;
   }
-  const asins = PICKS.filter(p => p.kind === 'asin').map(p => p.asin);
+  const asins = (await activePicks(env)).filter(p => p.kind === 'asin').map(p => p.asin);
   if (!asins.length) { await note('nothing_to_fetch'); return; }
   let token;
   try { token = await accessToken(env); }
@@ -171,6 +259,23 @@ async function refreshCatalog(env) {
   await note('ok', 'updated ' + updated + ' of ' + asins.length);
 }
 
+async function status(env) {
+  if (!env.DB) return json({ refresh: null }, 503);
+  const refresh = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_refresh WHERE id = 1').first();
+  const active = await activePicks(env);
+  const bench = ((await env.DB.prepare("SELECT id FROM pick_pool WHERE status = 'bench' ORDER BY since ASC, id ASC").all()).results || [])
+    .map(r => r.id).filter(id => byId.has(id));
+  const stats = await weekStats(env, hourIndex(Date.now()) - 7 * 24);
+  const rotation = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_rotations ORDER BY ran_at DESC LIMIT 1').first();
+  return json({
+    refresh: refresh || null,
+    rules: { active_size: ACTIVE_SIZE, rotate_n: ROTATE_N, min_views: MIN_VIEWS, retire_below_median: RETIRE_BELOW, cron: ROTATE_CRON },
+    active: active.map(p => ({ id: p.id, keep: !!p.keep, week: stats[p.id] || { views: 0, clicks: 0 } })),
+    bench,
+    last_rotation: rotation || null
+  }, 200, { 'cache-control': 'no-store' });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -193,15 +298,13 @@ export default {
       catch (_) { return new Response(null, { status: 204, headers: publicHeaders(request) }); }
     }
     if (url.pathname === '/status' && request.method === 'GET') {
-      // Operator check: last refresh outcome. No secrets, no visitor data.
-      try {
-        const row = env.DB ? await env.DB.prepare('SELECT ran_at, status, detail FROM pick_refresh WHERE id = 1').first() : null;
-        return json({ refresh: row || null, picks: PICKS.length }, 200, { 'cache-control': 'no-store' });
-      } catch (_) { return json({ refresh: null }, 503); }
+      // Operator check. No secrets, no visitor data.
+      try { return await status(env); }
+      catch (err) { return json({ error: String(err.message) }, 503); }
     }
     return new Response('Not found', { status: 404 });
   },
-  async scheduled(_event, env, ctx) {
-    ctx.waitUntil(refreshCatalog(env));
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(event.cron === ROTATE_CRON ? rotatePool(env) : refreshCatalog(env));
   }
 };

@@ -28,3 +28,18 @@ CREATE TABLE IF NOT EXISTS pick_refresh (
   status TEXT NOT NULL,
   detail TEXT
 );
+
+-- Which catalog picks are active (in the hourly rotation) vs on the bench. `since` orders
+-- the bench (oldest promoted first) and records when a pick last changed status.
+CREATE TABLE IF NOT EXISTS pick_pool (
+  id TEXT PRIMARY KEY,
+  status TEXT NOT NULL CHECK (status IN ('active', 'bench')),
+  since INTEGER NOT NULL
+);
+
+-- Weekly rotation log: what was benched and promoted, or why nothing changed.
+CREATE TABLE IF NOT EXISTS pick_rotations (
+  ran_at INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  detail TEXT
+);

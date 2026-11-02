@@ -11,9 +11,10 @@ PICKS_ENABLED = "true"
 # The live Associates store/tracking ID (the 2020 "nickdaly-20" application was closed by Amazon).
 PARTNER_TAG = "nickdaly0c-20"
 
-# Product facts refresh (title/photo/price) - Amazon requires shown prices to be < 24h old.
+# 17 */6: product facts refresh (title/photo/price; Amazon requires shown prices < 24h old).
+# 7 6 * * 1: weekly pool rotation (Monday 06:07 UTC) - bench unclicked picks, promote bench.
 [triggers]
-crons = ["17 */6 * * *"]
+crons = ["17 */6 * * *", "7 6 * * 1"]
 
 [[d1_databases]]
 binding = "DB"

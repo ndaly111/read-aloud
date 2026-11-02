@@ -1,20 +1,24 @@
-// The pool of picks the homepage strip rotates through. Edit this file to add, drop or
-// reword a pick; redeploy the Worker and the strip follows.
+// The full pool of picks. ACTIVE_SIZE of them are "active" (shown in the hourly rotation);
+// the rest sit on the bench. Once a week the Worker benches active picks nobody clicks and
+// promotes the bench picks that have waited longest (see rotatePool in index.js). Add new
+// candidates at the END of this list; they join the bench and get their turn in order.
 //
 // Each pick is one of:
 //   kind 'asin'   - a specific product; the Creators API fills in title/image/price when the
 //                   account is eligible, otherwise the card shows our own words only.
 //   kind 'search' - an Amazon search for a product type (no ASIN to go stale).
 //   kind 'bounty' - a program signup (Audible etc.) paid as a flat bounty.
+// keep: true     - never benched by the weekly rotation (the Audible bounty is the fastest
+//                   route to the 10-sales bar that unlocks product photos).
 //
 // Rules for the words (Amazon Associates operating agreement):
 //   - hook/title are OUR words. Never paste Amazon review text, star ratings or
 //     "best seller" claims, and never state a price here - prices come only from the API.
 //   - Every claim must be plainly true of the product type.
-export const PICKS = [
+export const CATALOG = [
   { id: 'echo-dot', kind: 'asin', asin: 'B09B8V1LZ3',
     title: 'Echo Dot', hook: 'A little speaker that reads the news, the weather and your audiobooks back to you.' },
-  { id: 'audible', kind: 'bounty', url: 'https://www.amazon.com/dp/B00NB86OYE',
+  { id: 'audible', kind: 'bounty', url: 'https://www.amazon.com/dp/B00NB86OYE', keep: true,
     title: 'Audible free trial', hook: 'Like having text read to you? Try a professionally narrated audiobook, free for the trial.' },
   { id: 'kindle-paperwhite', kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },
@@ -35,23 +39,73 @@ export const PICKS = [
   { id: 'mini-projector', kind: 'search', query: 'mini projector',
     title: 'Mini projector', hook: 'A movie on the wall, from a box the size of a lunchbox.' },
   { id: 'hand-warmer', kind: 'search', query: 'rechargeable hand warmer',
-    title: 'Rechargeable hand warmer', hook: 'A pocket heater for cold-morning walks.' }
+    title: 'Rechargeable hand warmer', hook: 'A pocket heater for cold-morning walks.' },
+  // ---- bench, in the order they will be promoted ----
+  { id: 'moon-lamp', kind: 'search', query: 'levitating moon lamp',
+    title: 'Levitating moon lamp', hook: 'A little moon that floats above its base.' },
+  { id: 'galaxy-projector', kind: 'search', query: 'galaxy projector',
+    title: 'Galaxy projector', hook: 'Turn the ceiling into the night sky.' },
+  { id: 'heated-blanket', kind: 'search', query: 'electric heated blanket',
+    title: 'Heated blanket', hook: 'A blanket that warms the bed before you get in.' },
+  { id: 'instant-camera', kind: 'search', query: 'instant film camera',
+    title: 'Instant camera', hook: 'A camera that prints the photo into your hand.' },
+  { id: 'e-ink-tablet', kind: 'search', query: 'e-ink tablet',
+    title: 'E-ink writing tablet', hook: 'A tablet that feels like paper and you can write on.' },
+  { id: 'pet-camera', kind: 'search', query: 'pet camera treat dispenser',
+    title: 'Pet camera', hook: 'A camera that tosses your dog a treat from your phone.' },
+  { id: 'digital-frame', kind: 'search', query: 'digital picture frame wifi',
+    title: 'Digital photo frame', hook: 'A photo frame your family can send pictures to from their phones.' },
+  { id: 'light-therapy', kind: 'search', query: 'light therapy lamp',
+    title: 'Light therapy lamp', hook: 'A lamp bright enough to fake a summer morning in November.' },
+  { id: 'retro-handheld', kind: 'search', query: 'retro handheld game console',
+    title: 'Retro handheld console', hook: 'Hundreds of childhood games in your pocket.' },
+  { id: 'robot-vacuum', kind: 'search', query: 'robot vacuum',
+    title: 'Robot vacuum', hook: 'A vacuum that cleans the floor while you are out.' },
+  { id: 'massage-gun', kind: 'search', query: 'massage gun',
+    title: 'Massage gun', hook: 'A percussion massager for sore shoulders.' },
+  { id: 'smart-plug', kind: 'search', query: 'smart plug',
+    title: 'Smart plug', hook: 'Turn any lamp into a voice-controlled lamp.' },
+  { id: 'walking-pad', kind: 'search', query: 'walking pad under desk treadmill',
+    title: 'Walking pad', hook: 'Walk while you work.' },
+  { id: 'portable-monitor', kind: 'search', query: 'portable monitor',
+    title: 'Portable monitor', hook: 'A second screen that slides into a laptop bag.' },
+  { id: 'desk-heater', kind: 'search', query: 'small space heater desk',
+    title: 'Desk heater', hook: 'A heater the size of a toaster for a cold desk.' },
+  { id: 'weighted-blanket', kind: 'search', query: 'weighted blanket',
+    title: 'Weighted blanket', hook: 'A blanket that feels like a hug.' },
+  { id: 'milk-frother', kind: 'search', query: 'milk frother',
+    title: 'Milk frother', hook: 'Coffee-shop foam from a stick.' },
+  { id: 'tracker-wallet', kind: 'search', query: 'wallet with tracker',
+    title: 'Tracker wallet', hook: 'A wallet that tells your phone where it is.' },
+  { id: 'smart-bulbs', kind: 'search', query: 'smart light bulbs color',
+    title: 'Smart bulbs', hook: 'Bulbs you can turn any color from your phone.' },
+  { id: 'doorbell-cam', kind: 'search', query: 'video doorbell',
+    title: 'Video doorbell', hook: 'See who is at the door from anywhere.' },
+  { id: 'nc-earbuds', kind: 'search', query: 'noise cancelling earbuds',
+    title: 'Noise-cancelling earbuds', hook: 'Earbuds that switch the world off.' },
+  { id: 'mech-keyboard', kind: 'search', query: 'mechanical keyboard',
+    title: 'Mechanical keyboard', hook: 'The typewriter feel, back.' },
+  { id: 'heated-vest', kind: 'search', query: 'heated vest',
+    title: 'Heated vest', hook: 'A vest with a heater in it.' },
+  { id: 'insulated-tumbler', kind: 'search', query: 'insulated tumbler with handle',
+    title: 'Insulated tumbler', hook: 'The tumbler that keeps ice all day.' }
 ];
 
-// How many picks the strip shows at once.
+// How many picks are active (in the hourly rotation) at once, and how many show per hour.
+export const ACTIVE_SIZE = 12;
 export const PER_HOUR = 3;
 
 // The UTC hour index (hours since the epoch) for a millisecond timestamp.
 export const hourIndex = ms => Math.floor(ms / 3600000);
 
 // Everyone sees the same picks during a UTC hour (so exposure and clicks line up by time,
-// like the donation experiment). Consecutive hours walk through the pool three at a time,
-// and each UTC day shifts the start by one so the same picks do not always share a card row.
-export function scheduledPicks(ms) {
+// like the donation experiment). Consecutive hours walk through the active list three at a
+// time, and each UTC day shifts the start by one so the same picks do not always share a row.
+export function scheduledPicks(ms, active) {
   const hour = hourIndex(ms);
-  const start = (hour * PER_HOUR + Math.floor(hour / 24)) % PICKS.length;
+  const start = (hour * PER_HOUR + Math.floor(hour / 24)) % active.length;
   const out = [];
-  for (let i = 0; i < PER_HOUR; i++) out.push(PICKS[(start + i) % PICKS.length]);
+  for (let i = 0; i < Math.min(PER_HOUR, active.length); i++) out.push(active[(start + i) % active.length]);
   return out;
 }
 
