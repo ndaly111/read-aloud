@@ -294,6 +294,23 @@ async function status(env) {
   }, 200, { 'cache-control': 'no-store' });
 }
 
+// Dashboard auto-refresh (Nick 11/02): once an hour on the half hour, 5:30 AM to 8:30 PM
+// Eastern; nothing overnight. Returns seconds until the next refresh and its label.
+function nextDashRefresh(nowMs) {
+  const et = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    .formatToParts(new Date(nowMs)).reduce((o, p) => (o[p.type] = p.value, o), {});
+  const minutesNow = Number(et.hour) % 24 * 60 + Number(et.minute);
+  const first = 5 * 60 + 30, last = 20 * 60 + 30;
+  let target;
+  if (minutesNow < first) target = first;
+  else if (minutesNow >= last) target = first + 24 * 60;
+  else target = (Math.floor((minutesNow - 30) / 60) + 1) * 60 + 30;
+  const seconds = Math.max(60, (target - minutesNow) * 60 - Number(et.second));
+  const h = Math.floor(target / 60) % 24, m = target % 60;
+  const label = ((h + 11) % 12 + 1) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM') + ' ET' + (target >= 24 * 60 ? ' tomorrow' : '');
+  return { seconds, label };
+}
 // ---- live dashboard (private link: /dash?k=DASH_KEY) ------------------------------------
 async function sums(env, sql, ...args) {
   return (await env.DB.prepare(sql).bind(...args).all()).results || [];
@@ -324,6 +341,7 @@ async function dashData(env) {
   return {
     as_of: new Date(now).toISOString().slice(0, 16).replace('T', ' '),
     hour,
+    refresh_in: nextDashRefresh(now),
     hour_label: new Date(hour * 3600000).toISOString().slice(11, 16) + ' UTC',
     tag: env.PARTNER_TAG,
     totals: { today: total(day), week: total(week) },

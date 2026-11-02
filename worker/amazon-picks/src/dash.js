@@ -20,7 +20,7 @@ export function renderDash(d) {
   const rotation = d.rotation ? esc(d.rotation.status) + ' <span class="muted">(' + esc(new Date(d.rotation.ran_at * 1000).toUTCString()) + ')</span>' +
     (d.rotation.detail ? '<pre>' + esc(d.rotation.detail) + '</pre>' : '') : 'first run Monday 06:07 UTC';
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="60">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="${Number(d.refresh_in.seconds)}">
 <meta name="robots" content="noindex"><title>Worth a look · live</title>
 <style>
   :root{--bg:#f3ecdd;--card:#faf4e6;--ink:#1a1c22;--muted:#6f6857;--red:#c8341e;--rule:#d6c8a8}
@@ -45,7 +45,7 @@ export function renderDash(d) {
   @media(max-width:600px){.tiles,.nowgrid{grid-template-columns:1fr 1fr 1fr}.tile b{font-size:20px}.now span{font-size:12px}}
 </style></head><body><main>
 <h1>Worth <em>a look</em> · live</h1>
-<p class="sub">read-aloud.com Amazon picks · ${esc(d.as_of)} UTC · refreshes every minute</p>
+<p class="sub">read-aloud.com Amazon picks · ${esc(d.as_of)} UTC · next update ${esc(d.refresh_in.label)} (hourly, 5:30 AM to 8:30 PM ET; reload any time for live numbers)</p>
 <div class="tiles">
   <div class="tile"><b>${n(t.today.views)}</b><span>views, last 24h</span><small>${n(t.week.views)} in 7 days</small></div>
   <div class="tile"><b>${n(t.today.clicks)}</b><span>clicks, last 24h</span><small>${n(t.week.clicks)} in 7 days</small></div>
