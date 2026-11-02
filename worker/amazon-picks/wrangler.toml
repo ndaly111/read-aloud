@@ -1,0 +1,21 @@
+name = "read-aloud-amazon-picks"
+main = "src/index.js"
+compatibility_date = "2026-10-07"
+account_id = "d36f6a50c928a16dc27e0e789a94617f"
+
+# Homepage "Worth a look" Amazon picks strip. Secrets (set with `wrangler secret put`):
+#   CREATORS_ID / CREATORS_SECRET - Amazon Creators API credential (Associates Central > Tools).
+# Kill switch: PICKS_ENABLED = "false" and redeploy; the strip stays hidden on every page.
+[vars]
+PICKS_ENABLED = "true"
+# The live Associates store/tracking ID (the 2020 "nickdaly-20" application was closed by Amazon).
+PARTNER_TAG = "nickdaly0c-20"
+
+# Product facts refresh (title/photo/price) - Amazon requires shown prices to be < 24h old.
+[triggers]
+crons = ["17 */6 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "read-aloud-picks"
+database_id = "22f04308-0aa9-4488-9f62-b7a7bba62b6c"

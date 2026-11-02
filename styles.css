@@ -1908,3 +1908,86 @@ body.focus-mode textarea#txt {
 body.focus-mode.is-reading textarea#txt { display: none; }
 body.focus-mode #disp { flex: 1; min-height: 120px; max-height: none; font-size: 1.25rem; line-height: 1.7; }
 body.focus-mode .controls { flex: none; }
+
+/* ============================================================
+   Worth a look — three Amazon picks, rotated hourly (amazon-picks.js)
+   ============================================================ */
+.picks-strip { margin-top: 14px; }
+.picks-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.picks-heading {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variation-settings: "opsz" 100, "SOFT" 30;
+  font-size: 1.35rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+.picks-heading em {
+  font-style: italic;
+  color: var(--vermilion);
+  font-variation-settings: "opsz" 100, "SOFT" 80;
+}
+.picks-disclosure {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-faded);
+}
+.picks-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.pick-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: var(--paper-bright);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.pick-card:hover,
+.pick-card:focus-visible {
+  text-decoration: none;
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-soft);
+}
+.pick-card__img {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--rule-soft);
+}
+.pick-card__body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pick-card__hook {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.pick-card__meta {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vermilion);
+}
+@media (max-width: 760px) {
+  .picks-row { grid-template-columns: 1fr; }
+}

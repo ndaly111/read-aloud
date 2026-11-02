@@ -9,11 +9,12 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20261016a">
+  <link rel="stylesheet" href="/styles.css?v=20261102a">
   <script src="/nav-menu.js?v=20261016a" defer></script>
   <link rel="stylesheet" href="/donation-experiment.css?v=20261008a">
   <script src="/cookie-consent.js?v=20261007b" defer></script>
   <script src="/donation-experiment.js?v=20261021a" defer></script>
+<script src="/amazon-picks.js?v=20261102a" defer></script>
 </head>
 
 <body>
@@ -122,6 +123,15 @@
       <p class="tool-foot">Shortcuts: Ctrl+Enter starts, Space pauses, Esc stops. No sound on iPhone? Flip the ring/silent switch. <a href="/help.html">More help</a></p>
     </div>
   </div>
+</section>
+
+<!-- worth a look — three Amazon picks, rotated hourly by the Worker; stays hidden until it answers -->
+<section id="amazonPicks" class="picks-strip" aria-labelledby="picks-heading" hidden>
+  <div class="picks-head">
+    <h2 id="picks-heading" class="picks-heading">Worth <em>a look.</em></h2>
+    <p class="picks-disclosure"></p>
+  </div>
+  <div class="picks-row"></div>
 </section>
 
 <!-- latest updates — newest first; add a new <li> at the top when something ships -->
