@@ -1948,49 +1948,72 @@ body.focus-mode .controls { flex: none; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
+/* Cards are styled like a shopping ad on purpose: white panel, orange frame, product name,
+   price when Amazon supplies one, and a Shop now button. The whole card is one link. */
 .pick-card {
+  --ad-orange: #f08804;
+  --ad-ink: #0f1111;
   display: flex;
   flex-direction: column;
-  background: var(--paper-bright);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--ad-orange);
+  border-radius: 6px;
+  color: var(--ad-ink);
   text-decoration: none;
   overflow: hidden;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .pick-card:hover,
 .pick-card:focus-visible {
   text-decoration: none;
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(15, 17, 17, 0.18);
 }
 .pick-card__frame {
   display: block;
   aspect-ratio: 16 / 10;
-  background: var(--paper-deep);
-  border-bottom: 1px solid var(--ink);
+  background: #fff;
+  padding: 0;
 }
+.pick-card__frame--product { padding: 14px; }
 .pick-card__img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.pick-card__body { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; min-width: 0; }
-.pick-card__hook {
-  font-family: var(--font-display);
-  font-size: 1.08rem;
+.pick-card__frame--product .pick-card__img { object-fit: contain; }
+.pick-card__body { display: flex; flex-direction: column; gap: 5px; padding: 12px 14px 14px; min-width: 0; }
+.pick-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
   line-height: 1.25;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
-.pick-card__meta {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--vermilion);
+.pick-card__hook {
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: #565959;
 }
+.pick-card__price {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #b12704;
+}
+.pick-card__btn {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 8px 22px;
+  border-radius: 20px;
+  background: #ffd814;
+  border: 1px solid #fcd200;
+  color: var(--ad-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.pick-card:hover .pick-card__btn { background: #f7ca00; }
 @media (max-width: 760px) {
   .picks-row { grid-template-columns: 1fr; }
 }

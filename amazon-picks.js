@@ -19,18 +19,25 @@
     } catch (_) {}
   }
 
+  const el = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  // Ad-style card: photo, product name, one-line hook, price when Amazon supplies one,
+  // and a Shop now button. The whole card is the link.
   function card(item) {
-    const a = document.createElement('a');
-    a.className = 'pick-card';
+    const a = el('a', 'pick-card');
     a.href = item.url;
     a.target = '_blank';
     a.rel = 'noopener sponsored';
     a.addEventListener('click', () => send(item.id, 'click'));
     if (item.image) {
-      const frame = document.createElement('span');
-      frame.className = 'pick-card__frame';
-      const img = document.createElement('img');
-      img.className = 'pick-card__img';
+      // Amazon's product shots sit on white and are shown whole; our stock photos fill the frame.
+      const frame = el('span', 'pick-card__frame' + (item.image_kind === 'product' ? ' pick-card__frame--product' : ''));
+      const img = el('img', 'pick-card__img');
       img.src = item.image;
       img.alt = '';
       img.loading = 'lazy';
@@ -42,15 +49,11 @@
       frame.appendChild(img);
       a.appendChild(frame);
     }
-    const body = document.createElement('span');
-    body.className = 'pick-card__body';
-    const hook = document.createElement('span');
-    hook.className = 'pick-card__hook';
-    hook.textContent = item.hook;
-    const meta = document.createElement('span');
-    meta.className = 'pick-card__meta';
-    meta.textContent = item.title + (item.price ? ' · ' + item.price : '') + ' · See it on Amazon';
-    body.append(hook, meta);
+    const body = el('span', 'pick-card__body');
+    body.appendChild(el('span', 'pick-card__title', item.title));
+    body.appendChild(el('span', 'pick-card__hook', item.hook));
+    if (item.price) body.appendChild(el('span', 'pick-card__price', item.price));
+    body.appendChild(el('span', 'pick-card__btn', 'Shop now'));
     a.appendChild(body);
     return a;
   }

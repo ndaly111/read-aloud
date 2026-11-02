@@ -89,6 +89,8 @@ async function currentPicks(env, request) {
       // Our own link, carrying the pick's tracking ID when Nick has created it.
       url: pickUrl(pick, tagFor(pick, env)),
       image: (fact && fact.image) || SITE_PHOTO + pick.id + '.jpg',
+      // 'product' = Amazon's own product shot (shown whole on white); 'stock' = our scene photo.
+      image_kind: fact && fact.image ? 'product' : 'stock',
       // Stale prices are withheld rather than shown wrong.
       price: fresh && fact.price ? fact.price : null,
       price_as_of: fresh && fact.price ? new Date(fact.updated_at * 1000).toISOString() : null
