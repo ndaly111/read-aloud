@@ -16,9 +16,9 @@ export function renderDash(d) {
     '<img src="' + esc(p.image) + '" alt=""><span><b>' + esc(p.title) + '</b><br>' + esc(p.hook) +
     (p.photo ? '<br><small>photo #' + p.photo + '</small>' : '') + '</span></a>').join('');
   const hours = d.hourly.map(h => '<tr><td>' + esc(h.label) + '</td><td>' + n(h.views) + '</td><td>' + n(h.clicks) + '</td><td>' + pct(h.clicks, h.views) + '</td></tr>').join('');
-  const refresh = d.refresh ? esc(d.refresh.status) + ' <span class="muted">(' + esc(new Date(d.refresh.ran_at * 1000).toUTCString()) + ')</span>' : 'not run yet';
-  const rotation = d.rotation ? esc(d.rotation.status) + ' <span class="muted">(' + esc(new Date(d.rotation.ran_at * 1000).toUTCString()) + ')</span>' +
-    (d.rotation.detail ? '<pre>' + esc(d.rotation.detail) + '</pre>' : '') : 'first run Monday 06:07 UTC';
+  const refresh = d.refresh ? esc(d.refresh.status) + ' <span class="muted">(' + esc(d.refresh.when) + ')</span>' : 'not run yet';
+  const rotation = d.rotation ? esc(d.rotation.status) + ' <span class="muted">(' + esc(d.rotation.when) + ')</span>' +
+    (d.rotation.detail ? '<pre>' + esc(d.rotation.detail) + '</pre>' : '') : 'first run Monday, about 1:07 AM ET';
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="${Number(d.refresh_in.seconds)}">
 <meta name="robots" content="noindex"><title>Worth a look · live</title>
@@ -45,7 +45,7 @@ export function renderDash(d) {
   @media(max-width:600px){.tiles,.nowgrid{grid-template-columns:1fr 1fr 1fr}.tile b{font-size:20px}.now span{font-size:12px}}
 </style></head><body><main>
 <h1>Worth <em>a look</em> · live</h1>
-<p class="sub">read-aloud.com Amazon picks · ${esc(d.as_of)} UTC · next update ${esc(d.refresh_in.label)} (hourly, 5:30 AM to 8:30 PM ET; reload any time for live numbers)</p>
+<p class="sub">read-aloud.com Amazon picks · ${esc(d.as_of)} · next update ${esc(d.refresh_in.label)} (hourly, 5:30 AM to 8:30 PM ET; reload any time for live numbers)</p>
 <div class="tiles">
   <div class="tile"><b>${n(t.today.views)}</b><span>views, last 24h</span><small>${n(t.week.views)} in 7 days</small></div>
   <div class="tile"><b>${n(t.today.clicks)}</b><span>clicks, last 24h</span><small>${n(t.week.clicks)} in 7 days</small></div>
@@ -58,7 +58,7 @@ export function renderDash(d) {
 <h2>Thumbnails · last 7 days</h2>
 <table><tr><th>pick · photo</th><th>views</th><th>clicks</th><th>rate</th></tr>${rows(d.photos, 'key')}</table>
 <h2>By hour · last 24h</h2>
-<table><tr><th>hour (UTC)</th><th>views</th><th>clicks</th><th>rate</th></tr>${hours || '<tr><td colspan="4" class="muted">nothing yet</td></tr>'}</table>
+<table><tr><th>hour (ET)</th><th>views</th><th>clicks</th><th>rate</th></tr>${hours || '<tr><td colspan="4" class="muted">nothing yet</td></tr>'}</table>
 <h2>Bench (next up first)</h2>
 <p class="bench">${esc(d.bench.join(', ')) || 'none'}</p>
 <h2>Housekeeping</h2>

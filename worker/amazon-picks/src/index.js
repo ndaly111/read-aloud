@@ -312,6 +312,10 @@ function nextDashRefresh(nowMs) {
   return { seconds, label };
 }
 // ---- live dashboard (private link: /dash?k=DASH_KEY) ------------------------------------
+// All dashboard times are Eastern; Intl handles the EST/EDT switch.
+const etTime = (ms, opts) => new Date(ms).toLocaleString('en-US', { timeZone: 'America/New_York', ...opts });
+const etStamp = ms => etTime(ms, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET';
+
 async function sums(env, sql, ...args) {
   return (await env.DB.prepare(sql).bind(...args).all()).results || [];
 }
@@ -339,10 +343,10 @@ async function dashData(env) {
   const rotation = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_rotations ORDER BY ran_at DESC LIMIT 1').first();
   const rate = r => (r.views ? r.clicks / r.views : 0);
   return {
-    as_of: new Date(now).toISOString().slice(0, 16).replace('T', ' '),
+    as_of: etStamp(now),
     hour,
     refresh_in: nextDashRefresh(now),
-    hour_label: new Date(hour * 3600000).toISOString().slice(11, 16) + ' UTC',
+    hour_label: etTime(hour * 3600000, { hour: 'numeric', minute: '2-digit' }) + ' ET',
     tag: env.PARTNER_TAG,
     totals: { today: total(day), week: total(week) },
     now: picks.map((p, i) => {
@@ -352,9 +356,11 @@ async function dashData(env) {
     active: active.map(p => ({ id: p.id, keep: !!p.keep, ...(week[p.id] || { views: 0, clicks: 0 }) }))
       .sort((a, b) => rate(b) - rate(a) || b.views - a.views),
     photos: Object.entries(photos).map(([key, c]) => ({ key, ...c })).sort((a, b) => a.key.localeCompare(b.key)),
-    hourly: Object.entries(hourly).map(([h, c]) => ({ label: new Date(Number(h) * 3600000).toISOString().slice(5, 16).replace('T', ' '), ...c }))
-      .sort((a, b) => b.label.localeCompare(a.label)),
-    bench, refresh: refresh || null, rotation: rotation || null
+    hourly: Object.entries(hourly).sort((a, b) => Number(b[0]) - Number(a[0]))
+      .map(([h, c]) => ({ label: etTime(Number(h) * 3600000, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }), ...c })),
+    bench,
+    refresh: refresh ? { ...refresh, when: etStamp(refresh.ran_at * 1000) } : null,
+    rotation: rotation ? { ...rotation, when: etStamp(rotation.ran_at * 1000) } : null
   };
 }
 export default {
