@@ -1949,7 +1949,7 @@ body.focus-mode .controls { flex: none; }
   gap: 12px;
 }
 /* Cards are styled like a shopping ad on purpose: white panel, orange frame, product name,
-   price when Amazon supplies one, and a Shop now button. The whole card is one link. */
+   price when Amazon supplies one, and a See it on Amazon button. The whole card is one link. */
 .pick-card {
   --ad-orange: #f08804;
   --ad-ink: #0f1111;
@@ -2000,6 +2000,12 @@ body.focus-mode .controls { flex: none; }
   font-size: 1.15rem;
   font-weight: 700;
   color: #b12704;
+}
+.pick-card__stamp {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #565959;
 }
 .pick-card__btn {
   align-self: flex-start;

@@ -26,8 +26,16 @@
     return node;
   };
 
+  // Amazon requires a date/time stamp next to any price it supplies.
+  function priceStamp(iso) {
+    const when = new Date(iso);
+    if (Number.isNaN(when.getTime())) return null;
+    return 'as of ' + when.toLocaleString('en-US', { month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+  }
+
   // Ad-style card: photo, product name, one-line hook, price when Amazon supplies one,
-  // and a Shop now button. The whole card is the link.
+  // and a button naming Amazon as the destination. The whole card is the link.
   function card(item) {
     const a = el('a', 'pick-card');
     a.href = item.url;
@@ -52,8 +60,14 @@
     const body = el('span', 'pick-card__body');
     body.appendChild(el('span', 'pick-card__title', item.title));
     body.appendChild(el('span', 'pick-card__hook', item.hook));
-    if (item.price) body.appendChild(el('span', 'pick-card__price', item.price));
-    body.appendChild(el('span', 'pick-card__btn', 'Shop now'));
+    const stamp = item.price && item.price_as_of ? priceStamp(item.price_as_of) : null;
+    // A price without its time stamp is never shown.
+    if (stamp) {
+      const price = el('span', 'pick-card__price', item.price);
+      price.appendChild(el('small', 'pick-card__stamp', stamp));
+      body.appendChild(price);
+    }
+    body.appendChild(el('span', 'pick-card__btn', 'See it on Amazon'));
     a.appendChild(body);
     return a;
   }

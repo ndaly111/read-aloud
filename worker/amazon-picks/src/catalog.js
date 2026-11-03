@@ -24,7 +24,7 @@ export const CATALOG = [
     title: 'Audible free trial', hook: 'Like having text read to you? Try a professionally narrated audiobook, free for the trial.' },
   { id: 'kindle-paperwhite', photos: 3, kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },
-  { id: 'airtag', photos: 2, kind: 'asin', asin: 'B0933BVK6T',
+  { id: 'airtag', photos: 2, kind: 'search', query: 'Apple AirTag 4 pack',
     title: 'AirTag 4-pack', hook: 'Never hunt for your keys, wallet or luggage again.' },
   { id: 'pocket-printer', photos: 2, kind: 'search', query: 'mini pocket thermal printer',
     title: 'Pocket thermal printer', hook: 'A printer the size of a deck of cards. No ink, ever.' },
