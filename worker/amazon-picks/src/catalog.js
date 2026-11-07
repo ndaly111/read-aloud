@@ -95,6 +95,11 @@ export const CATALOG = [
     title: 'Heated vest', hook: 'A vest with a heater in it.' },
   { id: 'insulated-tumbler', kind: 'search', query: 'insulated tumbler with handle',
     title: 'Insulated tumbler', hook: 'The tumbler that keeps ice all day.' }
+  // Bounty sign-ups from Nick's rate card (11/07); links are the exact landing pages it lists.
+  { id: 'prime-trial', photos: 2, kind: 'bounty', url: 'https://www.amazon.com/prime',
+    title: 'Amazon Prime free trial', hook: 'Fast, free delivery on eligible items, plus Prime Video. Try it free.' },
+  { id: 'music-unlimited', photos: 2, kind: 'bounty', url: 'https://www.amazon.com/music/unlimited',
+    title: 'Amazon Music Unlimited', hook: 'Millions of songs, ad-free. Try it free.' },
 ];
 
 // How many picks are active (in the hourly rotation) at once, and how many show per hour.
