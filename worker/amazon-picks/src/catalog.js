@@ -29,8 +29,8 @@ export const CATALOG = [
     // Amazon's landing page (seen by Nick 11/07): "Get 3 months of Audible Standard ... + $20
     // Audible bonus", offer ends Dec 28, 2026. No dollar figures on our card: prices may only
     // come from Amazon's API. After promoUntil the normal title and hook come back.
-    promoUntil: '2026-12-29T05:00:00Z', promoTitle: 'Audible holiday deal',
-    promoHook: "Audible's biggest deal of the season: 3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28." },
+    promoUntil: '2026-12-29T05:00:00Z', promoTitle: "Audible's biggest deal of the season",
+    promoHook: '3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28.' },
   { id: 'kindle-paperwhite', photos: 3, kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },
   { id: 'airtag', photos: 2, kind: 'search', query: 'Apple AirTag 4 pack',
