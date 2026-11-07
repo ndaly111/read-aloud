@@ -20,8 +20,12 @@
 export const CATALOG = [
   { id: 'echo-dot', photos: 3, kind: 'asin', asin: 'B09B8V1LZ3',
     title: 'Echo Dot', hook: 'A little speaker that reads the news, the weather and your audiobooks back to you.' },
-  { id: 'audible', photos: 3, kind: 'bounty', url: 'https://www.amazon.com/dp/B00NB86OYE', keep: true,
-    title: 'Audible free trial', hook: 'Like having text read to you? Try a professionally narrated audiobook, free for the trial.' },
+  // Link is the landing page listed for the Audible bounty on Nick's rate card (11/07).
+  // featuredUntil: Amazon pays $20 per Audible Standard sign-up until 12/15, so the card is in
+  // every hour's set until the end of 12/15 Eastern, then returns to the normal rotation.
+  { id: 'audible', photos: 3, kind: 'bounty', url: 'https://www.amazon.com/hz/audible/mlp', keep: true,
+    featuredUntil: '2026-12-16T05:00:00Z',
+    title: 'Audible', hook: 'Like having text read to you? Try audiobooks read by professional narrators.' },
   { id: 'kindle-paperwhite', photos: 3, kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },
   { id: 'airtag', photos: 2, kind: 'search', query: 'Apple AirTag 4 pack',
@@ -34,7 +38,7 @@ export const CATALOG = [
     title: 'Sunrise alarm clock', hook: 'Wake up to a slow fake sunrise instead of a buzzer.' },
   { id: 'wireless-headphones', photos: 2, kind: 'search', query: 'wireless over-ear headphones',
     title: 'Wireless headphones', hook: 'Big, soft, wireless headphones for long listens.' },
-  { id: 'neck-light', photos: 3, kind: 'search', query: 'neck reading light',
+  { id: 'neck-light', photos: 3, kind: 'asin', asin: 'B07WNRN9WQ', // Glocusent bendable neck light, checked 11/07
     title: 'Neck reading light', hook: 'A reading lamp you wear around your neck, hands free.' },
   { id: 'spin-scrubber', photos: 2, kind: 'search', query: 'electric spin scrubber',
     title: 'Electric spin scrubber', hook: 'A power tool for the bathtub.' },
@@ -105,9 +109,15 @@ export const hourIndex = ms => Math.floor(ms / 3600000);
 // time, and each UTC day shifts the start by one so the same picks do not always share a row.
 export function scheduledPicks(ms, active) {
   const hour = hourIndex(ms);
-  const start = (hour * PER_HOUR + Math.floor(hour / 24)) % active.length;
-  const out = [];
-  for (let i = 0; i < Math.min(PER_HOUR, active.length); i++) out.push(active[(start + i) % active.length]);
+  // Featured picks (featuredUntil still in the future) take the first slots every hour;
+  // the rest of the active list rotates through the remaining slots as before.
+  const featured = active.filter(p => p.featuredUntil && ms < Date.parse(p.featuredUntil)).slice(0, PER_HOUR);
+  const rest = active.filter(p => !featured.includes(p));
+  const slots = Math.min(PER_HOUR - featured.length, rest.length);
+  const out = [...featured];
+  if (!slots) return out;
+  const start = (hour * slots + Math.floor(hour / 24)) % rest.length;
+  for (let i = 0; i < slots; i++) out.push(rest[(start + i) % rest.length]);
   return out;
 }
 
