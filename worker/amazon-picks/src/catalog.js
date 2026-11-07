@@ -30,7 +30,32 @@ export const CATALOG = [
     // Audible bonus", offer ends Dec 28, 2026. No dollar figures on our card: prices may only
     // come from Amazon's API. After promoUntil the normal title and hook come back.
     promoUntil: '2026-12-29T05:00:00Z', promoTitle: "Audible's biggest deal of the season",
-    promoHook: '3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28.' },
+    promoHook: '3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28.',
+    // Wording test (Nick 11/07): ten versions of title + description + button, one per UTC hour
+    // (see variantFor). A is the control. Every button names Amazon; no dollar figures.
+    // testPhoto pins one photo during the test so the photo does not muddy the comparison.
+    test: { id: 'audible-cta-2026-11', until: '2026-12-29T05:00:00Z', testPhoto: 1, variants: [
+      { id: "A", title: "Audible's biggest deal of the season",
+        hook: "3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28.", button: "See it on Amazon" },
+      { id: "B", title: "Like hearing it read aloud?",
+        hook: "Hear whole books read by pro narrators. Audible's holiday deal ends Dec 28.", button: "See the deal on Amazon" },
+      { id: "C", title: "Your next book, read to you",
+        hook: "3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28.", button: "Get the deal on Amazon" },
+      { id: "D", title: "Ends Dec 28: Audible's holiday deal",
+        hook: "3 months of audiobooks at a steep discount, plus a bonus.", button: "Get it on Amazon" },
+      { id: "E", title: "Give your eyes a break",
+        hook: "Let a pro narrator read your next book. 3 months of Audible at a steep discount, through Dec 28.", button: "Start listening on Amazon" },
+      { id: "F", title: "Turn your commute into reading time",
+        hook: "Audible's holiday deal: 3 months at a steep discount, plus a bonus. Ends Dec 28.", button: "See the deal on Amazon" },
+      { id: "G", title: "Bestsellers, read to you",
+        hook: "Audible Standard's holiday deal: 3 months at a steep discount, plus a bonus. Ends Dec 28.", button: "Browse Audible on Amazon" },
+      { id: "H", title: "Listen to more books this winter",
+        hook: "3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28.", button: "See the deal on Amazon" },
+      { id: "I", title: "3 months of Audible, deeply discounted",
+        hook: "Plus a bonus. Cancel anytime. Ends Dec 28.", button: "Get the deal on Amazon" },
+      { id: "J", title: "Love Read-Aloud? You'll love Audible",
+        hook: "Pro narrators, full books, and a holiday deal that ends Dec 28.", button: "See the deal on Amazon" },
+    ] } },
   { id: 'kindle-paperwhite', photos: 3, kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },
   { id: 'airtag', photos: 2, kind: 'search', query: 'Apple AirTag 4 pack',
@@ -147,7 +172,18 @@ export function tagFor(pick, env) {
 }
 
 // A pick's title and hook right now: its promo wording while the promo runs, else the normal one.
+// Wording-test version live in a given hour, or null. One version per UTC hour for everyone;
+// the 3-per-day shift makes every hour of the day show every version once each 10 days.
+export function variantFor(pick, ms) {
+  const t = pick.test;
+  if (!t || !(ms < Date.parse(t.until))) return null;
+  const hour = hourIndex(ms);
+  return t.variants[(hour + 3 * Math.floor(hour / 24)) % t.variants.length];
+}
+
 export function wordingFor(pick, ms) {
+  const v = variantFor(pick, ms);
+  if (v) return { title: v.title, hook: v.hook, button: v.button, variant: v.id };
   const promo = pick.promoUntil && ms < Date.parse(pick.promoUntil);
   return { title: promo ? pick.promoTitle : pick.title, hook: promo ? pick.promoHook : pick.hook };
 }

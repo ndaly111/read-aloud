@@ -54,3 +54,13 @@ CREATE TABLE IF NOT EXISTS pick_photo_events (
   count INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (hour, pick, photo, event)
 );
+
+-- Wording tests: aggregate counts per UTC hour / pick / test version / event. No identifiers.
+CREATE TABLE IF NOT EXISTS pick_variant_events (
+  hour INTEGER NOT NULL,
+  pick TEXT NOT NULL,
+  variant TEXT NOT NULL,
+  event TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (hour, pick, variant, event)
+);

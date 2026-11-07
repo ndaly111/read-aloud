@@ -6,9 +6,9 @@
   const strip = document.getElementById('amazonPicks');
   if (!strip) return;
 
-  function send(pick, event, photo) {
+  function send(pick, event, photo, variant) {
     // Aggregate counter only: pick id, event name, which stock photo. No identifiers, no page content.
-    const body = JSON.stringify({ pick, event, photo: photo || 0 });
+    const body = JSON.stringify({ pick, event, photo: photo || 0, variant: variant || '' });
     try {
       // text/plain keeps the beacon a CORS "simple" request (see donation-experiment.js).
       if (navigator.sendBeacon && navigator.sendBeacon(ORIGIN + '/event',
@@ -41,7 +41,7 @@
     a.href = item.url;
     a.target = '_blank';
     a.rel = 'noopener sponsored';
-    a.addEventListener('click', () => send(item.id, 'click', item.photo));
+    a.addEventListener('click', () => send(item.id, 'click', item.photo, item.variant));
     if (item.image) {
       // Amazon's product shots sit on white and are shown whole; our stock photos fill the frame.
       const frame = el('span', 'pick-card__frame' + (item.image_kind === 'product' ? ' pick-card__frame--product' : ''));
@@ -67,7 +67,8 @@
       price.appendChild(el('small', 'pick-card__stamp', stamp));
       body.appendChild(price);
     }
-    body.appendChild(el('span', 'pick-card__btn', 'See it on Amazon'));
+    // A wording test may supply its own button text; every version names Amazon.
+    body.appendChild(el('span', 'pick-card__btn', item.button || 'See it on Amazon'));
     a.appendChild(body);
     return a;
   }
@@ -79,7 +80,7 @@
     row.replaceChildren(...data.items.map(card));
     note.textContent = data.disclosure;
     strip.hidden = false;
-    const seen = () => data.items.forEach(item => send(item.id, 'view', item.photo));
+    const seen = () => data.items.forEach(item => send(item.id, 'view', item.photo, item.variant));
     // Count a view only when the strip actually comes into view.
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(entries => {

@@ -6,7 +6,7 @@
 //   cron 6-hourly - refreshes product facts from the Amazon Creators API.
 //   cron weekly   - rotatePool(): benches active picks nobody clicks, promotes bench picks.
 // Stores product facts and counts only. Nothing about visitors is ever recorded.
-import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag, wordingFor } from './catalog.js';
+import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag, wordingFor, variantFor } from './catalog.js';
 import { renderDash } from './dash.js';
 
 const ORIGINS = new Set(['https://read-aloud.com', 'https://www.read-aloud.com']);
@@ -85,7 +85,8 @@ async function currentPicks(env, request) {
     const fact = pick.kind === 'asin' ? facts.get(pick.asin) : null;
     const fresh = fact && nowS - fact.updated_at <= PRICE_MAX_AGE_S;
     // Which of the pick's stock photos this hour shows (1-based); photos take turns hour by hour.
-    const photo = fact && fact.image ? 0 : (hour + i) % (pick.photos || 1) + 1;
+    const testing = variantFor(pick, now) && pick.test.testPhoto;
+    const photo = fact && fact.image ? 0 : testing || (hour + i) % (pick.photos || 1) + 1;
     return {
       id: pick.id,
       ...wordingFor(pick, now),
@@ -127,6 +128,15 @@ async function recordEvent(request, env) {
     'INSERT INTO pick_events (hour, pick, event, count) VALUES (?, ?, ?, 1) ' +
     'ON CONFLICT(hour, pick, event) DO UPDATE SET count = pick_events.count + 1'
   ).bind(hourIndex(now), body.pick, body.event).run();
+  // Wording test: count again by version, only for the version live now or last hour.
+  const pick = byId.get(body.pick);
+  if (pick && typeof body.variant === 'string' &&
+      [variantFor(pick, now), variantFor(pick, now - 3600000)].some(v => v && v.id === body.variant)) {
+    await env.DB.prepare(
+      'INSERT INTO pick_variant_events (hour, pick, variant, event, count) VALUES (?, ?, ?, ?, 1) ' +
+      'ON CONFLICT(hour, pick, variant, event) DO UPDATE SET count = pick_variant_events.count + 1'
+    ).bind(hourIndex(now), body.pick, body.variant, body.event).run();
+  }
   if (photo > 0) {
     // Same count again, keyed by which stock photo was on the card, so photos can be compared.
     await env.DB.prepare(
@@ -349,9 +359,16 @@ async function dashData(env) {
     tag: env.PARTNER_TAG,
     totals: { today: total(day), week: total(week) },
     now: picks.map((p, i) => {
-      const photo = (hour + i) % (p.photos || 1) + 1;
+      const photo = (variantFor(p, now) && p.test.testPhoto) || (hour + i) % (p.photos || 1) + 1;
       return { id: p.id, ...wordingFor(p, now), url: pickUrl(p, tagFor(p, env)), photo, image: SITE_PHOTO + p.id + '-' + photo + '.jpg' };
     }),
+    test: await (async () => {
+      const p = CATALOG.find(x => x.test && variantFor(x, now));
+      if (!p) return null;
+      const got = agg(await sums(env, 'SELECT variant AS key, event, SUM(count) AS n FROM pick_variant_events WHERE pick = ? GROUP BY variant, event', p.id));
+      const live = variantFor(p, now).id;
+      return { pick: p.id, live, rows: p.test.variants.map(v => ({ key: v.id + (v.id === live ? ' (live now)' : '') + ' · ' + v.title, ...(got[v.id] || { views: 0, clicks: 0 }) })) };
+    })(),
     active: active.map(p => ({ id: p.id, keep: !!p.keep, ...(week[p.id] || { views: 0, clicks: 0 }) }))
       .sort((a, b) => rate(b) - rate(a) || b.views - a.views),
     photos: Object.entries(photos).map(([key, c]) => ({ key, ...c })).sort((a, b) => a.key.localeCompare(b.key)),

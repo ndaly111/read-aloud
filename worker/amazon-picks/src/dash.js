@@ -53,6 +53,7 @@ export function renderDash(d) {
 </div>
 <h2>On the page right now (since ${esc(d.hour_label)})</h2>
 <div class="nowgrid">${now}</div>
+${d.test ? '<h2>Audible wording test · since it started</h2><table><tr><th>version</th><th>views</th><th>clicks</th><th>rate</th></tr>' + rows(d.test.rows, 'key') + '</table>' : ''}
 <h2>Active picks · last 7 days</h2>
 <table><tr><th>pick</th><th>views</th><th>clicks</th><th>rate</th></tr>${rows(d.active, 'id')}</table>
 <h2>Thumbnails · last 7 days</h2>
