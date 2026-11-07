@@ -6,7 +6,7 @@
 //   cron 6-hourly - refreshes product facts from the Amazon Creators API.
 //   cron weekly   - rotatePool(): benches active picks nobody clicks, promotes bench picks.
 // Stores product facts and counts only. Nothing about visitors is ever recorded.
-import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag } from './catalog.js';
+import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag, wordingFor } from './catalog.js';
 import { renderDash } from './dash.js';
 
 const ORIGINS = new Set(['https://read-aloud.com', 'https://www.read-aloud.com']);
@@ -88,8 +88,7 @@ async function currentPicks(env, request) {
     const photo = fact && fact.image ? 0 : (hour + i) % (pick.photos || 1) + 1;
     return {
       id: pick.id,
-      title: pick.title,
-      hook: pick.hook,
+      ...wordingFor(pick, now),
       // Our own link, carrying the pick's tracking ID when Nick has created it.
       url: pickUrl(pick, tagFor(pick, env)),
       image: (fact && fact.image) || SITE_PHOTO + pick.id + '-' + photo + '.jpg',
@@ -351,7 +350,7 @@ async function dashData(env) {
     totals: { today: total(day), week: total(week) },
     now: picks.map((p, i) => {
       const photo = (hour + i) % (p.photos || 1) + 1;
-      return { id: p.id, title: p.title, hook: p.hook, url: pickUrl(p, tagFor(p, env)), photo, image: SITE_PHOTO + p.id + '-' + photo + '.jpg' };
+      return { id: p.id, ...wordingFor(p, now), url: pickUrl(p, tagFor(p, env)), photo, image: SITE_PHOTO + p.id + '-' + photo + '.jpg' };
     }),
     active: active.map(p => ({ id: p.id, keep: !!p.keep, ...(week[p.id] || { views: 0, clicks: 0 }) }))
       .sort((a, b) => rate(b) - rate(a) || b.views - a.views),

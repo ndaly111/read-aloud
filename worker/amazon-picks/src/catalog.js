@@ -25,7 +25,12 @@ export const CATALOG = [
   // every hour's set until the end of 12/15 Eastern, then returns to the normal rotation.
   { id: 'audible', photos: 3, kind: 'bounty', url: 'https://www.amazon.com/hz/audible/mlp', keep: true,
     featuredUntil: '2026-12-16T05:00:00Z',
-    title: 'Audible', hook: 'Like having text read to you? Try audiobooks read by professional narrators.' },
+    title: 'Audible', hook: 'Like having text read to you? Try audiobooks read by professional narrators.',
+    // Amazon's landing page (seen by Nick 11/07): "Get 3 months of Audible Standard ... + $20
+    // Audible bonus", offer ends Dec 28, 2026. No dollar figures on our card: prices may only
+    // come from Amazon's API. After promoUntil the normal title and hook come back.
+    promoUntil: '2026-12-29T05:00:00Z', promoTitle: 'Audible holiday deal',
+    promoHook: "Audible's biggest deal of the season: 3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28." },
   { id: 'kindle-paperwhite', photos: 3, kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },
   { id: 'airtag', photos: 2, kind: 'search', query: 'Apple AirTag 4 pack',
@@ -139,6 +144,12 @@ export function tagFor(pick, env) {
   const created = new Set(String(env.TRACKING_TAGS || '').split(/[\s,]+/).filter(Boolean));
   const own = trackingTag(pick);
   return created.has(own) ? own : env.PARTNER_TAG;
+}
+
+// A pick's title and hook right now: its promo wording while the promo runs, else the normal one.
+export function wordingFor(pick, ms) {
+  const promo = pick.promoUntil && ms < Date.parse(pick.promoUntil);
+  return { title: promo ? pick.promoTitle : pick.title, hook: promo ? pick.promoHook : pick.hook };
 }
 
 export function pickUrl(pick, tag) {
