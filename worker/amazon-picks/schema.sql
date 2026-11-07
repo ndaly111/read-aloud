@@ -64,3 +64,11 @@ CREATE TABLE IF NOT EXISTS pick_variant_events (
   count INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (hour, pick, variant, event)
 );
+
+-- Wording-test versions retired by the pruning rule (pruneVariants in src/index.js).
+CREATE TABLE IF NOT EXISTS pick_variant_status (
+  pick TEXT NOT NULL,
+  variant TEXT NOT NULL,
+  retired_at INTEGER NOT NULL,
+  PRIMARY KEY (pick, variant)
+);

@@ -172,17 +172,27 @@ export function tagFor(pick, env) {
 }
 
 // A pick's title and hook right now: its promo wording while the promo runs, else the normal one.
-// Wording-test version live in a given hour, or null. One version per UTC hour for everyone;
-// the 3-per-day shift makes every hour of the day show every version once each 10 days.
-export function variantFor(pick, ms) {
-  const t = pick.test;
-  if (!t || !(ms < Date.parse(t.until))) return null;
-  const hour = hourIndex(ms);
-  return t.variants[(hour + 3 * Math.floor(hour / 24)) % t.variants.length];
+// Daily shift for an n-version rotation, chosen so every hour of the day shows every
+// version once every n days (needs (24 + shift) mod n to share no factor with n).
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+function dailyShift(n) {
+  for (let s = 1; s <= n; s++) if (n === 1 || ((24 + s) % n && gcd((24 + s) % n, n) === 1)) return s;
+  return 1;
 }
 
-export function wordingFor(pick, ms) {
-  const v = variantFor(pick, ms);
+// Wording-test version live in a given hour, or null. One version per UTC hour for everyone,
+// drawn from the versions not yet retired (retired = Set of 'pick:version').
+export function variantFor(pick, ms, retired = new Set()) {
+  const t = pick.test;
+  if (!t || !(ms < Date.parse(t.until))) return null;
+  const live = t.variants.filter(v => !retired.has(pick.id + ':' + v.id));
+  if (!live.length) return null;
+  const hour = hourIndex(ms);
+  return live[(hour + dailyShift(live.length) * Math.floor(hour / 24)) % live.length];
+}
+
+export function wordingFor(pick, ms, retired) {
+  const v = variantFor(pick, ms, retired);
   if (v) return { title: v.title, hook: v.hook, button: v.button, variant: v.id };
   const promo = pick.promoUntil && ms < Date.parse(pick.promoUntil);
   return { title: promo ? pick.promoTitle : pick.title, hook: promo ? pick.promoHook : pick.hook };

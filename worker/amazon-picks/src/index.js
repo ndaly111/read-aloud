@@ -81,15 +81,16 @@ async function currentPicks(env, request) {
   }
   const nowS = Math.floor(now / 1000);
   const hour = hourIndex(now);
+  const retired = await retiredVariants(env);
   const items = picks.map((pick, i) => {
     const fact = pick.kind === 'asin' ? facts.get(pick.asin) : null;
     const fresh = fact && nowS - fact.updated_at <= PRICE_MAX_AGE_S;
     // Which of the pick's stock photos this hour shows (1-based); photos take turns hour by hour.
-    const testing = variantFor(pick, now) && pick.test.testPhoto;
+    const testing = variantFor(pick, now, retired) && pick.test.testPhoto;
     const photo = fact && fact.image ? 0 : testing || (hour + i) % (pick.photos || 1) + 1;
     return {
       id: pick.id,
-      ...wordingFor(pick, now),
+      ...wordingFor(pick, now, retired),
       // Our own link, carrying the pick's tracking ID when Nick has created it.
       url: pickUrl(pick, tagFor(pick, env)),
       image: (fact && fact.image) || SITE_PHOTO + pick.id + '-' + photo + '.jpg',
@@ -130,8 +131,9 @@ async function recordEvent(request, env) {
   ).bind(hourIndex(now), body.pick, body.event).run();
   // Wording test: count again by version, only for the version live now or last hour.
   const pick = byId.get(body.pick);
+  const retired = pick && pick.test ? await retiredVariants(env) : new Set();
   if (pick && typeof body.variant === 'string' &&
-      [variantFor(pick, now), variantFor(pick, now - 3600000)].some(v => v && v.id === body.variant)) {
+      [variantFor(pick, now, retired), variantFor(pick, now - 3600000, retired)].some(v => v && v.id === body.variant)) {
     await env.DB.prepare(
       'INSERT INTO pick_variant_events (hour, pick, variant, event, count) VALUES (?, ?, ?, ?, 1) ' +
       'ON CONFLICT(hour, pick, variant, event) DO UPDATE SET count = pick_variant_events.count + 1'
@@ -145,6 +147,58 @@ async function recordEvent(request, env) {
     ).bind(hourIndex(now), body.pick, photo, body.event).run();
   }
   return new Response(null, { status: 204, headers });
+}
+
+// ---- wording-test pruning -----------------------------------------------------------------
+// Readable rules (Nick 11/07: phase out the versions that do worse, keep the ones that do better):
+//   - A version is judged only once it has VARIANT_MIN_VIEWS views.
+//   - It is retired when its click rate is under VARIANT_RETIRE_BELOW x the leader's rate,
+//     and the leader itself has at least VARIANT_LEADER_CLICKS clicks.
+//   - At most one retirement per pick per day; the last VARIANT_FLOOR versions always stay.
+const VARIANT_MIN_VIEWS = 1000;
+const VARIANT_RETIRE_BELOW = 0.5;
+const VARIANT_LEADER_CLICKS = 8;
+const VARIANT_FLOOR = 2;
+
+async function retiredVariants(env) {
+  if (!env.DB) return new Set();
+  try {
+    const rows = (await env.DB.prepare('SELECT pick, variant FROM pick_variant_status').all()).results || [];
+    return new Set(rows.map(r => r.pick + ':' + r.variant));
+  } catch (_) { return new Set(); }
+}
+
+async function pruneVariants(env) {
+  if (!env.DB) return;
+  const now = Date.now(), nowS = Math.floor(now / 1000);
+  const retired = await retiredVariants(env);
+  for (const p of CATALOG.filter(x => x.test && now < Date.parse(x.test.until))) {
+    const live = p.test.variants.filter(v => !retired.has(p.id + ':' + v.id));
+    if (live.length <= VARIANT_FLOOR) continue;
+    const recent = await env.DB.prepare(
+      "SELECT 1 FROM pick_rotations WHERE status = 'variant_retired' AND detail LIKE ? AND ran_at > ? LIMIT 1"
+    ).bind('%"pick":"' + p.id + '"%', nowS - 86400).first();
+    if (recent) continue;
+    const rows = (await env.DB.prepare(
+      'SELECT variant, event, SUM(count) AS n FROM pick_variant_events WHERE pick = ? GROUP BY variant, event'
+    ).bind(p.id).all()).results || [];
+    const st = {};
+    for (const r of rows) {
+      st[r.variant] ||= { views: 0, clicks: 0 };
+      st[r.variant][r.event === 'click' ? 'clicks' : 'views'] += Number(r.n);
+    }
+    const judged = live.map(v => ({ id: v.id, ...(st[v.id] || { views: 0, clicks: 0 }) }))
+      .filter(s => s.views >= VARIANT_MIN_VIEWS).map(s => ({ ...s, rate: s.clicks / s.views }))
+      .sort((a, b) => b.rate - a.rate);
+    const leader = judged[0];
+    if (!leader || leader.clicks < VARIANT_LEADER_CLICKS) continue;
+    const worst = judged[judged.length - 1];
+    if (worst.id === leader.id || worst.rate >= leader.rate * VARIANT_RETIRE_BELOW) continue;
+    await env.DB.prepare('INSERT OR IGNORE INTO pick_variant_status (pick, variant, retired_at) VALUES (?, ?, ?)')
+      .bind(p.id, worst.id, nowS).run();
+    await env.DB.prepare('INSERT INTO pick_rotations (ran_at, status, detail) VALUES (?, ?, ?)').bind(nowS, 'variant_retired',
+      JSON.stringify({ pick: p.id, retired: worst, leader, remaining: live.length - 1 })).run();
+  }
 }
 
 // ---- weekly pool rotation ---------------------------------------------------------------
@@ -330,6 +384,7 @@ async function sums(env, sql, ...args) {
 }
 async function dashData(env) {
   const now = Date.now();
+  const retired = await retiredVariants(env);
   const hour = hourIndex(now);
   const active = await activePicks(env);
   const picks = scheduledPicks(now, active);
@@ -359,15 +414,16 @@ async function dashData(env) {
     tag: env.PARTNER_TAG,
     totals: { today: total(day), week: total(week) },
     now: picks.map((p, i) => {
-      const photo = (variantFor(p, now) && p.test.testPhoto) || (hour + i) % (p.photos || 1) + 1;
-      return { id: p.id, ...wordingFor(p, now), url: pickUrl(p, tagFor(p, env)), photo, image: SITE_PHOTO + p.id + '-' + photo + '.jpg' };
+      const photo = (variantFor(p, now, retired) && p.test.testPhoto) || (hour + i) % (p.photos || 1) + 1;
+      return { id: p.id, ...wordingFor(p, now, retired), url: pickUrl(p, tagFor(p, env)), photo, image: SITE_PHOTO + p.id + '-' + photo + '.jpg' };
     }),
     test: await (async () => {
-      const p = CATALOG.find(x => x.test && variantFor(x, now));
+      const p = CATALOG.find(x => x.test && variantFor(x, now, retired));
       if (!p) return null;
       const got = agg(await sums(env, 'SELECT variant AS key, event, SUM(count) AS n FROM pick_variant_events WHERE pick = ? GROUP BY variant, event', p.id));
-      const live = variantFor(p, now).id;
-      return { pick: p.id, live, rows: p.test.variants.map(v => ({ key: v.id + (v.id === live ? ' (live now)' : '') + ' · ' + v.title, ...(got[v.id] || { views: 0, clicks: 0 }) })) };
+      const live = variantFor(p, now, retired).id;
+      const tag = v => (v.id === live ? ' (live now)' : retired.has(p.id + ':' + v.id) ? ' (retired)' : '');
+      return { pick: p.id, live, rows: p.test.variants.map(v => ({ key: v.id + tag(v) + ' · ' + v.title, ...(got[v.id] || { views: 0, clicks: 0 }) })) };
     })(),
     active: active.map(p => ({ id: p.id, keep: !!p.keep, ...(week[p.id] || { views: 0, clicks: 0 }) }))
       .sort((a, b) => rate(b) - rate(a) || b.views - a.views),
@@ -418,6 +474,7 @@ export default {
     }    return new Response('Not found', { status: 404 });
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(event.cron === ROTATE_CRON ? rotatePool(env) : refreshCatalog(env));
+    ctx.waitUntil(event.cron === ROTATE_CRON ? rotatePool(env)
+      : Promise.all([refreshCatalog(env), pruneVariants(env).catch(() => {})]));
   }
 };
