@@ -107,6 +107,8 @@ async function currentPicks(env, request) {
 }
 
 const EVENT_NAMES = new Set(['view', 'click']);
+// Fixed placements outside the hourly strip; always accepted, never part of the rotation.
+const PLACEMENTS = new Set(['audible-player']);
 async function recordEvent(request, env) {
   const headers = publicHeaders(request);
   if (!headers['access-control-allow-origin']) return new Response('Forbidden', { status: 403 });
@@ -123,7 +125,7 @@ async function recordEvent(request, env) {
   // Only a pick on screen this hour or last hour (a page opened before the hour turned) counts.
   const active = await activePicks(env);
   const allowed = new Set([...scheduledPicks(now, active), ...scheduledPicks(now - 3600000, active)].map(p => p.id));
-  if (!allowed.has(body.pick)) return new Response(null, { status: 204, headers });
+  if (!allowed.has(body.pick) && !PLACEMENTS.has(body.pick)) return new Response(null, { status: 204, headers });
   await env.DB.prepare(
     'INSERT INTO pick_events (hour, pick, event, count) VALUES (?, ?, ?, 1) ' +
     'ON CONFLICT(hour, pick, event) DO UPDATE SET count = pick_events.count + 1'
@@ -353,6 +355,7 @@ async function dashData(env) {
       const photo = (hour + i) % (p.photos || 1) + 1;
       return { id: p.id, title: p.title, hook: p.hook, url: pickUrl(p, tagFor(p, env)), photo, image: SITE_PHOTO + p.id + '-' + photo + '.jpg' };
     }),
+    placements: [...PLACEMENTS].map(id => ({ id, today: day[id] || { views: 0, clicks: 0 }, ...(week[id] || { views: 0, clicks: 0 }) })),
     active: active.map(p => ({ id: p.id, keep: !!p.keep, ...(week[p.id] || { views: 0, clicks: 0 }) }))
       .sort((a, b) => rate(b) - rate(a) || b.views - a.views),
     photos: Object.entries(photos).map(([key, c]) => ({ key, ...c })).sort((a, b) => a.key.localeCompare(b.key)),
