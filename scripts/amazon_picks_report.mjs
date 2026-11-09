@@ -9,7 +9,7 @@ const sinceHour = Math.floor(Date.now() / 3600000) - days * 24;
 const cwd = new URL('../worker/amazon-picks/', import.meta.url);
 const query = sql => {
   const out = execFileSync('npx', ['wrangler', 'd1', 'execute', 'read-aloud-picks', '--remote', '--json',
-    '--command', sql], { cwd, encoding: 'utf8', shell: process.platform === 'win32' });
+    '--command', process.platform === 'win32' ? '"' + sql + '"' : sql], { cwd, encoding: 'utf8', shell: process.platform === 'win32' });
   return JSON.parse(out.slice(out.indexOf('[')))[0].results;
 };
 const pool = query('SELECT id, status, since FROM pick_pool ORDER BY status, since, id');
