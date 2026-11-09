@@ -58,23 +58,23 @@ export const CATALOG = [
     ] } },
   { id: 'kindle-paperwhite', photos: 3, kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },
-  { id: 'airtag', photos: 2, kind: 'search', query: 'Apple AirTag 4 pack',
+  { id: 'airtag', photos: 2, kind: 'asin', asin: 'B0GJTXVN9Z', // Apple AirTag 2nd gen 4-pack, checked 11/09
     title: 'AirTag 4-pack', hook: 'Never hunt for your keys, wallet or luggage again.' },
-  { id: 'pocket-printer', photos: 2, kind: 'search', query: 'mini pocket thermal printer',
+  { id: 'pocket-printer', photos: 2, kind: 'asin', asin: 'B0CHZ74442', // inkless Bluetooth mini thermal printer, checked 11/09
     title: 'Pocket thermal printer', hook: 'A printer the size of a deck of cards. No ink, ever.' },
-  { id: 'bird-feeder-cam', photos: 3, kind: 'search', query: 'smart bird feeder with camera',
+  { id: 'bird-feeder-cam', photos: 3, kind: 'asin', asin: 'B0C4Y6D5BD', // solar AI bird-ID feeder cam, checked 11/09
     title: 'Smart bird feeder', hook: 'A bird feeder that sends you a photo of every visitor.' },
-  { id: 'sunrise-clock', photos: 2, kind: 'search', query: 'sunrise alarm clock',
+  { id: 'sunrise-clock', photos: 2, kind: 'asin', asin: 'B081CHLF46', // JALL sunrise alarm clock, checked 11/09
     title: 'Sunrise alarm clock', hook: 'Wake up to a slow fake sunrise instead of a buzzer.' },
-  { id: 'wireless-headphones', photos: 2, kind: 'search', query: 'wireless over-ear headphones',
+  { id: 'wireless-headphones', photos: 2, kind: 'asin', asin: 'B0C3HCD34R', // soundcore Q20i ANC headphones, checked 11/09
     title: 'Wireless headphones', hook: 'Big, soft, wireless headphones for long listens.' },
   { id: 'neck-light', photos: 3, kind: 'asin', asin: 'B07WNRN9WQ', // Glocusent bendable neck light, checked 11/07
     title: 'Neck reading light', hook: 'A reading lamp you wear around your neck, hands free.' },
-  { id: 'spin-scrubber', photos: 2, kind: 'search', query: 'electric spin scrubber',
+  { id: 'spin-scrubber', photos: 2, kind: 'asin', asin: 'B0B7RSV894', // long-handle spin scrubber, checked 11/09
     title: 'Electric spin scrubber', hook: 'A power tool for the bathtub.' },
-  { id: 'mini-projector', photos: 3, kind: 'search', query: 'mini projector',
+  { id: 'mini-projector', photos: 3, kind: 'asin', asin: 'B0F7RR3YC6', // WiFi+Bluetooth mini projector, checked 11/09
     title: 'Mini projector', hook: 'A movie on the wall, from a box the size of a lunchbox.' },
-  { id: 'hand-warmer', photos: 2, kind: 'search', query: 'rechargeable hand warmer',
+  { id: 'hand-warmer', photos: 2, kind: 'asin', asin: 'B0CG65PYBV', // rechargeable hand warmers 2-pack, checked 11/09
     title: 'Rechargeable hand warmer', hook: 'A pocket heater for cold-morning walks.' },
   // ---- bench, in the order they will be promoted ----
   { id: 'moon-lamp', kind: 'search', query: 'levitating moon lamp',
