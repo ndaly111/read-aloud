@@ -72,3 +72,12 @@ CREATE TABLE IF NOT EXISTS pick_variant_status (
   retired_at INTEGER NOT NULL,
   PRIMARY KEY (pick, variant)
 );
+
+-- Aggregate counts per UTC hour / page type ('home' or 'guide') / event. No identifiers, no URLs.
+CREATE TABLE IF NOT EXISTS pick_surface_events (
+  hour INTEGER NOT NULL,
+  surface TEXT NOT NULL,
+  event TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (hour, surface, event)
+);

@@ -6,9 +6,13 @@
   const strip = document.getElementById('amazonPicks');
   if (!strip) return;
 
+  // Which kind of page the strip sits on: the homepage or one of the guides. A two-value
+  // label for counting traffic per page type; never the URL or anything about the visitor.
+  const SURFACE = /^\/(index\.html)?$/.test(location.pathname) ? 'home' : 'guide';
+
   function send(pick, event, photo, variant) {
-    // Aggregate counter only: pick id, event name, which stock photo. No identifiers, no page content.
-    const body = JSON.stringify({ pick, event, photo: photo || 0, variant: variant || '' });
+    // Aggregate counter only: pick id, event name, which stock photo, page type. No identifiers.
+    const body = JSON.stringify({ pick, event, photo: photo || 0, variant: variant || '', surface: SURFACE });
     try {
       // text/plain keeps the beacon a CORS "simple" request (see donation-experiment.js).
       if (navigator.sendBeacon && navigator.sendBeacon(ORIGIN + '/event',
@@ -77,17 +81,26 @@
     const row = strip.querySelector('.picks-row');
     const note = strip.querySelector('.picks-disclosure');
     if (!row || !note || !data || data.ready !== true || !Array.isArray(data.items) || !data.items.length) return;
-    row.replaceChildren(...data.items.map(card));
+    const cards = data.items.map(card);
+    row.replaceChildren(...cards);
     note.textContent = data.disclosure;
     strip.hidden = false;
-    const seen = () => data.items.forEach(item => send(item.id, 'view', item.photo, item.variant));
-    // Count a view only when the strip actually comes into view.
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver(entries => {
-        if (entries.some(e => e.isIntersecting)) { io.disconnect(); seen(); }
-      }, { threshold: 0.5 });
-      io.observe(strip);
-    } else seen();
+    // Count a view per card, once, when at least half of that card is on screen (since 11/11).
+    // Before 11/11 one view per card was counted when half the whole strip was on screen, which
+    // on phones (three stacked cards, ~2x the screen height) meant scrolling past card 2.
+    if (!('IntersectionObserver' in window)) {
+      data.items.forEach(item => send(item.id, 'view', item.photo, item.variant));
+      return;
+    }
+    const io = new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        io.unobserve(e.target);
+        const item = data.items[cards.indexOf(e.target)];
+        if (item) send(item.id, 'view', item.photo, item.variant);
+      }
+    }, { threshold: 0.5 });
+    cards.forEach(c => io.observe(c));
   }
 
   fetch(ORIGIN + '/picks', { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' })

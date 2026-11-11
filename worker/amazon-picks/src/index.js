@@ -6,7 +6,7 @@
 //   cron 6-hourly - refreshes product facts from the Amazon Creators API.
 //   cron weekly   - rotatePool(): benches active picks nobody clicks, promotes bench picks.
 // Stores product facts and counts only. Nothing about visitors is ever recorded.
-import { CATALOG, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag, wordingFor, variantFor } from './catalog.js';
+import { CATALOG, POOL, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag, wordingFor, variantFor, photoFor } from './catalog.js';
 import { renderDash } from './dash.js';
 
 const ORIGINS = new Set(['https://read-aloud.com', 'https://www.read-aloud.com']);
@@ -42,15 +42,17 @@ function publicHeaders(request) {
   return ORIGINS.has(origin) ? { 'access-control-allow-origin': origin, 'vary': 'Origin' } : {};
 }
 const byId = new Map(CATALOG.map(p => [p.id, p]));
+// Picks eligible for the weekly pool (dated event cards are never pooled).
+const poolById = new Map(POOL.map(p => [p.id, p]));
 
 // The active picks, in a stable order. Catalog entries the pool table has never seen are
 // added to it (the first ACTIVE_SIZE ever seen become active, later ones join the bench).
 async function activePicks(env) {
-  if (!env.DB) return CATALOG.slice(0, ACTIVE_SIZE);
+  if (!env.DB) return POOL.slice(0, ACTIVE_SIZE);
   const read = async () => (await env.DB.prepare('SELECT id, status, since FROM pick_pool').all()).results || [];
   let rows = await read();
   const known = new Set(rows.map(r => r.id));
-  const missing = CATALOG.filter(p => !known.has(p.id));
+  const missing = POOL.filter(p => !known.has(p.id));
   if (missing.length) {
     let activeCount = rows.filter(r => r.status === 'active').length;
     const now = Math.floor(Date.now() / 1000);
@@ -59,9 +61,9 @@ async function activePicks(env) {
     ).bind(p.id, activeCount++ < ACTIVE_SIZE ? 'active' : 'bench', now + i)));
     rows = await read();
   }
-  const active = rows.filter(r => r.status === 'active' && byId.has(r.id))
-    .sort((a, b) => a.since - b.since || (a.id < b.id ? -1 : 1)).map(r => byId.get(r.id));
-  return active.length ? active : CATALOG.slice(0, ACTIVE_SIZE);
+  const active = rows.filter(r => r.status === 'active' && poolById.has(r.id))
+    .sort((a, b) => a.since - b.since || (a.id < b.id ? -1 : 1)).map(r => poolById.get(r.id));
+  return active.length ? active : POOL.slice(0, ACTIVE_SIZE);
 }
 
 async function currentPicks(env, request) {
@@ -87,7 +89,7 @@ async function currentPicks(env, request) {
     const fresh = fact && nowS - fact.updated_at <= PRICE_MAX_AGE_S;
     // Which of the pick's stock photos this hour shows (1-based); photos take turns hour by hour.
     const testing = variantFor(pick, now, retired) && pick.test.testPhoto;
-    const photo = fact && fact.image ? 0 : testing || (hour + i) % (pick.photos || 1) + 1;
+    const photo = fact && fact.image ? 0 : testing || photoFor(pick, hour, i);
     return {
       id: pick.id,
       ...wordingFor(pick, now, retired),
@@ -139,6 +141,12 @@ async function recordEvent(request, env) {
       'ON CONFLICT(hour, pick, variant, event) DO UPDATE SET count = pick_variant_events.count + 1'
     ).bind(hourIndex(now), body.pick, body.variant, body.event).run();
   }
+  // Page type (homepage vs guide pages), counted separately to see where the strip gets seen.
+  const surface = body.surface === 'guide' ? 'guide' : 'home';
+  await env.DB.prepare(
+    'INSERT INTO pick_surface_events (hour, surface, event, count) VALUES (?, ?, ?, 1) ' +
+    'ON CONFLICT(hour, surface, event) DO UPDATE SET count = pick_surface_events.count + 1'
+  ).bind(hourIndex(now), surface, body.event).run();
   if (photo > 0) {
     // Same count again, keyed by which stock photo was on the card, so photos can be compared.
     await env.DB.prepare(
@@ -232,7 +240,7 @@ async function rotatePool(env) {
   const retire = judged.filter(s => s.ctr < median * RETIRE_BELOW).slice(0, ROTATE_N);
   const bench = ((await env.DB.prepare(
     "SELECT id FROM pick_pool WHERE status = 'bench' ORDER BY since ASC, id ASC"
-  ).all()).results || []).map(r => r.id).filter(id => byId.has(id));
+  ).all()).results || []).map(r => r.id).filter(id => poolById.has(id));
   const swaps = Math.min(retire.length, bench.length);
   if (!swaps) {
     await log('no_change', JSON.stringify({ judged: judged.length, median_ctr: median, below_bar: retire.length, bench: bench.length }));
@@ -345,7 +353,7 @@ async function status(env) {
   const refresh = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_refresh WHERE id = 1').first();
   const active = await activePicks(env);
   const bench = ((await env.DB.prepare("SELECT id FROM pick_pool WHERE status = 'bench' ORDER BY since ASC, id ASC").all()).results || [])
-    .map(r => r.id).filter(id => byId.has(id));
+    .map(r => r.id).filter(id => poolById.has(id));
   const stats = await weekStats(env, hourIndex(Date.now()) - 7 * 24);
   const rotation = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_rotations ORDER BY ran_at DESC LIMIT 1').first();
   return json({
@@ -402,7 +410,7 @@ async function dashData(env) {
   const hourly = agg(await sums(env, 'SELECT hour AS key, event, SUM(count) AS n FROM pick_events WHERE hour >= ? GROUP BY hour, event', hour - 24));
   const total = m => Object.values(m).reduce((a, r) => ({ views: a.views + r.views, clicks: a.clicks + r.clicks }), { views: 0, clicks: 0 });
   const bench = ((await env.DB.prepare("SELECT id FROM pick_pool WHERE status = 'bench' ORDER BY since ASC, id ASC").all()).results || [])
-    .map(r => r.id).filter(id => byId.has(id));
+    .map(r => r.id).filter(id => poolById.has(id));
   const refresh = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_refresh WHERE id = 1').first();
   const rotation = await env.DB.prepare('SELECT ran_at, status, detail FROM pick_rotations ORDER BY ran_at DESC LIMIT 1').first();
   const rate = r => (r.views ? r.clicks / r.views : 0);
@@ -414,7 +422,7 @@ async function dashData(env) {
     tag: env.PARTNER_TAG,
     totals: { today: total(day), week: total(week) },
     now: picks.map((p, i) => {
-      const photo = (variantFor(p, now, retired) && p.test.testPhoto) || (hour + i) % (p.photos || 1) + 1;
+      const photo = (variantFor(p, now, retired) && p.test.testPhoto) || photoFor(p, hour, i);
       return { id: p.id, ...wordingFor(p, now, retired), url: pickUrl(p, tagFor(p, env)), photo, image: SITE_PHOTO + p.id + '-' + photo + '.jpg' };
     }),
     test: await (async () => {

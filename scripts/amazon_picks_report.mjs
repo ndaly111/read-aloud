@@ -29,6 +29,11 @@ console.log('pick'.padEnd(20), 'views'.padStart(7), 'clicks'.padStart(7), 'ctr'.
 for (const r of active) console.log(r.id.padEnd(20), String(r.views).padStart(7), String(r.clicks).padStart(7), pct(r.ctr));
 const total = active.reduce((a, r) => ({ views: a.views + r.views, clicks: a.clicks + r.clicks }), { views: 0, clicks: 0 });
 console.log('total'.padEnd(20), String(total.views).padStart(7), String(total.clicks).padStart(7), pct(total.views ? total.clicks / total.views : 0));
+// Dated event cards (Black Friday etc.) are outside the pool; show any that have counts.
+const pooled = new Set(pool.map(p => p.id));
+for (const r of Object.keys(stats).filter(id => !pooled.has(id)).map(row)) {
+  console.log(('(event) ' + r.id).padEnd(20), String(r.views).padStart(7), String(r.clicks).padStart(7), pct(r.ctr));
+}
 console.log('\nBENCH (next up first):', pool.filter(p => p.status === 'bench').map(p => p.id).join(', ') || 'none');
 console.log('\nLAST ROTATION:', rotation ? new Date(rotation.ran_at * 1000).toISOString() + ' ' + rotation.status + ' ' + (rotation.detail || '') : 'none yet');
 
@@ -45,3 +50,14 @@ if (photoList.length) {
   console.log('\nPHOTOS (last ' + days + ' days)');
   for (const r of photoList) console.log(r.k.padEnd(24), String(r.views).padStart(7), String(r.clicks).padStart(7), pct(r.ctr));
 }
+
+// Where the strip is seen: homepage vs guide pages (counted from 11/11).
+try {
+  const surf = query('SELECT surface, event, SUM(count) AS n FROM pick_surface_events WHERE hour >= ' + sinceHour + ' GROUP BY surface, event');
+  if (surf.length) {
+    console.log('\nPAGES (card views/clicks by page type)');
+    const by = {};
+    for (const r of surf) { by[r.surface] ||= { views: 0, clicks: 0 }; by[r.surface][r.event === 'click' ? 'clicks' : 'views'] += Number(r.n); }
+    for (const [k, c] of Object.entries(by)) console.log(k.padEnd(24), String(c.views).padStart(7), String(c.clicks).padStart(7), pct(c.views ? c.clicks / c.views : 0));
+  }
+} catch (_) {}

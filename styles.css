@@ -2023,3 +2023,6 @@ body.focus-mode .controls { flex: none; }
 @media (max-width: 760px) {
   .picks-row { grid-template-columns: 1fr; }
 }
+/* On guide pages the strip sits below the article, inside <main>. */
+.picks-strip--guide { margin: 40px 0 8px; }
+.picks-strip--guide p.picks-disclosure { max-width: none; }
