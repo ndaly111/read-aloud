@@ -6,7 +6,7 @@
 //   cron 6-hourly - refreshes product facts from the Amazon Creators API.
 //   cron weekly   - rotatePool(): benches active picks nobody clicks, promotes bench picks.
 // Stores product facts and counts only. Nothing about visitors is ever recorded.
-import { CATALOG, POOL, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag, wordingFor, variantFor, photoFor } from './catalog.js';
+import { CATALOG, POOL, ACTIVE_SIZE, hourIndex, scheduledPicks, pickUrl, tagFor, trackingTag, wordingFor, variantFor, photoFor, buttonArm, headingFor, BUTTON_TEST } from './catalog.js';
 import { renderDash } from './dash.js';
 
 const ORIGINS = new Set(['https://read-aloud.com', 'https://www.read-aloud.com']);
@@ -105,7 +105,9 @@ async function currentPicks(env, request) {
     };
   });
   return json({
-    ready: true, hour: hourIndex(now), disclosure: DISCLOSURE, items, as_of: new Date(now).toISOString()
+    ready: true, hour: hourIndex(now), disclosure: DISCLOSURE, items, as_of: new Date(now).toISOString(),
+    // Dated heading (gift framing 11/19-12/20); null = keep the page's own "Worth a look."
+    heading: (h => (h ? { lead: h.lead, em: h.em } : null))(headingFor(now))
   }, 200, headers);
 }
 
@@ -134,8 +136,10 @@ async function recordEvent(request, env) {
   // Wording test: count again by version, only for the version live now or last hour.
   const pick = byId.get(body.pick);
   const retired = pick && pick.test ? await retiredVariants(env) : new Set();
+  // Product-card button test arms ('btn:...') are counted in the same table, per pick.
   if (pick && typeof body.variant === 'string' &&
-      [variantFor(pick, now, retired), variantFor(pick, now - 3600000, retired)].some(v => v && v.id === body.variant)) {
+      [variantFor(pick, now, retired), variantFor(pick, now - 3600000, retired),
+       buttonArm(pick, now), buttonArm(pick, now - 3600000)].some(v => v && v.id === body.variant)) {
     await env.DB.prepare(
       'INSERT INTO pick_variant_events (hour, pick, variant, event, count) VALUES (?, ?, ?, ?, 1) ' +
       'ON CONFLICT(hour, pick, variant, event) DO UPDATE SET count = pick_variant_events.count + 1'
@@ -163,7 +167,9 @@ async function recordEvent(request, env) {
 //   - It is retired when its click rate is under VARIANT_RETIRE_BELOW x the leader's rate,
 //     and the leader itself has at least VARIANT_LEADER_CLICKS clicks.
 //   - At most one retirement per pick per day; the last VARIANT_FLOOR versions always stay.
-const VARIANT_MIN_VIEWS = 1000;
+// 400 since 11/11 (was 1,000): the $20 Audible bounty ends 12/15 and at ~85 views a day per
+// version the old bar would never bite in time.
+const VARIANT_MIN_VIEWS = 400;
 const VARIANT_RETIRE_BELOW = 0.5;
 const VARIANT_LEADER_CLICKS = 8;
 const VARIANT_FLOOR = 2;
@@ -432,6 +438,11 @@ async function dashData(env) {
       const live = variantFor(p, now, retired).id;
       const tag = v => (v.id === live ? ' (live now)' : retired.has(p.id + ':' + v.id) ? ' (retired)' : '');
       return { pick: p.id, live, rows: p.test.variants.map(v => ({ key: v.id + tag(v) + ' · ' + v.title, ...(got[v.id] || { views: 0, clicks: 0 }) })) };
+    })(),
+    buttonTest: await (async () => {
+      if (now < Date.parse(BUTTON_TEST.from)) return { starts: etStamp(Date.parse(BUTTON_TEST.from)), rows: [] };
+      const got = agg(await sums(env, "SELECT variant AS key, event, SUM(count) AS n FROM pick_variant_events WHERE variant LIKE 'btn:%' GROUP BY variant, event"));
+      return { starts: null, rows: BUTTON_TEST.arms.map(a => ({ key: a.button, ...(got[a.id] || { views: 0, clicks: 0 }) })) };
     })(),
     active: active.map(p => ({ id: p.id, keep: !!p.keep, ...(week[p.id] || { views: 0, clicks: 0 }) }))
       .sort((a, b) => rate(b) - rate(a) || b.views - a.views),

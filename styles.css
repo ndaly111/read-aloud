@@ -1673,6 +1673,26 @@ form button { justify-self: start; }
 }
 .cookie-banner__actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .cookie-banner__actions button { flex: 1 1 120px; }
+/* Desktop (11/11): a slim bar along the bottom edge instead of a 480x240 box in the
+   bottom-right corner, which sat over the third Amazon card on a first visit. */
+@media (min-width: 900px) {
+  .cookie-banner {
+    inset: auto 0 0 0;
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
+    border-width: 1px 0 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    padding: 10px 24px;
+  }
+  .cookie-banner strong { font-size: 1rem; }
+  .cookie-banner > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .cookie-banner p { font-size: 0.85rem; margin-top: 2px; max-width: none; }
+  .cookie-banner__actions { flex: none; flex-wrap: nowrap; }
+  .cookie-banner__actions button { flex: none; }
+}
 
 /* ============================================================
    Visually hidden / focus / utility
@@ -2022,6 +2042,41 @@ body.focus-mode .controls { flex: none; }
 .pick-card:hover .pick-card__btn { background: #f7ca00; }
 @media (max-width: 760px) {
   .picks-row { grid-template-columns: 1fr; }
+}
+/* Phones (11/11): each card is a compact row, photo left (~112px square), title, hook and
+   button right, ~130px tall, so all three cards fit on one screen. Desktop unchanged. */
+@media (max-width: 600px) {
+  .picks-row { gap: 8px; }
+  .pick-card { flex-direction: row; align-items: center; min-height: 130px; }
+  .pick-card__frame {
+    flex: none;
+    width: 112px;
+    height: 112px;
+    aspect-ratio: 1 / 1;
+    margin: 6px 0 6px 6px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .pick-card__frame--product { padding: 6px; }
+  .pick-card__body { flex: 1; gap: 3px; padding: 8px 10px 8px 12px; }
+  .pick-card__title {
+    font-size: 0.98rem;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pick-card__hook {
+    font-size: 0.8rem;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pick-card__price { font-size: 0.95rem; }
+  .pick-card__btn { margin-top: 4px; padding: 5px 14px; font-size: 0.8rem; }
 }
 /* On guide pages the strip sits below the article, inside <main>. */
 .picks-strip--guide { margin: 40px 0 8px; }

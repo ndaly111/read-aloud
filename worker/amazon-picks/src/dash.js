@@ -54,6 +54,7 @@ export function renderDash(d) {
 <h2>On the page right now (since ${esc(d.hour_label)})</h2>
 <div class="nowgrid">${now}</div>
 ${d.test ? '<h2>Audible wording test · since it started</h2><table><tr><th>version</th><th>views</th><th>clicks</th><th>rate</th></tr>' + rows(d.test.rows, 'key') + '</table>' : ''}
+${d.buttonTest ? '<h2>Product button test · pooled, by UTC hour' + (d.buttonTest.starts ? ' · starts ' + esc(d.buttonTest.starts) : '') + ' · read at ~3,000 views per arm</h2>' + (d.buttonTest.rows.length ? '<table><tr><th>button</th><th>views</th><th>clicks</th><th>rate</th></tr>' + rows(d.buttonTest.rows, 'key') + '</table>' : '') : ''}
 <h2>Active picks · last 7 days</h2>
 <table><tr><th>pick</th><th>views</th><th>clicks</th><th>rate</th></tr>${rows(d.active, 'id')}</table>
 <h2>Thumbnails · last 7 days</h2>
@@ -63,6 +64,6 @@ ${d.test ? '<h2>Audible wording test · since it started</h2><table><tr><th>vers
 <h2>Bench (next up first)</h2>
 <p class="bench">${esc(d.bench.join(', ')) || 'none'}</p>
 <h2>Housekeeping</h2>
-<p class="sub">Amazon product data: <b>${refresh}</b><br>Weekly rotation: <b>${rotation}</b><br>Tracking tag: <b>${esc(d.tag)}</b></p>
+<p class="sub">Amazon product data: <b>${refresh}</b><br>Weekly rotation: <b>${rotation}</b><br>Tracking tag: <b>${esc(d.tag)}</b><br>Layout changes: <b>Nov 11, ~7 PM ET</b> phone cards became compact rows (all three fit one screen) and product titles lead with the benefit. Views for cards 2 and 3 jump on phones; click rates before and after are not comparable.</p>
 </main></body></html>`;
 }

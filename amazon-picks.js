@@ -84,6 +84,12 @@
     const cards = data.items.map(card);
     row.replaceChildren(...cards);
     note.textContent = data.disclosure;
+    // Dated heading from the Worker (e.g. "Gifts worth a look." 11/19-12/20); same style,
+    // last words in the italic accent. Without one the page's own heading stays.
+    const h = strip.querySelector('.picks-heading');
+    if (h && data.heading && data.heading.lead && data.heading.em) {
+      h.replaceChildren(document.createTextNode(data.heading.lead + ' '), el('em', '', data.heading.em));
+    }
     strip.hidden = false;
     // Count a view per card, once, when at least half of that card is on screen (since 11/11).
     // Before 11/11 one view per card was counted when half the whole strip was on screen, which

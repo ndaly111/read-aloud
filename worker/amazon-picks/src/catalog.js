@@ -12,6 +12,7 @@
 // keep: true     - never benched by the weekly rotation (the Audible bounty is the fastest
 //                   route to the 10-sales bar that unlocks product photos).
 //
+// Words (11/11): the title leads with what the thing does for you; the hook names the product.
 // Rules for the words (Amazon Associates operating agreement):
 //   - hook/title are OUR words. Never paste Amazon review text, star ratings or
 //     "best seller" claims, and never state a price here - prices come only from the API.
@@ -57,31 +58,42 @@ export const CATALOG = [
         hook: "Plus a bonus. Cancel anytime. Ends Dec 28.", button: "Get the deal on Amazon" },
       { id: "J", title: "Love Read-Aloud? You'll love Audible",
         hook: "Pro narrators, full books, and a holiday deal that ends Dec 28.", button: "See the deal on Amazon" },
+      // 11/11: F, G, H, J retired by hand (fewest clicks); K-M build on the winners (C, E: titles
+      // that say a book is read to you). Wording checked against Amazon's landing page 11/11:
+      // "Get 3 months of Audible Standard ... + bonus", "Offer ends December 28, 2026. Cancel anytime."
+      { id: "K", title: "A whole book, read to you",
+        hook: "Pro narrators do the reading. Audible's holiday deal ends Dec 28.", button: "Get the deal on Amazon" },
+      { id: "L", title: "Your next book, read to you",
+        hook: "3 months of Audible, deeply discounted, plus a bonus. Cancel anytime. Ends Dec 28.", button: "Get the deal on Amazon" },
+      { id: "M", title: "Let someone read to you tonight",
+        hook: "Full books, pro narrators. Audible's holiday deal ends Dec 28.", button: "Start listening on Amazon" },
     ] } },
   { id: 'kindle-paperwhite', photos: 3, kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },
   { id: 'airtag', photos: 2, kind: 'asin', asin: 'B0GJTXVN9Z', // Apple AirTag 2nd gen 4-pack, checked 11/09
-    title: 'AirTag 4-pack', hook: 'Never hunt for your keys, wallet or luggage again.' },
+    title: 'Never hunt for your keys again', hook: 'Apple AirTag 4-pack. Works for wallets and luggage too.' },
   { id: 'pocket-printer', photos: 2, kind: 'asin', asin: 'B0CHZ74442', // inkless Bluetooth mini thermal printer, checked 11/09
-    title: 'Pocket thermal printer', hook: 'A printer the size of a deck of cards. No ink, ever.' },
+    title: 'A printer the size of a deck of cards', hook: 'Pocket thermal printer. No ink, ever.' },
   { id: 'bird-feeder-cam', photos: 3, kind: 'asin', asin: 'B0C4Y6D5BD', // solar AI bird-ID feeder cam, checked 11/09
-    title: 'Smart bird feeder', hook: 'A bird feeder that sends you a photo of every visitor.' },
+    title: 'See every bird that visits', hook: 'Smart bird feeder that sends a photo to your phone.' },
   { id: 'sunrise-clock', photos: 2, dropPhotos: [2], // #2 1/948 vs #1 6/1218 (11/11)
     kind: 'asin', asin: 'B081CHLF46', // JALL sunrise alarm clock, checked 11/09
-    title: 'Sunrise alarm clock', hook: 'Wake up to a slow fake sunrise instead of a buzzer.' },
-  { id: 'wireless-headphones', photos: 2, kind: 'asin', asin: 'B0C3HCD34R', // soundcore Q20i ANC headphones, checked 11/09
-    title: 'Wireless headphones', hook: 'Big, soft, wireless headphones for long listens.' },
-  { id: 'neck-light', photos: 3, dropPhotos: [3], // #3 2/830 vs #1 6/704, #2 4/744 (11/11)
+    title: 'Wake up to a sunrise, not a buzzer', hook: 'Sunrise alarm clock that brightens slowly.' },
+  { id: 'wireless-headphones', photos: 4, dropPhotos: [1, 2], // 11/11: #1 pink JBL, #2 orange on-ear; listing is black over-ear
+    kind: 'asin', asin: 'B0C3HCD34R', // soundcore Q20i ANC headphones, checked 11/09
+    title: 'Shut out the room and just listen', hook: 'Noise-cancelling wireless headphones.' },
+  { id: 'neck-light', photos: 3, dropPhotos: [2, 3], // #3 2/830 vs #1 6/704 (11/11); #2 is a clip-on book light, not a neck light
     kind: 'asin', asin: 'B07WNRN9WQ', // Glocusent bendable neck light, checked 11/07
-    title: 'Neck reading light', hook: 'A reading lamp you wear around your neck, hands free.' },
+    title: 'Read in bed without waking anyone', hook: 'Reading light you wear around your neck.' },
   { id: 'spin-scrubber', photos: 2, dropPhotos: [1], // #1 5/1173 vs #2 10/1098 (11/11)
     kind: 'asin', asin: 'B0B7RSV894', // long-handle spin scrubber, checked 11/09
-    title: 'Electric spin scrubber', hook: 'A power tool for the bathtub.' },
-  { id: 'mini-projector', photos: 3, kind: 'asin', asin: 'B0F7RR3YC6', // WiFi+Bluetooth mini projector, checked 11/09
-    title: 'Mini projector', hook: 'A movie on the wall, from a box the size of a lunchbox.' },
+    title: 'A power tool for the bathtub', hook: 'Electric spin scrubber with a long handle.' },
+  { id: 'mini-projector', photos: 3, dropPhotos: [2], // 11/11: #2 is a big black projector; listing is a small white one
+    kind: 'asin', asin: 'B0F7RR3YC6', // WiFi+Bluetooth mini projector, checked 11/09
+    title: 'Movie night on any wall', hook: 'Mini projector about the size of a lunchbox.' },
   { id: 'hand-warmer', photos: 2, dropPhotos: [1], // #1 2/1213 vs #2 10/997 (11/11)
     kind: 'asin', asin: 'B0CG65PYBV', // rechargeable hand warmers 2-pack, checked 11/09
-    title: 'Rechargeable hand warmer', hook: 'A pocket heater for cold-morning walks.' },
+    title: 'Warm hands on cold-morning walks', hook: 'Rechargeable hand warmers, 2-pack.' },
   // ---- bench, in the order they will be promoted ----
   { id: 'moon-lamp', kind: 'search', query: 'levitating moon lamp',
     title: 'Levitating moon lamp', hook: 'A little moon that floats above its base.' },
@@ -139,27 +151,27 @@ export const CATALOG = [
   // 11/11: cheaper picks (about $10-25) for the people who use Read-Aloud: students,
   // proofreaders, language learners, readers with dyslexia or low vision, bedtime listeners.
   // Each one is a single listing checked in stock and buyable 11/11 (desktop + phone).
-  { id: 'sleep-headband', kind: 'asin', asin: 'B09K4WZGVD', // MUSICOZY Bluetooth sleep headband
-    title: 'Sleep headphones headband', hook: 'Thin speakers in a soft headband, made for listening in bed, even on your side.' },
+  { id: 'sleep-headband', photos: 2, dropPhotos: [1], // 11/11: #1 thin band + wired buds; listing is a wide black band, also worn over the eyes
+    kind: 'asin', asin: 'B09K4WZGVD', // MUSICOZY Bluetooth sleep headband
+    title: 'Fall asleep listening, even on your side', hook: 'Soft headband with thin speakers inside.' },
   { id: 'blue-light-glasses', photos: 2, kind: 'asin', asin: 'B07W781XWF', // livho blue light glasses
-    title: 'Blue light glasses', hook: 'Glasses with lenses that filter the blue light from screens.' },
+    title: 'For long days at a screen', hook: 'Glasses that filter blue light.' },
   { id: 'earbuds', kind: 'asin', asin: 'B0BTYCRJSS', // soundcore P20i true wireless earbuds
-    title: 'Wireless earbuds', hook: 'Small wireless earbuds for listening on a walk, a bus or a train.' },
+    title: 'Listen on a walk, a bus or a train', hook: 'Small true wireless earbuds.' },
   { id: 'book-stand', kind: 'asin', asin: 'B07459P7BF', // bamboo book stand with page clips
-    title: 'Book stand', hook: 'Holds a book open and upright, so your hands are free.' },
+    title: 'Keep a book open, hands free', hook: 'Bamboo book stand with page clips.' },
   { id: 'magnifier', kind: 'asin', asin: 'B08XXF1VCS', // JMH lighted handheld magnifier
-    title: 'Lighted magnifying glass', hook: 'A big magnifying lens with its own light, for small print.' },
+    title: 'Small print, big and bright', hook: 'Handheld magnifying glass with its own light.' },
   { id: 'tablet-stand', kind: 'asin', asin: 'B01DBV1OKY', // Lamicall adjustable aluminum stand
-    title: 'Tablet stand', hook: 'Props up a tablet or phone at eye level, hands free.' },
+    title: 'Your tablet at eye level', hook: 'Adjustable aluminum stand for a tablet or phone.' },
   // ---- dated event cards: outside the weekly pool, featured only between showFrom and
   // showUntil (see eventsLive), so each retires by itself when the event ends. Links are
   // Amazon's own event pages (allowed as event links with our own words next to them,
   // Associates Program Policies 2(b), read 11/11). Our words only: no prices, no percentages.
   { id: 'black-friday', kind: 'event', url: 'https://www.amazon.com/blackfriday',
-    showFrom: '2026-11-11T05:00:00Z', showUntil: '2026-11-30T08:00:00Z',
-    // Until Amazon's Black Friday start (Nov 19, per its own banner 11/11) the card says so.
-    promoUntil: '2026-11-19T08:00:00Z', promoTitle: "Amazon's holiday deals",
-    promoHook: 'Holiday deals are on now. Black Friday deals start Nov 19.',
+    // Held until Amazon's Black Friday start (Nov 19, per Amazon's own nav banner 11/11), so the
+    // pre-event weeks give that slot back to the product cards.
+    showFrom: '2026-11-19T08:00:00Z', showUntil: '2026-11-30T08:00:00Z',
     title: 'Black Friday deals on Amazon', hook: "Amazon's Black Friday deals, all on one page." },
   // /cybermonday still showed a 2025 title on 11/11; check it before 11/30 and point this at
   // /blackfriday if Amazon has not updated it.
@@ -167,6 +179,29 @@ export const CATALOG = [
     showFrom: '2026-11-30T08:00:00Z', showUntil: '2026-12-01T08:00:00Z',
     title: 'Cyber Monday deals on Amazon', hook: "Amazon's Cyber Monday deals, all on one page." },
 ];
+
+// Strip heading by date (Nick 11/11: gift framing 11/19-12/20, reverts by itself). The page's
+// own HTML holds the default "Worth a look."; the Worker sends a heading only inside a window.
+export const HEADINGS = [
+  { from: '2026-11-19T05:00:00Z', until: '2026-12-21T05:00:00Z', lead: 'Gifts worth', em: 'a look.' },
+];
+export const headingFor = ms => HEADINGS.find(h => ms >= Date.parse(h.from) && ms < Date.parse(h.until)) || null;
+
+// Button wording test on product cards (kind asin/search; not Audible, not the deals cards),
+// pooled across picks, one arm per UTC hour like the Audible test. Starts two days after the
+// 11/11 phone layout + benefit-first wording shipped. Read at about 3,000 views per arm.
+// "Check price" shows no price; Associates Program Policies (4/14/2026) only regulate prices
+// that ARE shown, see the 11/11 note in the memory file.
+export const BUTTON_TEST = { id: 'product-btn-2026-11', from: '2026-11-14T00:00:00Z', until: '2026-12-31T05:00:00Z',
+  arms: [{ id: 'btn:check', button: 'Check price on Amazon' }, { id: 'btn:see', button: 'See it on Amazon' }] };
+export function buttonArm(pick, ms) {
+  const t = BUTTON_TEST;
+  if (!(pick.kind === 'asin' || pick.kind === 'search')) return null;
+  if (!(ms >= Date.parse(t.from) && ms < Date.parse(t.until))) return null;
+  // + day so each hour of the day gets both arms on alternate days (24 is even).
+  const h = hourIndex(ms);
+  return t.arms[(h + Math.floor(h / 24)) % t.arms.length];
+}
 
 // How many picks are active (in the hourly rotation) at once, and how many show per hour.
 export const ACTIVE_SIZE = 12;
@@ -251,7 +286,9 @@ export function wordingFor(pick, ms, retired) {
   const v = variantFor(pick, ms, retired);
   if (v) return { title: v.title, hook: v.hook, button: v.button, variant: v.id };
   const promo = pick.promoUntil && ms < Date.parse(pick.promoUntil);
-  return { title: promo ? pick.promoTitle : pick.title, hook: promo ? pick.promoHook : pick.hook };
+  const out = { title: promo ? pick.promoTitle : pick.title, hook: promo ? pick.promoHook : pick.hook };
+  const arm = buttonArm(pick, ms);
+  return arm ? { ...out, button: arm.button, variant: arm.id } : out;
 }
 
 export function pickUrl(pick, tag) {
