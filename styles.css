@@ -1968,6 +1968,9 @@ body.focus-mode .controls { flex: none; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
+/* One line under the cards pointing to the gift guide page. */
+.picks-more { margin: 12px 0 0; font-size: 0.95rem; color: var(--ink); }
+.picks-more a { color: var(--vermilion); font-weight: 600; }
 /* Cards are styled like a shopping ad on purpose: white panel, orange frame, product name,
    price when Amazon supplies one, and a See it on Amazon button. The whole card is one link. */
 .pick-card {
