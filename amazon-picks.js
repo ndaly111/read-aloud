@@ -109,6 +109,13 @@
     cards.forEach(c => io.observe(c));
   }
 
+  // The line under the cards that points to the gift guide: count clicks on it, in aggregate.
+  const giftLink = strip.querySelector('.picks-more a');
+  if (giftLink) giftLink.addEventListener('click', () => {
+    const body = JSON.stringify({ pick: 'gift-guide', event: 'click', surface: 'gifts-link' });
+    try { navigator.sendBeacon(ORIGIN + '/event', new Blob([body], { type: 'text/plain' })); } catch (_) {}
+  });
+
   fetch(ORIGIN + '/picks', { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' })
     .then(r => (r.ok ? r.json() : null))
     .then(render)

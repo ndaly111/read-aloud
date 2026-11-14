@@ -125,6 +125,22 @@ async function recordEvent(request, env) {
     return new Response('Invalid event', { status: 400, headers });
   }
   const now = Date.now();
+  // Gift guide page (11/13): its own counters, kept out of the per-pick tables so the strip's
+  // click rates, weekly rotation and wording tests are untouched. Rows in pick_surface_events:
+  //   'gifts'        view = guide opened, click = any Amazon link on it
+  //   'gifts:<id>'   click = that product's link (id must be in the catalog, or 'other')
+  //   'gifts-link'   click = the homepage line that points to the guide
+  if (body.surface === 'gifts' || body.surface === 'gifts-link') {
+    const rows = [body.surface];
+    if (body.surface === 'gifts' && body.event === 'click') rows.push('gifts:' + (byId.has(body.pick) ? body.pick : 'other'));
+    for (const s of rows) {
+      await env.DB.prepare(
+        'INSERT INTO pick_surface_events (hour, surface, event, count) VALUES (?, ?, ?, 1) ' +
+        'ON CONFLICT(hour, surface, event) DO UPDATE SET count = pick_surface_events.count + 1'
+      ).bind(hourIndex(now), s, body.event).run();
+    }
+    return new Response(null, { status: 204, headers });
+  }
   // Only a pick on screen this hour or last hour (a page opened before the hour turned) counts.
   const active = await activePicks(env);
   const allowed = new Set([...scheduledPicks(now, active), ...scheduledPicks(now - 3600000, active)].map(p => p.id));
