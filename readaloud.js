@@ -268,6 +268,24 @@ function updateWordCount() {
   if (clearBtn) clearBtn.hidden = !txt.value;
 }
 
+/* ========== NO-SPEECH-SYNTHESIS BROWSERS ========== */
+// Android WebViews / in-app browsers ship without window.speechSynthesis. Every
+// bare reference then throws a ReferenceError — init died before voice setup,
+// and stopAll() threw before resetting state, so editing the text never cleared
+// the old reading (11/14 feedback: "it kept bringing up the first document").
+// A silent stand-in keeps premium voices working; device voices just list none.
+if (typeof globalThis.speechSynthesis === 'undefined') {
+  globalThis.speechSynthesis = {
+    speaking: false, pending: false, paused: false, onvoiceschanged: null,
+    getVoices: () => [], cancel() {}, pause() {}, resume() {},
+    addEventListener() {}, removeEventListener() {},
+    speak(u) { setTimeout(() => u && u.onerror && u.onerror({ error: 'synthesis-unavailable' }), 0); },
+  };
+}
+if (typeof globalThis.SpeechSynthesisUtterance === 'undefined') {
+  globalThis.SpeechSynthesisUtterance = function SpeechSynthesisUtterance(text) { this.text = text; };
+}
+
 /* ========== GLOBALS ========== */
 let browserVoices = [];
 let currentAudio = null;
