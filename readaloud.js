@@ -274,13 +274,27 @@ function updateWordCount() {
 // and stopAll() threw before resetting state, so editing the text never cleared
 // the old reading (11/14 feedback: "it kept bringing up the first document").
 // A silent stand-in keeps premium voices working; device voices just list none.
-if (typeof globalThis.speechSynthesis === 'undefined') {
-  globalThis.speechSynthesis = {
+// Some iOS in-app browsers expose a partial object (getVoices not a function,
+// 11/14 diagnostics) — treat that the same as missing.
+const synthBroken = (() => {
+  try {
+    const s = globalThis.speechSynthesis;
+    return !s || typeof s.getVoices !== 'function' || typeof s.cancel !== 'function' || typeof s.speak !== 'function';
+  } catch (e) { return true; }
+})();
+if (synthBroken) {
+  const stub = {
     speaking: false, pending: false, paused: false, onvoiceschanged: null,
     getVoices: () => [], cancel() {}, pause() {}, resume() {},
     addEventListener() {}, removeEventListener() {},
     speak(u) { setTimeout(() => u && u.onerror && u.onerror({ error: 'synthesis-unavailable' }), 0); },
   };
+  // An own property shadows a read-only prototype getter; plain assignment wouldn't.
+  try {
+    Object.defineProperty(globalThis, 'speechSynthesis', { value: stub, configurable: true, writable: true });
+  } catch (e) {
+    try { globalThis.speechSynthesis = stub; } catch (_) {}
+  }
 }
 if (typeof globalThis.SpeechSynthesisUtterance === 'undefined') {
   globalThis.SpeechSynthesisUtterance = function SpeechSynthesisUtterance(text) { this.text = text; };
