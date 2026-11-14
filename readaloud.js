@@ -2124,9 +2124,23 @@ function invalidateSavedReading() {
   updateExportControls();
 }
 
+// While an export is being prepared its button stays visible (disabled) and
+// shows progress — hiding it on click looked like the download was broken
+// (11/14 feedback), and the status line is silent while a reading is active.
 function updateExportControls() {
-  $('download').disabled = !lastRead || (mp3Export !== null && mp3Export.reading === lastRead);
-  $('subtitles').disabled = !lastRead || (subtitleExport !== null && subtitleExport.reading === lastRead);
+  showExportButton($('download'), 'MP3', mp3Export);
+  showExportButton($('subtitles'), 'Subtitles', subtitleExport);
+}
+function showExportButton(btn, label, job) {
+  const busy = !!lastRead && job !== null && job.reading === lastRead;
+  btn.disabled = !lastRead || busy;
+  btn.classList.toggle('is-busy', busy);
+  btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+  btn.textContent = busy ? `${label} ${job.progress || '…'}` : label;
+}
+function setExportProgress(job, i, n) {
+  job.progress = `${i}/${n}`;
+  updateExportControls();
 }
 
 // Silence between loops. Counts down only while not paused; `alive` lets a
@@ -2190,12 +2204,14 @@ async function downloadMp3() {
       if (Math.abs(rate - 1) > 0.01) {
         blobs = [];
         for (let i = 0; i < segs.length; i++) {
+          setExportProgress(job, i + 1, segs.length);
           if (!isSpeaking) setStatus(`Preparing MP3 at ${rate}x — part ${i + 1} of ${segs.length}...`);
           blobs.push(await fetchChunkWithRetry(segs[i].text, reading.voiceId, i, rate, segs[i].start));
           if (!isCurrent()) return;
         }
       } else {
         for (let i = 0; i < segs.length; i++) {
+          setExportProgress(job, i + 1, segs.length);
           if (!isSpeaking) setStatus(`Preparing MP3 — part ${i + 1} of ${segs.length}...`);
           await ensureTimedSegment(segs[i], reading.voiceId, `${i + 1}/${segs.length} (download)`);
           if (!isCurrent()) return;
@@ -2308,6 +2324,7 @@ async function downloadSubtitles() {
     for (let i = 0; i < segs.length; i++) {
       const seg = segs[i];
       if (seg.blob && seg.words) continue;
+      setExportProgress(job, i + 1, segs.length);
       if (!isSpeaking) setStatus(`Preparing subtitles — part ${i + 1} of ${segs.length}...`);
       await ensureTimedSegment(seg, reading.voiceId, `${i + 1}/${segs.length} (subtitles)`);
       if (!isCurrent()) return;
