@@ -93,6 +93,8 @@ async function currentPicks(env, request) {
     return {
       id: pick.id,
       ...wordingFor(pick, now, retired),
+      // true = a link to our own page (same tab, not marked sponsored).
+      ...(pick.kind === 'page' ? { internal: true } : {}),
       // Our own link, carrying the pick's tracking ID when Nick has created it.
       url: pickUrl(pick, tagFor(pick, env)),
       image: (fact && fact.image) || SITE_PHOTO + pick.id + '-' + photo + '.jpg',

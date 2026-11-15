@@ -173,6 +173,26 @@ export const CATALOG = [
     // pre-event weeks give that slot back to the product cards.
     showFrom: '2026-11-19T08:00:00Z', showUntil: '2026-11-30T08:00:00Z',
     title: 'Black Friday deals on Amazon', hook: "Amazon's Black Friday deals, all on one page." },
+  // Our own gift guide page (11/14 draft, pending Nick's OK on the words). kind 'page': a link
+  // to a read-aloud.com page, no Amazon tag, opens in the same tab. Dated like the event cards,
+  // so it takes a featured slot until 12/21 and then retires by itself. Note 11/19-11/30: with
+  // Audible and Black Friday also featured, all three slots are featured cards.
+  { id: 'gift-guide', kind: 'page', url: 'https://read-aloud.com/gifts-for-listeners.html',
+    showFrom: '2026-11-14T00:00:00Z', showUntil: '2026-12-21T05:00:00Z',
+    title: "Gifts for people who'd rather listen",
+    hook: 'Our short list for students, writers, bedtime listeners and anyone who likes being read to.',
+    button: 'See the gift guide',
+    // Wording test (Nick 11/14: "feel free to A B C test"). A = the wording Nick approved.
+    // One version per UTC hour, same rotation and auto-retire rules as the Audible test.
+    // Every claim matches the guide page: 11 Amazon links, headphones/headband/neck light on it.
+    test: { id: 'gift-guide-2026-11', until: '2026-12-21T05:00:00Z', variants: [
+      { id: 'A', title: "Gifts for people who'd rather listen",
+        hook: 'Our short list for students, writers, bedtime listeners and anyone who likes being read to.', button: 'See the gift guide' },
+      { id: 'B', title: 'Shopping for someone who loves to listen?',
+        hook: 'Eleven gift ideas for readers and listeners, picked by the people who make Read-Aloud.', button: 'See the gift ideas' },
+      { id: 'C', title: 'Gift ideas for anyone who likes being read to',
+        hook: 'Headphones, a sleep headband, a neck light and more. Our short list, with links to Amazon.', button: 'Browse the gift ideas' },
+    ] } },
   // /cybermonday still showed a 2025 title on 11/11; check it before 11/30 and point this at
   // /blackfriday if Amazon has not updated it.
   { id: 'cyber-monday', kind: 'event', url: 'https://www.amazon.com/cybermonday',
@@ -287,11 +307,13 @@ export function wordingFor(pick, ms, retired) {
   if (v) return { title: v.title, hook: v.hook, button: v.button, variant: v.id };
   const promo = pick.promoUntil && ms < Date.parse(pick.promoUntil);
   const out = { title: promo ? pick.promoTitle : pick.title, hook: promo ? pick.promoHook : pick.hook };
+  if (pick.button) out.button = pick.button;
   const arm = buttonArm(pick, ms);
   return arm ? { ...out, button: arm.button, variant: arm.id } : out;
 }
 
 export function pickUrl(pick, tag) {
+  if (pick.kind === 'page') return pick.url; // our own page: no Amazon tag
   const t = encodeURIComponent(tag);
   if (pick.kind === 'asin') return 'https://www.amazon.com/dp/' + pick.asin + '?tag=' + t;
   if (pick.kind === 'search') return 'https://www.amazon.com/s?k=' + encodeURIComponent(pick.query) + '&tag=' + t;

@@ -43,8 +43,11 @@
   function card(item) {
     const a = el('a', 'pick-card');
     a.href = item.url;
-    a.target = '_blank';
-    a.rel = 'noopener sponsored';
+    // A card for one of our own pages (the gift guide) opens in the same tab and is not an ad.
+    if (!item.internal) {
+      a.target = '_blank';
+      a.rel = 'noopener sponsored';
+    }
     a.addEventListener('click', () => send(item.id, 'click', item.photo, item.variant));
     if (item.image) {
       // Amazon's product shots sit on white and are shown whole; our stock photos fill the frame.
