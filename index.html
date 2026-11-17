@@ -9,7 +9,7 @@
 <meta name="description" content="Free text-to-speech tool with premium neural voices. Paste text, pick a voice and speed, and listen instantly. Browser voices work offline; premium voices offer natural sound.">
 
 <!-- ——— Retro CSS ——— -->
-  <link rel="stylesheet" href="/styles.css?v=20261114a">
+  <link rel="stylesheet" href="/styles.css?v=20261116a">
   <script src="/nav-menu.js?v=20261016a" defer></script>
   <link rel="stylesheet" href="/donation-experiment.css?v=20261008a">
   <script src="/cookie-consent.js?v=20261007b" defer></script>
@@ -102,6 +102,8 @@
               <button id="pause" class="btn btn--secondary" hidden>Pause</button>
               <button id="resume" class="btn btn--secondary" hidden>Resume</button>
               <button id="stop" class="btn btn--danger" hidden>Stop</button>
+              <button id="restart" class="btn btn--secondary" type="button" hidden
+                      title="Jump back to the beginning of the reading">From start</button>
               <button id="loop" class="btn btn--secondary btn--toggle" type="button" aria-pressed="false"
                       title="Replay from the top when the reading finishes">Loop</button>
               <label id="loopGapWrap" class="loop-gap" hidden title="Seconds of silence before each replay">Pause
@@ -336,7 +338,7 @@
 
 <!-- main logic -->
 <script src="playback-diagnostics.js?v=20261028b"></script>
-<script src="readaloud.js?v=20261114c"></script>
+<script src="readaloud.js?v=20261116a"></script>
 
 <!-- feedback form submit (Cloudflare Worker -> email; Turnstile-verified) -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>

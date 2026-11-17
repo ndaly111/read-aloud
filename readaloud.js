@@ -252,6 +252,7 @@ const startBtn = $('start');
 const pauseBtn = $('pause');
 const resumeBtn = $('resume');
 const stopBtn = $('stop');
+const restartBtn = $('restart');
 const disp = $('disp');
 const statusEl = $('status');
 const errorEl = $('error');
@@ -462,6 +463,7 @@ function usesDeviceVolumeButtons(nav = navigator) {
   pauseBtn.onclick = pauseSpeak;
   resumeBtn.onclick = resumeSpeak;
   stopBtn.onclick = stopAll;
+  restartBtn.onclick = restartFromTop;
   $('download').onclick = downloadMp3;
   const loopBtn = $('loop');
   try { loopOn = localStorage.getItem('ra_loop') === '1'; } catch (e) {}
@@ -1026,6 +1028,19 @@ function seekToChar(ch) {
   if (audioResolve) audioResolve(); // abandon the current segment's playback
 }
 
+// "From start" button: back to the first word without fiddling with the bar.
+function restartFromTop() {
+  if (!isSpeaking) return;
+  if (timed) {
+    seekToChar(0);
+    if (isPaused) resumeSpeak();
+    return;
+  }
+  // Browser voices can't seek — restart the reading from the top.
+  stopAll();
+  startSpeak();
+}
+
 function savePosition(key, ch) {
   try { localStorage.setItem(key, JSON.stringify({ c: Math.floor(ch), t: Date.now() })); } catch (e) {}
 }
@@ -1082,7 +1097,7 @@ async function useTimedNeuralSpeech(voiceId) {
     timed.seekChar = saved;
     progChar = saved;
     resetTimeEstimate(saved);
-    setStatus('Resuming where you left off — click the first word to start over.');
+    setStatus('Resuming where you left off — press From start to start over.');
   }
 
   startProgressLoop();
@@ -2407,6 +2422,8 @@ function updateControls() {
   startBtn.hidden = isSpeaking;
   document.body.classList.toggle('is-reading', isSpeaking);
   stopBtn.hidden = !isSpeaking;
+  restartBtn.hidden = !isSpeaking;
+  restartBtn.disabled = !isSpeaking;
   pauseBtn.hidden = !isSpeaking || isPaused;
   resumeBtn.hidden = !isSpeaking || !isPaused;
 }
