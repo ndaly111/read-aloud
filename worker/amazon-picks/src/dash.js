@@ -64,6 +64,6 @@ ${d.buttonTest ? '<h2>Product button test · pooled, by UTC hour' + (d.buttonTes
 <h2>Bench (next up first)</h2>
 <p class="bench">${esc(d.bench.join(', ')) || 'none'}</p>
 <h2>Housekeeping</h2>
-<p class="sub">Amazon product data: <b>${refresh}</b><br>Weekly rotation: <b>${rotation}</b><br>Tracking tag: <b>${esc(d.tag)}</b><br>Layout changes: <b>Nov 11, ~7 PM ET</b> phone cards became compact rows (all three fit one screen) and product titles lead with the benefit. Views for cards 2 and 3 jump on phones; click rates before and after are not comparable.</p>
+<p class="sub">Amazon product data: <b>${refresh}</b><br>Weekly rotation: <b>${rotation}</b><br>Tracking tag: <b>${esc(d.tag)}</b><br>Layout changes: <b>Nov 11, ~7 PM ET</b> phone cards became compact rows (all three fit one screen) and product titles lead with the benefit. Views for cards 2 and 3 jump on phones; click rates before and after are not comparable.<br><b>Nov 17-18:</b> every card back on the read-aloud-20 tag; the Audible link fixed (it had opened an empty Amazon page in most loads since Nov 11); from Nov 18 the strip shows to visitors in the United States only, so views roughly halve; Audible lines shortened to fit phones.</p>
 </main></body></html>`;
 }

@@ -41,6 +41,42 @@ function publicHeaders(request) {
   const origin = request.headers.get('Origin');
   return ORIGINS.has(origin) ? { 'access-control-allow-origin': origin, 'vary': 'Origin' } : {};
 }
+// Audience tally (11/18): how many strip loads, card views and clicks came from each country
+// and kind of device, per UTC day. Counts only: the country is Cloudflare's two-letter code for
+// the request and the device is one of five words; nothing else about the request is kept.
+// (An iPad that asks for desktop pages calls itself a Mac and is counted as a computer.)
+function deviceClass(ua) {
+  ua = String(ua || '');
+  if (/bot|crawl|spider|headless|python|curl|wget|lighthouse/i.test(ua)) return 'bot';
+  if (/iPad|Tablet/.test(ua) || (/Android/.test(ua) && !/Mobile/.test(ua))) return 'tablet';
+  if (/iPhone|Mobile/.test(ua)) return 'phone';
+  if (/CrOS/.test(ua)) return 'chromebook';
+  if (/Windows|Macintosh|Linux/.test(ua)) return 'computer';
+  return 'other';
+}
+function tallyAudience(request, env, ctx, event) {
+  if (!env.DB) return;
+  const device = deviceClass(request.headers.get('user-agent'));
+  if (device === 'bot') return;
+  const c = request.cf && request.cf.country;
+  const country = typeof c === 'string' && /^[A-Z]{2}$/.test(c) ? c : 'ZZ';
+  // Never delays or breaks the response: runs after it, and a failed count is dropped.
+  const done = env.DB.prepare(
+    'INSERT INTO pick_audience (day, country, device, event, count) VALUES (?, ?, ?, ?, 1) ' +
+    'ON CONFLICT(day, country, device, event) DO UPDATE SET count = pick_audience.count + 1'
+  ).bind(Math.floor(Date.now() / 86400000), country, device, event).run().catch(() => {});
+  if (ctx && ctx.waitUntil) ctx.waitUntil(done);
+}
+// Where the strip is shown. Every card leads to Amazon's US store, whose offers (the Audible
+// deal above all) only work for people in the United States, so since 11/18 the strip is
+// shown there only: SHOW_COUNTRIES in wrangler.toml lists the country codes (blank = everyone).
+// A request whose country Cloudflare cannot tell is shown the strip.
+function shownHere(request, env) {
+  const list = String(env.SHOW_COUNTRIES || '').split(/[\s,]+/).filter(Boolean);
+  if (!list.length) return true;
+  const c = request.cf && request.cf.country;
+  return !c || list.includes(c);
+}
 const byId = new Map(CATALOG.map(p => [p.id, p]));
 // Picks eligible for the weekly pool (dated event cards are never pooled).
 const poolById = new Map(POOL.map(p => [p.id, p]));
@@ -66,9 +102,13 @@ async function activePicks(env) {
   return active.length ? active : POOL.slice(0, ACTIVE_SIZE);
 }
 
-async function currentPicks(env, request) {
-  const headers = { ...publicHeaders(request), 'cache-control': 'public, max-age=300' };
+async function currentPicks(env, request, ctx) {
+  // private: the answer depends on the visitor's country, so only their own browser keeps it.
+  const headers = { ...publicHeaders(request), 'cache-control': 'private, max-age=300' };
   if (env.PICKS_ENABLED !== 'true' || !env.PARTNER_TAG) return json({ ready: false }, 200, headers);
+  tallyAudience(request, env, ctx, 'load');
+  // ready:false leaves the page's strip hidden, exactly as when the strip is switched off.
+  if (!shownHere(request, env)) return json({ ready: false }, 200, headers);
   const now = Date.now();
   const picks = scheduledPicks(now, await activePicks(env));
   const facts = new Map();
@@ -114,7 +154,7 @@ async function currentPicks(env, request) {
 }
 
 const EVENT_NAMES = new Set(['view', 'click']);
-async function recordEvent(request, env) {
+async function recordEvent(request, env, ctx) {
   const headers = publicHeaders(request);
   if (!headers['access-control-allow-origin']) return new Response('Forbidden', { status: 403 });
   if (!env.DB) return new Response('Not configured', { status: 503 });
@@ -133,6 +173,7 @@ async function recordEvent(request, env) {
   //   'gifts:<id>'   click = that product's link (id must be in the catalog, or 'other')
   //   'gifts-link'   click = the homepage line that points to the guide
   if (body.surface === 'gifts' || body.surface === 'gifts-link') {
+    if (body.surface === 'gifts') tallyAudience(request, env, ctx, 'gifts_' + body.event);
     const rows = [body.surface];
     if (body.surface === 'gifts' && body.event === 'click') rows.push('gifts:' + (byId.has(body.pick) ? body.pick : 'other'));
     for (const s of rows) {
@@ -147,6 +188,8 @@ async function recordEvent(request, env) {
   const active = await activePicks(env);
   const allowed = new Set([...scheduledPicks(now, active), ...scheduledPicks(now - 3600000, active)].map(p => p.id));
   if (!allowed.has(body.pick)) return new Response(null, { status: 204, headers });
+  // Cards that lead to Amazon count as view/click; the card for our own gift guide separately.
+  tallyAudience(request, env, ctx, ((byId.get(body.pick) || {}).kind === 'page' ? 'page_' : '') + body.event);
   await env.DB.prepare(
     'INSERT INTO pick_events (hour, pick, event, count) VALUES (?, ?, ?, 1) ' +
     'ON CONFLICT(hour, pick, event) DO UPDATE SET count = pick_events.count + 1'
@@ -473,14 +516,14 @@ async function dashData(env) {
   };
 }
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/picks') {
       if (request.method === 'OPTIONS') return new Response(null, {
         status: 204, headers: { ...publicHeaders(request), 'access-control-allow-methods': 'GET, OPTIONS' }
       });
       if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
-      try { return await currentPicks(env, request); }
+      try { return await currentPicks(env, request, ctx); }
       catch (_) { return json({ ready: false }, 503, publicHeaders(request)); }
     }
     if (url.pathname === '/event') {
@@ -490,7 +533,7 @@ export default {
       });
       if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
       // A counter failure must never affect the page.
-      try { return await recordEvent(request, env); }
+      try { return await recordEvent(request, env, ctx); }
       catch (_) { return new Response(null, { status: 204, headers: publicHeaders(request) }); }
     }
     if (url.pathname === '/status' && request.method === 'GET') {

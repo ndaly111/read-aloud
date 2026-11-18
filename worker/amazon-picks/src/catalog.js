@@ -42,17 +42,20 @@ export const CATALOG = [
     // Wording test (Nick 11/07): ten versions of title + description + button, one per UTC hour
     // (see variantFor). A is the control. Every button names Amazon; no dollar figures.
     // testPhoto pins one photo during the test so the photo does not muddy the comparison.
+    // 11/18: the lines of B, C, E, L and M were shortened to 57 characters or fewer. The phone card
+    // shows two lines, and five of the six live versions were cut off before "Ends Dec 28"
+    // (measured at 360-390px with claude-rc/tmp/ra_hook_fit.py). Version ids keep counting.
     test: { id: 'audible-cta-2026-11', until: '2026-12-29T05:00:00Z', testPhoto: 1, variants: [
       { id: "A", title: "Audible's biggest deal of the season",
         hook: "3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28.", button: "See it on Amazon" },
       { id: "B", title: "Like hearing it read aloud?",
-        hook: "Hear whole books read by pro narrators. Audible's holiday deal ends Dec 28.", button: "See the deal on Amazon" },
+        hook: "Whole books read by pros. Audible's deal ends Dec 28.", button: "See the deal on Amazon" },
       { id: "C", title: "Your next book, read to you",
-        hook: "3 months of Audible Standard at a steep discount, plus a bonus. Ends Dec 28.", button: "Get the deal on Amazon" },
+        hook: "3 months of Audible at a steep discount. Ends Dec 28.", button: "Get the deal on Amazon" },
       { id: "D", title: "Ends Dec 28: Audible's holiday deal",
         hook: "3 months of audiobooks at a steep discount, plus a bonus.", button: "Get it on Amazon" },
       { id: "E", title: "Give your eyes a break",
-        hook: "Let a pro narrator read your next book. 3 months of Audible at a steep discount, through Dec 28.", button: "Start listening on Amazon" },
+        hook: "A pro reads your next book. Audible deal ends Dec 28.", button: "Start listening on Amazon" },
       { id: "F", title: "Turn your commute into reading time",
         hook: "Audible's holiday deal: 3 months at a steep discount, plus a bonus. Ends Dec 28.", button: "See the deal on Amazon" },
       { id: "G", title: "Bestsellers, read to you",
@@ -69,9 +72,9 @@ export const CATALOG = [
       { id: "K", title: "A whole book, read to you",
         hook: "Pro narrators do the reading. Audible's holiday deal ends Dec 28.", button: "Get the deal on Amazon" },
       { id: "L", title: "Your next book, read to you",
-        hook: "3 months of Audible, deeply discounted, plus a bonus. Cancel anytime. Ends Dec 28.", button: "Get the deal on Amazon" },
+        hook: "Audible, deeply discounted. Cancel anytime. Ends Dec 28.", button: "Get the deal on Amazon" },
       { id: "M", title: "Let someone read to you tonight",
-        hook: "Full books, pro narrators. Audible's holiday deal ends Dec 28.", button: "Start listening on Amazon" },
+        hook: "Full books, pro narrators. Audible's deal ends Dec 28.", button: "Start listening on Amazon" },
     ] } },
   { id: 'kindle-paperwhite', photos: 3, kind: 'search', query: 'Kindle Paperwhite',
     title: 'Kindle Paperwhite', hook: 'Glare-free reading in full sun, and weeks of battery on one charge.' },

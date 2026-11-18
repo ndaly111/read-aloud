@@ -8,6 +8,10 @@ account_id = "d36f6a50c928a16dc27e0e789a94617f"
 # Kill switch: PICKS_ENABLED = "false" and redeploy; the strip stays hidden on every page.
 [vars]
 PICKS_ENABLED = "true"
+# Countries where the strip is shown (space-separated two-letter codes; "" = everywhere).
+# US only since 11/18: every card leads to Amazon's US store. Loads are still counted for
+# every country (table pick_audience), so the share that never sees the strip is known.
+SHOW_COUNTRIES = "US"
 # Site-level tracking ID Nick created 11/02 so read-aloud earnings show separately in Associates
 # Central reports. The account store ID is nickdaly0c-20 (the 2020 "nickdaly-20" was closed).
 PARTNER_TAG = "read-aloud-20"

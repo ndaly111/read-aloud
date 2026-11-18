@@ -73,6 +73,18 @@ CREATE TABLE IF NOT EXISTS pick_variant_status (
   PRIMARY KEY (pick, variant)
 );
 
+-- Audience tally (11/18): counts per UTC day / country code / device class / event
+-- ('load' = strip fetched, 'view'/'click' = Amazon cards, 'page_*' = the gift guide card,
+-- 'gifts_*' = the gift guide page). Counts only, no identifiers.
+CREATE TABLE IF NOT EXISTS pick_audience (
+  day INTEGER NOT NULL,
+  country TEXT NOT NULL,
+  device TEXT NOT NULL,
+  event TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (day, country, device, event)
+);
+
 -- Aggregate counts per UTC hour / page type ('home' or 'guide') / event. No identifiers, no URLs.
 CREATE TABLE IF NOT EXISTS pick_surface_events (
   hour INTEGER NOT NULL,

@@ -51,6 +51,22 @@ if (photoList.length) {
   for (const r of photoList) console.log(r.k.padEnd(24), String(r.views).padStart(7), String(r.clicks).padStart(7), pct(r.ctr));
 }
 
+// Who loads the strip (counted from 11/18): country and device totals. 'load' = the page asked
+// for the strip (every country); views and clicks only exist where the strip is shown.
+try {
+  const aud = query('SELECT country, device, event, SUM(count) AS n FROM pick_audience WHERE day >= ' + Math.floor(sinceHour / 24) + ' GROUP BY country, device, event');
+  if (aud.length) {
+    const sum = (key, event) => { const m = {}; for (const r of aud) if (r.event === event) m[r[key]] = (m[r[key]] || 0) + Number(r.n); return m; };
+    const line = m => { const t = Object.values(m).reduce((a, b) => a + b, 0) || 1; return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => k + ' ' + (100 * v / t).toFixed(0) + '%').join('  ') + '  (n=' + t + ')'; };
+    console.log('\nAUDIENCE (strip loads, clicks)');
+    console.log('loads by country: ', line(sum('country', 'load')));
+    console.log('loads by device:  ', line(sum('device', 'load')));
+    console.log('views by device:  ', line(sum('device', 'view')));
+    console.log('clicks by device: ', line(sum('device', 'click')));
+    console.log('clicks by country:', line(sum('country', 'click')));
+  }
+} catch (_) {}
+
 // Where the strip is seen: homepage vs guide pages (counted from 11/11).
 try {
   const surf = query('SELECT surface, event, SUM(count) AS n FROM pick_surface_events WHERE hour >= ' + sinceHour + ' GROUP BY surface, event');
