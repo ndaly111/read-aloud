@@ -14,7 +14,14 @@ PARTNER_TAG = "read-aloud-20"
 # Per-pick tracking IDs Nick has CREATED in Associates Central (space-separated). A pick whose
 # derived ID (see trackingTag in src/catalog.js) is listed here links with it; the rest use
 # PARTNER_TAG. Never list an ID that does not exist yet - such links earn nothing.
-TRACKING_TAGS = "raaudible-20 raairtag-20 rapocketprinter-20 rabirdfeedercam-20 rasunriseclock-20 ranecklight-20 raspinscrubber-20 raminiprojector-20 rahandwarmer-20 rawirelessheadph-20 raprimetrial-20 ramusicunlimited-20"
+# EMPTIED 11/17: after the 12 per-pick IDs went live (11/09 08:45 ET) Amazon's click count fell
+# to about 15% of ours (0 on 11/10 vs 20 here), matching only the picks still on read-aloud-20.
+# Every card is back on read-aloud-20, the tag Amazon is known to count. Do not restore an ID
+# until Nick sees it listed WITH clicks in Associates Central > Reports > Tracking ID summary.
+# Was: raaudible-20 raairtag-20 rapocketprinter-20 rabirdfeedercam-20 rasunriseclock-20
+# ranecklight-20 raspinscrubber-20 raminiprojector-20 rahandwarmer-20 rawirelessheadph-20
+# raprimetrial-20 ramusicunlimited-20
+TRACKING_TAGS = ""
 
 # 17 */6: product facts refresh (title/photo/price; Amazon requires shown prices < 24h old).
 # 7 6 * * 1: weekly pool rotation (Monday 06:07 UTC) - bench unclicked picks, promote bench.
