@@ -9,6 +9,38 @@
   <link rel="stylesheet" href="/styles.css?v=20261111b">
   <script src="/nav-menu.js?v=20261016a" defer></script>
   <script src="/cookie-consent.js" defer></script>
+  <!-- Gift cards (11/18): a photo, the name, the reason, and a button that names Amazon.
+       Styles live here because only this page uses them. -->
+  <style>
+    .gift-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+    .gift-card {
+      display: flex; flex-direction: column;
+      background: var(--paper-bright); border: 1px solid var(--ink); border-radius: 3px;
+      color: var(--ink); text-decoration: none; overflow: hidden;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .gift-card:hover, .gift-card:focus-visible { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); text-decoration: none; }
+    .gift-card__photo { display: block; aspect-ratio: 16 / 10; background: var(--paper-deep); border-bottom: 1px solid var(--ink); }
+    .gift-card__photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .gift-card__body { display: flex; flex-direction: column; flex: 1; gap: 8px; padding: 16px 18px 18px; }
+    .gift-card__name { font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; line-height: 1.15; font-variation-settings: "opsz" 60, "SOFT" 30; }
+    .gift-card__why { font-size: 0.97rem; line-height: 1.5; color: var(--ink-soft); }
+    .gift-card__btn {
+      align-self: flex-start; margin-top: auto; padding: 9px 20px; border-radius: 20px;
+      background: #ffd814; border: 1px solid #e0b800; color: #0f1111;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-size: 0.9rem; font-weight: 600; line-height: 1.2;
+    }
+    .gift-card:hover .gift-card__btn { background: #f7ca00; }
+    @media (max-width: 900px) { .gift-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    /* Phones: one card per row with the photo full width on top. A narrow photo beside the
+       text cut most of the products in half (tried 11/18), and the photo is the point here. */
+    @media (max-width: 600px) {
+      .gift-grid { grid-template-columns: 1fr; gap: 16px; }
+      .gift-card__photo { aspect-ratio: 16 / 9; }
+      .gift-card__body { gap: 6px; padding: 14px 16px 16px; }
+      .gift-card__btn { margin-top: 6px; }
+    }
+  </style>
 </head>
 <body>
 <header class="site-header">
@@ -40,31 +72,108 @@
   </p>
 
   <h2>For the student with a reading list</h2>
-  <ul>
-    <li><a href="https://www.amazon.com/dp/B0C3HCD34R?tag=read-aloud-20" data-pick="wireless-headphones" target="_blank" rel="noopener sponsored"><strong>Noise‑cancelling headphones</strong></a>. Over‑ear wireless headphones that shut out a dorm, a library or a bus, so the chapter is the only thing they hear.</li>
-    <li><a href="https://www.amazon.com/dp/B07459P7BF?tag=read-aloud-20" data-pick="book-stand" target="_blank" rel="noopener sponsored"><strong>A bamboo book stand</strong></a>. Holds a textbook open with page clips, hands free, while they follow along or take notes.</li>
-    <li><a href="https://www.amazon.com/dp/B01DBV1OKY?tag=read-aloud-20" data-pick="tablet-stand" target="_blank" rel="noopener sponsored"><strong>An adjustable tablet stand</strong></a>. Lifts a tablet or phone to eye level, which is kinder to the neck during a long reading.</li>
-  </ul>
+  <div class="gift-grid">
+    <a class="gift-card" href="https://www.amazon.com/dp/B0C3HCD34R?tag=read-aloud-20" data-pick="wireless-headphones" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/wireless-headphones-3.jpg" alt="Black over-ear headphones on a wooden table" width="640" height="400" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">Noise‑cancelling headphones</strong>
+        <span class="gift-card__why">Over‑ear wireless headphones that shut out a dorm, a library or a bus, so the chapter is the only thing they hear.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+    <a class="gift-card" href="https://www.amazon.com/dp/B07459P7BF?tag=read-aloud-20" data-pick="book-stand" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/book-stand-1.jpg" alt="An open book held upright on a wooden stand" width="640" height="400" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">A bamboo book stand</strong>
+        <span class="gift-card__why">Holds a textbook open with page clips, hands free, while they follow along or take notes.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+    <a class="gift-card" href="https://www.amazon.com/dp/B01DBV1OKY?tag=read-aloud-20" data-pick="tablet-stand" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/tablet-stand-1.jpg" alt="Tablets propped up on stands" width="640" height="400" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">An adjustable tablet stand</strong>
+        <span class="gift-card__why">Lifts a tablet or phone to eye level, which is kinder to the neck during a long reading.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+  </div>
 
   <h2>For the writer who proofreads by ear</h2>
-  <ul>
-    <li><a href="https://www.amazon.com/dp/B0BTYCRJSS?tag=read-aloud-20" data-pick="earbuds" target="_blank" rel="noopener sponsored"><strong>Small wireless earbuds</strong></a>. For hearing a draft read back on a walk, where the clumsy sentences are easier to catch.</li>
-    <li><a href="https://www.amazon.com/dp/B07W781XWF?tag=read-aloud-20" data-pick="blue-light-glasses" target="_blank" rel="noopener sponsored"><strong>Glasses that filter blue light</strong></a>. For long days in front of a screen.</li>
-  </ul>
+  <div class="gift-grid">
+    <a class="gift-card" href="https://www.amazon.com/dp/B0BTYCRJSS?tag=read-aloud-20" data-pick="earbuds" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/earbuds-1.jpg" alt="A pair of small black wireless earbuds" width="640" height="400" loading="lazy" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">Small wireless earbuds</strong>
+        <span class="gift-card__why">For hearing a draft read back on a walk, where the clumsy sentences are easier to catch.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+    <a class="gift-card" href="https://www.amazon.com/dp/B07W781XWF?tag=read-aloud-20" data-pick="blue-light-glasses" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/blue-light-glasses-1.jpg" alt="Black-framed glasses resting on an open book" width="640" height="400" loading="lazy" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">Glasses that filter blue light</strong>
+        <span class="gift-card__why">For long days in front of a screen.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+  </div>
 
   <h2>For the reader who finds small print hard work</h2>
-  <ul>
-    <li><a href="https://www.amazon.com/dp/B08XXF1VCS?tag=read-aloud-20" data-pick="magnifier" target="_blank" rel="noopener sponsored"><strong>A lighted magnifying glass</strong></a>. Handheld, with its own light, for labels, menus and the small print on paper.</li>
-    <li><a href="https://www.amazon.com/dp/B09B8V1LZ3?tag=read-aloud-20" data-pick="echo-dot" target="_blank" rel="noopener sponsored"><strong>An Echo Dot</strong></a>. A small speaker that reads the news, the weather and audiobooks aloud when asked.</li>
-    <li><a href="https://www.amazon.com/hz/audible/arya/mlp?purchaseType=STANDARD_MTRIAL&amp;SHOPPING_PORTAL_MODE=AUGMENTED&amp;tag=read-aloud-20" data-pick="audible" target="_blank" rel="noopener sponsored"><strong>Audible</strong></a>. Whole books read by professional narrators. See Amazon's page for the current offer and its terms.</li>
-  </ul>
+  <div class="gift-grid">
+    <a class="gift-card" href="https://www.amazon.com/dp/B08XXF1VCS?tag=read-aloud-20" data-pick="magnifier" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/magnifier-1.jpg" alt="A handheld magnifying glass" width="640" height="400" loading="lazy" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">A lighted magnifying glass</strong>
+        <span class="gift-card__why">Handheld, with its own light, for labels, menus and the small print on paper.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+    <a class="gift-card" href="https://www.amazon.com/dp/B09B8V1LZ3?tag=read-aloud-20" data-pick="echo-dot" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/echo-dot-2.jpg" alt="A small round smart speaker with a glowing ring" width="640" height="400" loading="lazy" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">An Echo Dot</strong>
+        <span class="gift-card__why">A small speaker that reads the news, the weather and audiobooks aloud when asked.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+    <a class="gift-card" href="https://www.amazon.com/hz/audible/arya/mlp?purchaseType=STANDARD_MTRIAL&amp;SHOPPING_PORTAL_MODE=AUGMENTED&amp;tag=read-aloud-20" data-pick="audible" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/audible-1.jpg" alt="Headphones around a row of books" width="640" height="400" loading="lazy" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">Audible</strong>
+        <span class="gift-card__why">Whole books read by professional narrators. See Amazon's page for the current offer and its terms.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+  </div>
 
   <h2>For the bedtime listener</h2>
-  <ul>
-    <li><a href="https://www.amazon.com/dp/B09K4WZGVD?tag=read-aloud-20" data-pick="sleep-headband" target="_blank" rel="noopener sponsored"><strong>A sleep headband with speakers</strong></a>. A soft band with thin speakers inside, comfortable for listening on your side.</li>
-    <li><a href="https://www.amazon.com/dp/B07WNRN9WQ?tag=read-aloud-20" data-pick="neck-light" target="_blank" rel="noopener sponsored"><strong>A reading light worn around the neck</strong></a>. Lights the page and not the room, so nobody else is woken up.</li>
-    <li><a href="https://www.amazon.com/dp/B081CHLF46?tag=read-aloud-20" data-pick="sunrise-clock" target="_blank" rel="noopener sponsored"><strong>A sunrise alarm clock</strong></a>. Brightens slowly before the alarm, for the morning after a late chapter.</li>
-  </ul>
+  <div class="gift-grid">
+    <a class="gift-card" href="https://www.amazon.com/dp/B09K4WZGVD?tag=read-aloud-20" data-pick="sleep-headband" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/sleep-headband-2.jpg" alt="A person wearing a soft black headband over the eyes" width="640" height="400" loading="lazy" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">A sleep headband with speakers</strong>
+        <span class="gift-card__why">A soft band with thin speakers inside, comfortable for listening on your side.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+    <a class="gift-card" href="https://www.amazon.com/dp/B07WNRN9WQ?tag=read-aloud-20" data-pick="neck-light" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/neck-light-1.jpg" alt="A child reading in bed by a small light" width="640" height="400" loading="lazy" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">A reading light worn around the neck</strong>
+        <span class="gift-card__why">Lights the page and not the room, so nobody else is woken up.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+    <a class="gift-card" href="https://www.amazon.com/dp/B081CHLF46?tag=read-aloud-20" data-pick="sunrise-clock" target="_blank" rel="noopener sponsored">
+      <span class="gift-card__photo"><img src="/picks/sunrise-clock-1.jpg" alt="A warm glowing lamp beside someone asleep" width="640" height="400" loading="lazy" decoding="async"></span>
+      <span class="gift-card__body">
+        <strong class="gift-card__name">A sunrise alarm clock</strong>
+        <span class="gift-card__why">Brightens slowly before the alarm, for the morning after a late chapter.</span>
+        <span class="gift-card__btn">See it on Amazon</span>
+      </span>
+    </a>
+  </div>
 
   <h2>A gift that costs nothing</h2>
   <p>
@@ -72,7 +181,7 @@
   </p>
 
   <p class="callout">
-    Prices and availability change, so check Amazon's page before you buy. We picked these ourselves; nobody paid to be on the list.
+    Prices and availability change, so check Amazon's page before you buy. The photos show the kind of thing each gift is, not the exact product; Amazon's page shows the real one. We picked these ourselves; nobody paid to be on the list.
   </p>
   </article>
 </main>
