@@ -26,7 +26,12 @@ export const CATALOG = [
   // free-trial / monthly bounty (checked 11/11; the old /hz/audible/mlp is the Premium Plus
   // trial homepage, which only redirected here). featuredUntil: Amazon pays $20 per Audible Standard sign-up until 12/15, so the card is in
   // every hour's set until the end of 12/15 Eastern, then returns to the normal rotation.
-  { id: 'audible', photos: 3, kind: 'bounty', url: 'https://www.amazon.com/hz/audible/arya/mlp', keep: true,
+  // 11/17: the BARE arya/mlp URL (live 11/11-11/17) rendered an empty page, header and footer
+  // only, in 11 of 19 fresh signed-out loads (headed Edge, phone + desktop). With the two
+  // parameters Amazon's own redirect from /hz/audible/mlp adds, it rendered the Standard
+  // offer in 12 of 12. Keep both parameters; re-test with claude-rc/tmp/ra_funnel_audible_param.py.
+  { id: 'audible', photos: 3, kind: 'bounty', keep: true,
+    url: 'https://www.amazon.com/hz/audible/arya/mlp?purchaseType=STANDARD_MTRIAL&SHOPPING_PORTAL_MODE=AUGMENTED',
     featuredUntil: '2026-12-16T05:00:00Z',
     title: 'Audible', hook: 'Like having text read to you? Try audiobooks read by professional narrators.',
     // Amazon's landing page (seen by Nick 11/07): "Get 3 months of Audible Standard ... + $20
